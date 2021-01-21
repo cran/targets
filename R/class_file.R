@@ -1,0 +1,156 @@
+file_init <- function(
+  path = character(0),
+  stage = character(0),
+  hash = NA_character_,
+  time = NA_character_,
+  size = NA_character_,
+  bytes = 0
+) {
+  file_new(
+    path = path,
+    stage = stage,
+    hash = hash,
+    time = time,
+    size = size,
+    bytes = bytes
+  )
+}
+
+file_new <- function(
+  path = NULL,
+  stage = NULL,
+  hash = NULL,
+  time = NULL,
+  size = NULL,
+  bytes = NULL
+) {
+  force(path)
+  force(stage)
+  force(hash)
+  force(time)
+  force(size)
+  force(bytes)
+  environment()
+}
+
+file_exists_path <- function(file) {
+  all(file.exists(file$path))
+}
+
+file_update_hash <- function(file) {
+  files <- file_list_files(file$path)
+  info <- file_info(files)
+  file$hash <- file_hash(files)
+  file$time <- file_time(info)
+  file$bytes <- file_bytes(info)
+  file$size <- file_size(file$bytes)
+  invisible()
+}
+
+file_should_rehash <- function(file, time, size, bytes) {
+  small <- bytes < file_small_bytes
+  touched <- !identical(time, file$time)
+  resized <- !identical(size, file$size)
+  small || touched || resized
+}
+
+file_small_bytes <- 1e5
+
+file_ensure_hash <- function(file) {
+  files <- file_list_files(file$path)
+  info <- file_info(files)
+  time <- file_time(info)
+  bytes <- file_bytes(info)
+  size <- file_size(bytes)
+  do <- file_should_rehash(
+    file = file,
+    time = time,
+    size = size,
+    bytes = bytes
+  )
+  hash <- trn(do, file_hash(files), file$hash)
+  file$hash <- hash
+  file$time <- time
+  file$size <- size
+  file$bytes <- bytes
+}
+
+file_has_correct_hash <- function(file) {
+  files <- file_list_files(file$path)
+  info <- file_info(files)
+  time <- file_time(info)
+  bytes <- file_bytes(info)
+  size <- file_size(bytes)
+  trn(
+    file_should_rehash(
+      file = file,
+      time = time,
+      size = size,
+      bytes = bytes
+    ),
+    identical(file$hash, file_hash(files)),
+    TRUE
+  )
+}
+
+file_validate_path <- function(path) {
+  assert_nonempty(path, "a target must have at least one output file.")
+  assert_nonmissing(path, paste("missing output file for target:", path))
+  assert_chr_no_delim(path, "target output file path must not contain | or *")
+}
+
+file_validate <- function(file) {
+  assert_correct_fields(file, file_new)
+  file_validate_path(file$path)
+  assert_chr(file$hash)
+  assert_chr(file$time)
+  assert_chr(file$size)
+  assert_dbl(file$bytes)
+  assert_scalar(file$hash)
+  assert_scalar(file$time)
+  assert_scalar(file$size)
+  assert_scalar(file$bytes)
+}
+
+file_list_files <- function(path) {
+  if (!any(dir.exists(path))) {
+    return(path[file.exists(path)])
+  }
+  inner <- list.files(
+    path,
+    all.files = TRUE,
+    full.names = TRUE,
+    recursive = TRUE
+  )
+  out <- c(path, inner)
+  out[file.exists(out) & !dir.exists(out)]
+}
+
+file_hash <- function(files) {
+  n <- length(files)
+  if (identical(n, 0L)) {
+    return(null64)
+  }
+  hash <- digest_file64(files)
+  if (identical(n, 1L)) {
+    return(hash)
+  }
+  digest_chr64(paste(hash, collapse = ""))
+}
+
+file_info <- function(files) {
+  file.info(files, extra_cols = FALSE)
+}
+
+file_time <- function(info) {
+  digest_obj64(max(c(-Inf, replace_na(as.numeric(info$mtime), -Inf))))
+}
+
+file_bytes <- function(info) {
+  # Cannot be integer because of large value.
+  round(sum(replace_na(info$size, 0)), 6)
+}
+
+file_size <- function(bytes) {
+  digest_obj64(bytes)
+}

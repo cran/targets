@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>An overview of targets</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">An overview of targets</h1>
+
+
+
+<p>This vignette is a high-level overview of <code>targets</code> and its educational materials. The goal is to summarize the major features of <code>targets</code> and direct users to the appropriate resources. It explains how to get started, and then it briefly describes each chapter of the <a href="https://books.ropensci.org/targets/">user manual</a>.</p>
+<div id="what-is-targets" class="section level2">
+<h2>What is <code>targets</code>?</h2>
+<p>The <code>targets</code> R package is a <a href="https://www.gnu.org/software/make/">Make</a>-like pipeline toolkit for Statistics and data science in R. With <code>targets</code>, you can maintain a reproducible workflow without repeating yourself. <code>targets</code> skips costly runtime for tasks that are already up to date, runs the necessary computation with implicit parallel computing, and abstracts files as R objects. A fully up-to-date <code>targets</code> pipeline is tangible evidence that the output aligns with the code and data, which substantiates trust in the results.</p>
+</div>
+<div id="how-to-get-started" class="section level2">
+<h2>How to get started</h2>
+<p>The top of the <a href="https://docs.ropensci.org/targets/">reference website</a> links to a number of materials to help new users start learning <code>targets</code>. It lists online talks, tutorials, books, and workshops in the order that a new user should consume them. The rest of the main page outlines a more comprehensive list of resources.</p>
+</div>
+<div id="the-walkthrough" class="section level2">
+<h2>The walkthrough</h2>
+<p>The <a href="https://books.ropensci.org/targets/">user manual</a> starts with a <a href="https://books.ropensci.org/targets/walkthrough.html">walkthrough</a> chapter, a short tutorial to quickly started with <code>targets</code> using a simple example project. That project also has a <a href="https://github.com/wlandau/targets-minimal">repository</a> with the source code and an <a href="https://rstudio.cloud/project/1430691">RStudio Cloud workspace</a> that lets you try out the workflow in a web browser. Sign up for a free RStudio Cloud account, click on the link, and try out functions <code>tar_make()</code> and <code>tar_read()</code> in the R console.</p>
+</div>
+<div id="debugging" class="section level2">
+<h2>Debugging</h2>
+<p>The <a href="https://books.ropensci.org/targets/debugging.html">debugging chapter</a> describes two alternative built-in systems for troubleshooting errors. The first system uses workspaces, which let you load a target’s dependencies into you R session. This way is usually preferred, especially with large pipelines on computing clusters, but it still may require some manual work. The second system launches an interactive debugger while the pipeline is actually running, which may not be feasible in some situations, but can often help you reach the problem more quickly.</p>
+</div>
+<div id="functions" class="section level2">
+<h2>Functions</h2>
+<p><code>targets</code> expects users to adopt a function-oriented style of programming. User-defined R functions are essential to express the complexities of data generation, analysis, and reporting. The <a href="https://books.ropensci.org/targets/">user manual</a> has a <a href="https://books.ropensci.org/targets/functions.html">whole chapter</a> dedicated to user-defined functions for data science, and it explains why they are important and how to use them in <code>targets</code>-powered pipelines.</p>
+</div>
+<div id="best-practices" class="section level2">
+<h2>Best practices</h2>
+<p>The <a href="https://books.ropensci.org/targets/practices.html">best practices chapter</a> contains general recommendations about <code>targets</code> pipelines in the real world, including how to define good targets, what to do if your workflow is itself an R package, and how to diagnose performance issues.</p>
+</div>
+<div id="external-files-and-literate-programming" class="section level2">
+<h2>External files and literate programming</h2>
+<p><code>targets</code> has special ways to include data files and literate programming reports in a pipeline. This functionality is optional in the general case, but it is necessary if you want a target to rerun in response to a change in a data file, or if you want an R Markdown report to re-render when an upstream target changes. The <a href="https://books.ropensci.org/targets/files.html">files chapter</a> walks through this functionality, from input data to parameterized R Markdown.</p>
+</div>
+<div id="dynamic-branching" class="section level2">
+<h2>Dynamic branching</h2>
+<p>Sometimes, a pipeline contains more targets than a user can comfortably type by hand. For projects with hundreds of targets, branching can make the _targets.R file more concise and easier to read and maintain. Dynamic branching is a way to create new targets while the pipeline is running, and it is best suited to iterating over a larger number of very similar tasks. The <a href="https://books.ropensci.org/targets/dynamic.html">dynamic branching</a> chapter outlines this functionality, including how to create branching patterns, different ways to iterate over data, and recommendations for batching large numbers of small tasks into a comfortably small number of dynamic branches.</p>
+</div>
+<div id="static-branching" class="section level2">
+<h2>Static branching</h2>
+<p><a href="https://books.ropensci.org/targets/static.html">Static branching</a> is the act of defining a group of targets in bulk before the pipeline starts. Whereas dynamic branching uses last-minute dependency data to define the branches, static branching uses metaprogramming to modify the code of the pipeline up front. Whereas dynamic branching excels at creating a large number of very similar targets, static branching is most useful for smaller number of heterogeneous targets. Some users find it more convenient because they can use <code>tar_manifest()</code> and <code>tar_visnetwork()</code> to check the correctness of static branching before launching the pipeline. Read more about it in the <a href="https://books.ropensci.org/targets/static.html">static branching chapter</a>.</p>
+</div>
+<div id="high-performance-computing" class="section level2">
+<h2>High-performance computing</h2>
+<p><code>targets</code> is capable of distributing the computation in a pipeline across multiple cores of a laptop or multiple nodes of a computing cluster. Not only does it interface with these technologies using packages <a href="https://github.com/mschubert/clustermq"><code>clustermq</code></a> and <a href="https://github.com/HenrikBengtsson/future"><code>future</code></a>: it automatically deploys ready targets to parallel workers while making sure the other targets wait for their upstream dependencies to finish. Read more about high-performance computing in the <a href="https://books.ropensci.org/targets/hpc.html">HPC chapter</a>.</p>
+</div>
+<div id="cloud-computing" class="section level2">
+<h2>Cloud computing</h2>
+<p>Users with <a href="https://aws.amazon.com/">Amazon Web Services</a> accounts can store their targets on one or more <a href="https://aws.amazon.com/s3/">S3 buckets</a>, and retrieval with <code>tar_read()</code> and <code>tar_load()</code> is seamless. The <a href="https://books.ropensci.org/targets/cloud.html">cloud computing chapter</a> is a step-by-step guide that walks through how to get started with <a href="https://aws.amazon.com/">Amazon Web Services</a> and connect a <code>targets</code> pipeline to <a href="https://aws.amazon.com/s3/">S3</a>.</p>
+</div>
+<div id="what-about-drake" class="section level2">
+<h2>What about drake?</h2>
+<p>The <a href="https://github.com/ropensci/drake"><code>drake</code></a> package is an older and more established R-focused pipeline toolkit, and it is the predecessor of <code>targets</code>. The <a href="https://books.ropensci.org/targets/drake.html"><code>drake</code> chapter</a> of the <code>targets</code> manual helps <code>drake</code> users understand the role of <code>targets</code>, the future direction of <code>drake</code>, how to transition to <code>targets</code>, and the advantages of <code>targets</code> over <code>drake</code>.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
