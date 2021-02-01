@@ -26,7 +26,7 @@ Controls how messages are printed as targets run in the pipeline. Choices:
 \item \code{"silent"}: print nothing.
 \item \code{"timestamp"}: print a time-stamped message for each target that runs.
 \item \code{"summary"}: print a running total of the number of each targets in
-each status category (queued, running, skipped, build, cancelled,
+each status category (queued, running, skipped, build, canceled,
 or errored).
 }}
 
@@ -72,13 +72,13 @@ Wildcards in the template file are filled in with elements from
 }
 \examples{
 if (!identical(tolower(Sys.info()[["sysname"]]), "windows")) {
-if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
+if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   options(clustermq.scheduler = "multicore") # Does not work on Windows.
   tar_option_set()
   list(tar_target(x, 1 + 1))
-})
+}, ask = FALSE)
 tar_make_clustermq()
 })
 }

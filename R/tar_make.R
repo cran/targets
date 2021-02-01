@@ -16,10 +16,10 @@
 #'   * `"silent"`: print nothing.
 #'   * `"timestamp"`: print a time-stamped message for each target that runs.
 #'   * `"summary"`: print a running total of the number of each targets in
-#'     each status category (queued, running, skipped, build, cancelled,
+#'     each status category (queued, running, skipped, build, canceled,
 #'     or errored).
 #' @examples
-#' tar_dir({ # Write all files to a temporary directory.
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set()
 #'   list(tar_target(x, 1 + 1))
@@ -32,7 +32,7 @@
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' })
+#' }, ask = FALSE)
 #' tar_make(starts_with("y")) # Only builds y1 and y2.
 #' })
 tar_make <- function(
@@ -41,7 +41,7 @@ tar_make <- function(
   callr_function = callr::r,
   callr_arguments = list()
 ) {
-  assert_target_script()
+  assert_script()
   reporter <- match.arg(reporter, choices = tar_make_reporters())
   assert_callr_function(callr_function)
   assert_list(callr_arguments, "callr_arguments mut be a list.")

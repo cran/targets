@@ -29,8 +29,8 @@
 #'   at once, e.g. `label = c("time", "branches")`. All are disabled
 #'   by default because they clutter the graph.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_INTERACTIVE_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set()
 #'   list(
@@ -46,7 +46,7 @@
 tar_visnetwork <- function(
   targets_only = FALSE,
   allow = NULL,
-  exclude = NULL,
+  exclude = ".Random.seed",
   outdated = TRUE,
   label = NULL,
   level_separation = NULL,
@@ -54,7 +54,7 @@ tar_visnetwork <- function(
   callr_function = callr::r,
   callr_arguments = list(spinner = identical(reporter, "silent"))
 ) {
-  assert_target_script()
+  assert_script()
   assert_package("visNetwork")
   assert_lgl(targets_only, "targets_only must be logical.")
   assert_lgl(outdated, "outdated in tar_visnetwork() must be logical.")
@@ -93,8 +93,6 @@ tar_visnetwork_inner <- function(
   level_separation,
   reporter
 ) {
-  allow <- eval_tidyselect(allow_quosure, pipeline_get_names(pipeline))
-  exclude <- eval_tidyselect(exclude_quosure, pipeline_get_names(pipeline))
   network <- inspection_init(
     pipeline,
     outdated = outdated,
@@ -103,8 +101,8 @@ tar_visnetwork_inner <- function(
   visual <- visnetwork_init(
     network = network,
     targets_only = targets_only,
-    allow = allow,
-    exclude = exclude,
+    allow = allow_quosure,
+    exclude = exclude_quosure,
     label = label,
     level_separation = level_separation
   )

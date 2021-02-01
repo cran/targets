@@ -3,7 +3,7 @@ progress_init <- function(
   running = counter_init(),
   built = counter_init(),
   skipped = counter_init(),
-  cancelled = counter_init(),
+  canceled = counter_init(),
   errored = counter_init(),
   warned = counter_init()
 ) {
@@ -14,7 +14,7 @@ progress_init <- function(
     running = running,
     built = built,
     skipped = skipped,
-    cancelled = cancelled,
+    canceled = canceled,
     errored = errored,
     warned = warned
   )
@@ -26,7 +26,7 @@ progress_new <- function(
   running = NULL,
   skipped = NULL,
   built = NULL,
-  cancelled = NULL,
+  canceled = NULL,
   errored = NULL,
   warned = NULL
 ) {
@@ -36,7 +36,7 @@ progress_new <- function(
     running = running,
     skipped = skipped,
     built = built,
-    cancelled = cancelled,
+    canceled = canceled,
     errored = errored,
     warned = warned
   )
@@ -53,7 +53,7 @@ progress_class <- R6::R6Class(
     running = NULL,
     skipped = NULL,
     built = NULL,
-    cancelled = NULL,
+    canceled = NULL,
     errored = NULL,
     warned = NULL,
     initialize = function(
@@ -62,7 +62,7 @@ progress_class <- R6::R6Class(
       running = NULL,
       skipped = NULL,
       built = NULL,
-      cancelled = NULL,
+      canceled = NULL,
       errored = NULL,
       warned = NULL
     ) {
@@ -71,77 +71,97 @@ progress_class <- R6::R6Class(
       self$running <- running
       self$skipped <- skipped
       self$built <- built
-      self$cancelled <- cancelled
+      self$canceled <- canceled
       self$errored <- errored
       self$warned <- warned
     },
-    assign_dequeued = function(names) {
-      counter_del_names(self$queued, names)
+    assign_dequeued = function(target) {
+      counter_del_name(self$queued, target_get_name(target))
     },
-    assign_queued = function(names) {
-      counter_set_names(self$queued, names)
+    assign_queued = function(target) {
+      counter_set_name(self$queued, target_get_name(target))
     },
-    assign_skipped = function(names) {
-      counter_del_names(self$queued, names)
-      counter_set_names(self$skipped, names)
+    assign_skipped = function(target) {
+      name <- target_get_name(target)
+      counter_del_name(self$queued, name)
+      counter_set_name(self$skipped, name)
     },
-    assign_running = function(names) {
-      counter_del_names(self$queued, names)
-      counter_set_names(self$running, names)
+    assign_running = function(target) {
+      name <- target_get_name(target)
+      counter_del_name(self$queued, name)
+      counter_set_name(self$running, name)
     },
-    assign_built = function(names) {
-      counter_del_names(self$queued, names)
-      counter_del_names(self$running, names)
-      counter_set_names(self$built, names)
+    assign_built = function(target) {
+      name <- target_get_name(target)
+      counter_del_name(self$queued, name)
+      counter_del_name(self$running, name)
+      counter_set_name(self$built, name)
     },
-    assign_cancelled = function(names) {
-      counter_del_names(self$running, names)
-      counter_set_names(self$cancelled, names)
+    assign_canceled = function(target) {
+      name <- target_get_name(target)
+      counter_del_name(self$running, name)
+      counter_set_name(self$canceled, name)
     },
-    assign_errored = function(names) {
-      counter_del_names(self$running, names)
-      counter_set_names(self$errored, names)
+    assign_errored = function(target) {
+      name <- target_get_name(target)
+      counter_del_name(self$running, name)
+      counter_set_name(self$errored, name)
     },
-    assign_warned = function(names) {
-      counter_del_names(self$running, names)
-      counter_set_names(self$warned, names)
+    assign_warned = function(target) {
+      name <- target_get_name(target)
+      counter_del_name(self$running, name)
+      counter_set_name(self$warned, name)
     },
-    write_running = function(names) {
+    write_progress = function(target, progress) {
       db <- self$database
-      map(names, ~db$write_row(list(name = .x, progress = "running")))
+      name <- target_get_name(target)
+      type <- target_get_type(target)
+      branches <- trn(
+        identical(type, "stem"),
+        0L,
+        length(omit_na(target_get_children(target)))
+      )
+      row <- list(
+        name = name,
+        type = type,
+        parent = target_get_parent(target),
+        branches = branches,
+        progress = progress
+      )
+      db$write_row(row)
     },
-    write_built = function(names) {
-      db <- self$database
-      map(names, ~db$write_row(list(name = .x, progress = "built")))
+    write_running = function(target) {
+      self$write_progress(target, progress = "running")
     },
-    write_cancelled = function(names) {
-      db <- self$database
-      map(names, ~db$write_row(list(name = .x, progress = "cancelled")))
+    write_built = function(target) {
+      self$write_progress(target, progress = "built")
     },
-    write_errored = function(names) {
-      db <- self$database
-      map(names, ~db$write_row(list(name = .x, progress = "errored")))
+    write_canceled = function(target) {
+      self$write_progress(target, progress = "canceled")
     },
-    register_running = function(names) {
-      self$assign_running(names)
-      self$write_running(names)
+    write_errored = function(target) {
+      self$write_progress(target, progress = "errored")
     },
-    register_built = function(names) {
-      self$assign_built(names)
-      self$write_built(names)
+    register_running = function(target) {
+      self$assign_running(target)
+      self$write_running(target)
     },
-    register_cancelled = function(names) {
-      self$assign_cancelled(names)
-      self$write_cancelled(names)
+    register_built = function(target) {
+      self$assign_built(target)
+      self$write_built(target)
     },
-    register_errored = function(names) {
-      self$assign_errored(names)
-      self$write_errored(names)
+    register_canceled = function(target) {
+      self$assign_canceled(target)
+      self$write_canceled(target)
+    },
+    register_errored = function(target) {
+      self$assign_errored(target)
+      self$write_errored(target)
     },
     uptodate = function() {
       self$skipped$count > 0L &&
         self$built$count == 0L &&
-        self$cancelled$count == 0L &&
+        self$canceled$count == 0L &&
         self$errored$count == 0L
     },
     cli_end = function(time_stamp = FALSE) {
@@ -160,7 +180,7 @@ progress_class <- R6::R6Class(
         skipped = self$skipped$count,
         running = self$running$count,
         built = self$built$count,
-        cancelled = self$cancelled$count,
+        canceled = self$canceled$count,
         errored = self$errored$count,
         warned = self$warned$count
       )
@@ -170,7 +190,7 @@ progress_class <- R6::R6Class(
       counter_validate(self$running)
       counter_validate(self$built)
       counter_validate(self$skipped)
-      counter_validate(self$cancelled)
+      counter_validate(self$canceled)
       counter_validate(self$errored)
     }
   )
@@ -183,10 +203,6 @@ database_progress <- function() {
   )
 }
 
-path_progress <- function() {
-  file.path("_targets", "meta", "progress")
-}
-
 header_progress <- function() {
-  c("name", "progress")
+  c("name", "type", "parent", "branches", "progress")
 }

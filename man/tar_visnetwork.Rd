@@ -7,7 +7,7 @@
 tar_visnetwork(
   targets_only = FALSE,
   allow = NULL,
-  exclude = NULL,
+  exclude = ".Random.seed",
   outdated = TRUE,
   label = NULL,
   level_separation = NULL,
@@ -80,8 +80,8 @@ and visualize the directed acyclic graph of targets
 and imported global functions and objects.
 }
 \examples{
-if (identical(Sys.getenv("TARGETS_INTERACTIVE_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
+if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   tar_option_set()
   list(

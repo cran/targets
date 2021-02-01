@@ -1,6 +1,10 @@
 #' @title Read a project's metadata.
 #' @export
 #' @description Read the metadata of all recorded targets and global objects.
+#' @details A metadata row only updates when the target is built.
+#'   [tar_progress()] shows information on targets that are running.
+#'   That is why the number of branches may disagree between [tar_meta()]
+#'   and [tar_progress()] for actively running pipelines.
 #' @return A data frame with one row per target/object and the selected fields.
 #' @param names Optional, names of the targets. If supplied, `tar_meta()`
 #'   only returns metadata on these targets.
@@ -39,14 +43,14 @@
 #'     from the last run of the target.
 #'   * `error`: character string of the error message if the target errored.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script({
 #'   list(
 #'     tar_target(x, seq_len(2)),
 #'     tar_target(y, 2 * x, pattern = map(x))
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_make()
 #' tar_meta()
 #' tar_meta(starts_with("y_"))
@@ -54,7 +58,7 @@
 #' }
 tar_meta <- function(names = NULL, fields = NULL) {
   assert_store()
-  assert_path(file.path("_targets/meta/meta"))
+  assert_path(path_meta())
   out <- tibble::as_tibble(meta_init()$database$read_condensed_data())
   names_quosure <- rlang::enquo(names)
   fields_quosure <- rlang::enquo(fields)

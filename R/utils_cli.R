@@ -64,6 +64,14 @@ cli_red_x <- function(msg) {
   message(msg)
 }
 
+cli_errored <- function(errored) {
+  warn_run(
+    errored,
+    " targets produced errors. ",
+    "Run tar_meta(fields = error) for the messages."
+  )
+}
+
 cli_warned <- function(warned) {
   warn_run(
     warned,
@@ -99,7 +107,7 @@ cli_progress <- function(
   running,
   skipped,
   built,
-  cancelled,
+  canceled,
   errored,
   warned
 ) {
@@ -108,7 +116,7 @@ cli_progress <- function(
     cli_tally(running),
     cli_tally(skipped),
     cli_tally(built),
-    cli_tally(cancelled),
+    cli_tally(canceled),
     cli_tally(errored),
     cli_tally(warned)
   )

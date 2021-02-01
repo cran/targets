@@ -62,14 +62,14 @@
 #'     Always `NA` if the `record` cue is activated.
 #'     Otherwise, always `FALSE` if the `file` cue is suppressed.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script({
 #'   list(
 #'     tar_target(x, seq_len(2)),
 #'     tar_target(y, 2 * x, pattern = map(x))
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_make()
 #' tar_sitrep()
 #' tar_meta(starts_with("y_"))
@@ -82,7 +82,7 @@ tar_sitrep <- function(
   callr_function = callr::r,
   callr_arguments = list(spinner = identical(reporter, "silent"))
 ) {
-  assert_target_script()
+  assert_script()
   names_quosure <- rlang::enquo(names)
   fields_quosure <- rlang::enquo(fields)
   assert_scalar(reporter, "reporter arg of tar_outdated() must have length 1.")

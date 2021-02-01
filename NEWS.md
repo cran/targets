@@ -1,3 +1,34 @@
+# targets 0.1.0
+
+## Bug fixes
+
+* `tar_test()` now skips all tests on Solaris in order to fix the problems shown on the CRAN check page.
+* Enable `allow` and `exclude` to work on imports in `tar_visnetwork()` and `tar_glimpse()`.
+* Put `visNetwork` legends on right to deal with how legend nodes always align right within the legend space.
+
+## Performance
+
+* Call `force()` on subpipeline objects to eliminate high-memory promises in target objects. Allows targets to be deployed to workers much faster when `retreival` is `"main"` (#279).
+
+## New features
+
+* Add a new box to the `tar_watch()` app to tabulate progress on dynamic branches (#273, @mattwarkentin).
+* Store `type`, `parent`, and `branches` in progress data for `tar_watch()` (#273, @mattwarkentin).
+* Add a `fields` argument in `tar_progress()` and default to `"progress"` for back compatibility (#273, @mattwarkentin).
+* Add a new `tar_progress_branches()` function to tabulate branch progress (#273, @mattwarkentin).
+* Add new "refresh" switch to `tar_watch()` to toggle automatic refreshing and force a refresh.
+
+## Enhancements
+
+* Exclude `.Random.seed` by default in `tar_visnetwork()`.
+* Spelling: "cancelled" changed to "canceled".
+* Enhance controls and use of space in the `tar_watch()` app.
+* Centralize internal path management utilities.
+
+## Configuration
+
+* Skip `clustermq` tests on Solaris.
+
 # targets 0.0.2
 
 ## CRAN response

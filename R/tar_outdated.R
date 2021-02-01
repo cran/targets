@@ -28,17 +28,17 @@
 #'     targets found so far.
 #' @inheritParams tar_validate
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(list(tar_target(x, 1 + 1)))
 #' tar_outdated()
-#' tar_script(
+#' tar_script({
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_outdated()
 #' })
 #' }
@@ -50,7 +50,7 @@ tar_outdated <- function(
   callr_function = callr::r,
   callr_arguments = list(spinner = identical(reporter, "silent"))
 ) {
-  assert_target_script()
+  assert_script()
   assert_lgl(branches, "branches arg of tar_outdated() must be logical.")
   assert_scalar(reporter, "reporter arg of tar_outdated() must have length 1.")
   assert_in(

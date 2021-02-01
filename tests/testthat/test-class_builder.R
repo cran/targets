@@ -95,7 +95,12 @@ tar_test("error = \"continue\" means continue on error", {
   x <- target_init("x", expr = quote(stop(123)), error = "continue")
   y <- target_init("y", expr = quote(stop(456)), error = "continue")
   pipeline <- pipeline_init(list(x, y))
-  expect_silent(suppressMessages(local_init(pipeline)$run()))
+  suppressWarnings(
+    expect_warning(
+      suppressMessages(local_init(pipeline)$run()),
+      class = "condition_run"
+    )
+  )
   expect_equal(x$store$file$path, character(0))
   expect_equal(y$store$file$path, character(0))
   meta <- meta_init()$database$read_condensed_data()
@@ -303,7 +308,7 @@ tar_test("basic progress responses are correct", {
   expect_equal(sort(counter_get_names(progress$running)), character(0))
   expect_equal(sort(counter_get_names(progress$built)), character(0))
   expect_equal(sort(counter_get_names(progress$skipped)), character(0))
-  expect_equal(sort(counter_get_names(progress$cancelled)), character(0))
+  expect_equal(sort(counter_get_names(progress$canceled)), character(0))
   expect_equal(sort(counter_get_names(progress$errored)), character(0))
   local$run()
   progress <- local$scheduler$progress
@@ -314,7 +319,7 @@ tar_test("basic progress responses are correct", {
     sort(pipeline_get_names(pipeline))
   )
   expect_equal(sort(counter_get_names(progress$skipped)), character(0))
-  expect_equal(sort(counter_get_names(progress$cancelled)), character(0))
+  expect_equal(sort(counter_get_names(progress$canceled)), character(0))
   expect_equal(sort(counter_get_names(progress$errored)), character(0))
 })
 
@@ -351,9 +356,14 @@ tar_test("relay errors as messages if error is continue", {
       tar_target(data2, stop("error_data2"))
     )
   })
-  expect_message(
-    tar_make(callr_function = NULL),
-    class = "condition_run"
+  suppressWarnings(
+    expect_message(
+      expect_warning(
+        tar_make(callr_function = NULL),
+        class = "condition_run"
+      ),
+      class = "condition_run"
+    )
   )
   meta <- tar_meta(names = c("data1", "data2"), fields = error)
   expect_equal(sort(meta$error), sort(c("error_data1", "error_data2")))

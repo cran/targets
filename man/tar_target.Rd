@@ -232,9 +232,9 @@ data <- tar_target(target_name, get_data(!!n_rows), tidy_eval = FALSE)
 print(data)
 tar_option_reset()
 # In a pipeline:
-if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
-tar_script(tar_target(x, 1 + 1))
+if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
+tar_script(tar_target(x, 1 + 1), ask = FALSE)
 tar_make()
 tar_read(x)
 })

@@ -11,15 +11,15 @@
 #'   You can supply symbols, a character vector,
 #'   or `tidyselect` helpers like [starts_with()].
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script({
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_make()
 #' tar_delete(starts_with("y")) # Only deletes y1 and y2.
 #' tar_make() # y1 and y2 rebuild but return same values, so z is up to date.
@@ -37,9 +37,8 @@ tar_delete <- function(names) {
   names <- c(names, children)
   dynamic_files <- data$name[data$format == "file"]
   names <- setdiff(names, dynamic_files)
-  dir <- file.path("_targets", "objects")
-  files <- list.files(dir, all.files = TRUE)
+  files <- list.files(path_objects_dir(), all.files = TRUE)
   discard <- intersect(names, files)
-  unlink(file.path(dir, discard), recursive = TRUE)
+  unlink(file.path(path_objects_dir(), discard), recursive = TRUE)
   invisible()
 }

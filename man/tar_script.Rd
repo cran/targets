@@ -61,14 +61,14 @@ in the same function call.
 }
 
 \examples{
-tar_dir({ # Write all files to a temporary directory.
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script() # Writes an example target script.
 # Writes a user-defined target script:
 tar_script({
   x <- tar_target(x, 1 + 1)
   tar_option_set()
   list(x)
-})
+}, ask = FALSE)
 writeLines(readLines("_targets.R"))
 })
 }

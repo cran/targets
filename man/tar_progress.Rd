@@ -4,20 +4,30 @@
 \alias{tar_progress}
 \title{Read the target progress of the latest run of the pipeline.}
 \usage{
-tar_progress(names = NULL)
+tar_progress(names = NULL, fields = "progress")
 }
 \arguments{
 \item{names}{Optional, names of the targets. If supplied, \code{tar_progress()}
 only returns progress information on these targets.
 You can supply symbols, a character vector,
 or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
+
+\item{fields}{Optional, names of progress data columns to read.
+Set to \code{NULL} to read all fields.}
 }
 \value{
 A data frame with one row per target and the following columns:
 \itemize{
-\item \code{name}: name of the target or global object.
+\item \code{name}: name of the target.
+\item \code{type}: type of target: \code{"stem"} for non-branching targets,
+\code{"pattern"} for dynamically branching targets, and \code{"branch"}
+for dynamic branches.
+\item \code{parent}: name of the target's parent. For branches, this is the
+name of the associated pattern. For other targets, the pattern
+is just itself.
+\item \code{branches}: number of dynamic branches of a pattern. 0 for non-patterns.
 \item \code{progress}: the most recent progress update of that target.
-Could be \code{"running"}, \code{"built"}, \code{"cancelled"}, or \code{"failed"}.
+Could be \code{"running"}, \code{"built"}, \code{"canceled"}, or \code{"errored"}.
 }
 }
 \description{
@@ -25,14 +35,14 @@ Read a project's target progress data for the most recent
 run of \code{\link[=tar_make]{tar_make()}} or similar. Only the most recent record is shown.
 }
 \examples{
-if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
-tar_script(
+if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
+tar_script({
   list(
     tar_target(x, seq_len(2)),
     tar_target(y, 2 * x, pattern = map(x))
   )
-)
+}, ask = FALSE)
 tar_make()
 tar_progress()
 tar_progress(starts_with("y_"))

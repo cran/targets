@@ -38,11 +38,11 @@
 #' @param path Character of length 1, path to the script file to
 #'   populate with `library()` calls.
 #' @examples
-#' tar_dir({ # Write all files to a temporary directory.
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #'   tar_script({
 #'     tar_option_set(packages = c("tibble", "qs"))
 #'     list()
-#'   })
+#'   }, ask = FALSE)
 #'   tar_renv()
 #'   writeLines(readLines("_packages.R"))
 #' })
@@ -53,7 +53,7 @@ tar_renv <- function(
   callr_function = callr::r,
   callr_arguments = list()
 ) {
-  assert_target_script()
+  assert_script()
   assert_chr(extras, "extras must be a character vector")
   assert_chr(path, "path must have type character")
   assert_scalar(path, "path must have length 1")

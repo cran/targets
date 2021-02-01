@@ -15,13 +15,13 @@
 #' @param workers Positive integer, maximum number of transient
 #'   `future` workers allowed to run at any given time.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   future::plan(future::multisession)
 #'   tar_option_set()
 #'   list(tar_target(x, 1 + 1))
-#' })
+#' }, ask = FALSE)
 #' tar_make_future()
 #' })
 #' }
@@ -33,7 +33,7 @@ tar_make_future <- function(
   callr_arguments = list()
 ) {
   assert_package("future")
-  assert_target_script()
+  assert_script()
   reporter <- match.arg(reporter, choices = tar_make_reporters())
   assert_callr_function(callr_function)
   assert_list(callr_arguments, "callr_arguments mut be a list.")

@@ -39,8 +39,8 @@
 #'   * `packages`: List columns of packages loaded before building the target.
 #'   * `library`: List column of library paths to load the packages.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set()
 #'   list(
@@ -50,7 +50,7 @@
 #'     tar_target(m, z, pattern = map(z)),
 #'     tar_target(c, z, pattern = cross(z))
 #'   )
-#' })
+#' }, ask = FALSE)
 #' tar_manifest()
 #' tar_manifest(fields = c("name", "command"))
 #' tar_manifest(fields = "command")
@@ -63,7 +63,7 @@ tar_manifest <- function(
   callr_function = callr::r,
   callr_arguments = list()
 ) {
-  assert_target_script()
+  assert_script()
   assert_callr_function(callr_function)
   assert_list(callr_arguments, "callr_arguments mut be a list.")
   targets_arguments <- list(

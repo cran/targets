@@ -11,24 +11,24 @@
 #'   the value is invisibly returned.
 #' @inheritParams tar_validate
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script({
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_make()
 #' # Remove some targets from the pipeline.
-#' tar_script(list(tar_target(y1, 1 + 1)))
+#' tar_script(list(tar_target(y1, 1 + 1)), ask = FALSE)
 #' # Keep only the remaining targets in the data store.
 #' tar_prune()
 #' })
 #' }
 tar_prune <- function(callr_function = callr::r, callr_arguments = list()) {
-  assert_target_script()
+  assert_script()
   assert_store()
   assert_callr_function(callr_function)
   assert_list(callr_arguments, "callr_arguments mut be a list.")
@@ -55,6 +55,6 @@ tar_prune_inner <- function(pipeline) {
   discard <- setdiff(discard, dynamic_files)
   data <- as_data_frame(data)[data$name %in% keep, ]
   meta$database$overwrite_storage(data)
-  unlink(file.path("_targets", "objects", discard), recursive = TRUE)
+  unlink(file.path(path_objects_dir(), discard), recursive = TRUE)
   invisible()
 }

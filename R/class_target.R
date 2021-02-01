@@ -165,6 +165,11 @@ target_get_parent <- function(target) {
   UseMethod("target_get_parent")
 }
 
+#' @export
+target_get_parent.default <- function(target) {
+  target_get_name(target)
+}
+
 target_get_children <- function(target) {
   UseMethod("target_get_children")
 }
@@ -303,6 +308,8 @@ target_subpipeline_copy <- function(target, keep_value) {
   if (!keep_value) {
     out$value <- NULL
   }
+  # Eliminate high-memory promise objects:
+  force(out$value$object)
   out
 }
 
@@ -324,12 +331,12 @@ target_patternview_meta <- function(target, pipeline, meta) {
 target_patternview_meta.default <- function(target, pipeline, meta) {
 }
 
-target_patternview_cancelled <- function(target, pipeline, scheduler) {
-  UseMethod("target_patternview_cancelled")
+target_patternview_canceled <- function(target, pipeline, scheduler) {
+  UseMethod("target_patternview_canceled")
 }
 
 #' @export
-target_patternview_cancelled.default <- function(target, pipeline, scheduler) {
+target_patternview_canceled.default <- function(target, pipeline, scheduler) {
 }
 
 target_patternview_errored <- function(target, pipeline, scheduler) {

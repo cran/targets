@@ -22,7 +22,13 @@ reporter_class <- R6::R6Class(
   public = list(
     report_start = function() {
     },
+    report_error = function(error) {
+      msg_run("Error: ", error, "\n")
+    },
     report_end = function(progress = NULL) {
+      if (any(progress$errored$count > 1L)) {
+        cli_errored(progress$errored$count)
+      }
       if (any(progress$warned$count > 0L)) {
         cli_warned(progress$warned$count)
       }
@@ -33,7 +39,7 @@ reporter_class <- R6::R6Class(
     },
     report_errored = function(target = NULL, progress = NULL) {
     },
-    report_cancelled = function(target = NULL, progress = NULL) {
+    report_canceled = function(target = NULL, progress = NULL) {
     },
     report_outdated = function(checked, outdated) {
     },

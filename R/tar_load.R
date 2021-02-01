@@ -10,15 +10,15 @@
 #'   check/build all the targets (default). Otherwise, you can supply
 #'   symbols, a character vector, or `tidyselect` helpers like [starts_with()].
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script({
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_make()
 #' tar_load(starts_with("y"))
 #' })
@@ -46,15 +46,15 @@ tar_load <- function(
 #'   for any targets that are patterns.
 #' @param envir Environment to put the loaded targets.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script({
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' )
+#' }, ask = FALSE)
 #' tar_make()
 #' tar_load_raw(c("y1", "y2"))
 #' y1

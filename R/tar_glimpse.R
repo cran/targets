@@ -26,8 +26,8 @@
 #'   the `levelSeparation` argument of `visHierarchicalLayout()`
 #'   defaults to `150`.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_INTERACTIVE_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set()
 #'   list(
@@ -35,7 +35,7 @@
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' })
+#' }, ask = FALSE)
 #' tar_glimpse()
 #' tar_glimpse(allow = starts_with("y"))
 #' })
@@ -43,12 +43,12 @@
 tar_glimpse <- function(
   targets_only = TRUE,
   allow = NULL,
-  exclude = NULL,
+  exclude = ".Random.seed",
   level_separation = NULL,
   callr_function = callr::r,
   callr_arguments = list()
 ) {
-  assert_target_script()
+  assert_script()
   assert_package("visNetwork")
   assert_lgl(targets_only, "targets_only must be logical.")
   assert_callr_function(callr_function)
@@ -74,14 +74,12 @@ tar_glimpse_inner <- function(
   exclude_quosure,
   level_separation
 ) {
-  allow <- eval_tidyselect(allow_quosure, pipeline_get_names(pipeline))
-  exclude <- eval_tidyselect(exclude_quosure, pipeline_get_names(pipeline))
   network <- glimpse_init(pipeline)
   visual <- visnetwork_init(
     network = network,
     targets_only = targets_only,
-    allow = allow,
-    exclude = exclude,
+    allow = allow_quosure,
+    exclude = exclude_quosure,
     level_separation = level_separation
   )
   visual$update()

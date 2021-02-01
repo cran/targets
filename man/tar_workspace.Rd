@@ -46,8 +46,8 @@ When you are done debugging, you can remove the workspace files
 using \code{tar_destroy(destroy = "workspaces")}.
 }
 \examples{
-if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
+if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tmp <- sample(1)
 tar_script({
   tar_option_set(error = "workspace")
@@ -55,7 +55,7 @@ tar_script({
     tar_target(x, "loaded"),
     tar_target(y, stop(x))
   )
-})
+}, ask = FALSE)
 # The following code throws an error for demonstration purposes.
 try(tar_make())
 exists("x") # Should be FALSE.

@@ -7,15 +7,15 @@
 #'   vertices data frame has one row per target with fields to denote
 #'   the type of the target or object (stem, branch, map, cross, function,
 #'   or object) and the target's status
-#'   (up to date, outdated, running, cancelled, or errored).
+#'   (up to date, outdated, running, canceled, or errored).
 #'   The edges data frame has one row for every edge and columns `to` and
 #'   `from` to mark the starting and terminating vertices.
 #' @inheritParams tar_outdated
 #' @param targets_only Logical, whether to restrict the output to just targets
 #'   (`FALSE`) or to also include imported global functions and objects.
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set()
 #'   list(
@@ -23,7 +23,7 @@
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
-#' })
+#' }, ask = FALSE)
 #' tar_network(targets_only = TRUE)
 #' })
 #' }
@@ -33,7 +33,7 @@ tar_network <- function(
   callr_function = callr::r,
   callr_arguments = list()
 ) {
-  assert_target_script()
+  assert_script()
   assert_lgl(targets_only, "targets_only must be logical.")
   assert_in(
     reporter,

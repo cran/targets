@@ -19,9 +19,9 @@
 #'     if `error = "workspace"` in [tar_option_set()] or [tar_target()].
 #'     Load a workspace with [tar_workspace()].
 #' @examples
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
-#' tar_script(list(tar_target(x, 1 + 1)))
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' tar_script(list(tar_target(x, 1 + 1)), ask = FALSE)
 #' tar_make() # Creates the _targets/ data store.
 #' tar_destroy()
 #' print(file.exists("_targets")) # Should be FALSE.
@@ -32,10 +32,10 @@ tar_destroy <- function(
 ) {
   switch(
     match.arg(destroy),
-    all = unlink("_targets", recursive = TRUE),
-    meta = unlink(file.path("_targets", "meta", "meta")),
-    progress = unlink(file.path("_targets", "meta", "progress")),
-    objects = unlink(file.path("_targets", "objects"), recursive = TRUE),
+    all = unlink(path_store(), recursive = TRUE),
+    meta = unlink(path_meta()),
+    progress = unlink(path_progress()),
+    objects = unlink(path_objects_dir(), recursive = TRUE),
     scratch = unlink(path_scratch_dir(), recursive = TRUE),
     workspaces = unlink(path_workspaces_dir(), recursive = TRUE)
   )

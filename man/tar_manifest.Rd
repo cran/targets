@@ -69,8 +69,8 @@ Along with \code{\link[=tar_visnetwork]{tar_visnetwork()}} and \code{\link[=tar_
 \code{tar_manifest()} helps check that you constructed your pipeline correctly.
 }
 \examples{
-if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
+if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   tar_option_set()
   list(
@@ -80,7 +80,7 @@ tar_script({
     tar_target(m, z, pattern = map(z)),
     tar_target(c, z, pattern = cross(z))
   )
-})
+}, ask = FALSE)
 tar_manifest()
 tar_manifest(fields = c("name", "command"))
 tar_manifest(fields = "command")

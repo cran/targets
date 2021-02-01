@@ -39,7 +39,7 @@ A list with two data frames: \code{vertices} and \code{edges}. The
 vertices data frame has one row per target with fields to denote
 the type of the target or object (stem, branch, map, cross, function,
 or object) and the target's status
-(up to date, outdated, running, cancelled, or errored).
+(up to date, outdated, running, canceled, or errored).
 The edges data frame has one row for every edge and columns \code{to} and
 \code{from} to mark the starting and terminating vertices.
 }
@@ -49,8 +49,8 @@ and return the vertices and edges of the directed acyclic graph
 of dependency relationships.
 }
 \examples{
-if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
+if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   tar_option_set()
   list(
@@ -58,7 +58,7 @@ tar_script({
     tar_target(y2, 1 + 1),
     tar_target(z, y1 + y2)
   )
-})
+}, ask = FALSE)
 tar_network(targets_only = TRUE)
 })
 }

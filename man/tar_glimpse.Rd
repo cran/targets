@@ -7,7 +7,7 @@
 tar_glimpse(
   targets_only = TRUE,
   allow = NULL,
-  exclude = NULL,
+  exclude = ".Random.seed",
   level_separation = NULL,
   callr_function = callr::r,
   callr_arguments = list()
@@ -58,8 +58,8 @@ renders faster. Also, \code{tar_glimpse()} omits functions and other global
 objects by default (but you can include them with \code{targets_only = FALSE}).
 }
 \examples{
-if (identical(Sys.getenv("TARGETS_INTERACTIVE_EXAMPLES"), "true")) {
-tar_dir({ # Write all files to a temporary directory.
+if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
+tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   tar_option_set()
   list(
@@ -67,7 +67,7 @@ tar_script({
     tar_target(y2, 1 + 1),
     tar_target(z, y1 + y2)
   )
-})
+}, ask = FALSE)
 tar_glimpse()
 tar_glimpse(allow = starts_with("y"))
 })

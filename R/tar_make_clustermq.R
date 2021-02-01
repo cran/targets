@@ -25,13 +25,13 @@
 #'   and `clustermq::workers()`.
 #' @examples
 #' if (!identical(tolower(Sys.info()[["sysname"]]), "windows")) {
-#' if (identical(Sys.getenv("TARGETS_LONG_EXAMPLES"), "true")) {
-#' tar_dir({ # Write all files to a temporary directory.
+#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   options(clustermq.scheduler = "multicore") # Does not work on Windows.
 #'   tar_option_set()
 #'   list(tar_target(x, 1 + 1))
-#' })
+#' }, ask = FALSE)
 #' tar_make_clustermq()
 #' })
 #' }
@@ -45,7 +45,7 @@ tar_make_clustermq <- function(
   callr_arguments = list()
 ) {
   assert_package("clustermq")
-  assert_target_script()
+  assert_script()
   reporter <- match.arg(reporter, choices = tar_make_reporters())
   assert_callr_function(callr_function)
   assert_list(callr_arguments, "callr_arguments mut be a list.")
