@@ -1,4 +1,8 @@
 path_script <- function() {
+  path_script_basename()
+}
+
+path_script_basename <- function() {
   "_targets.R"
 }
 
@@ -24,6 +28,10 @@ path_meta <- function() {
 
 path_progress <- function() {
   file.path(path_meta_dir(), "progress")
+}
+
+path_process <- function() {
+  file.path(path_meta_dir(), "process")
 }
 
 path_scratch <- function(pattern = "") {

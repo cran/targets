@@ -4,11 +4,15 @@
 \alias{tar_load}
 \title{Load the values of targets.}
 \usage{
-tar_load(names, branches = NULL, meta = tar_meta(), envir = parent.frame())
+tar_load(
+  names,
+  branches = NULL,
+  meta = tar_meta(targets_only = TRUE),
+  envir = parent.frame()
+)
 }
 \arguments{
-\item{names}{Names of the targets to build or check. Set to \code{NULL} to
-check/build all the targets (default). Otherwise, you can supply
+\item{names}{Names of the targets to load. You can supply
 symbols, a character vector, or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
 
 \item{branches}{Integer of indices of the branches to load

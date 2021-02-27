@@ -10,6 +10,7 @@
 #'   refreshes of the graph, and the other settings match
 #'   the arguments of [`tar_visnetwork()`].
 #' @return A handle to `callr::r_bg()` background process running the app.
+#' @inheritParams callr::r_bg
 #' @inheritParams tar_watch_ui
 #' @param label Label argument to [tar_visnetwork()].
 #' @param background Logical, whether to run the app in a background process
@@ -55,7 +56,8 @@ tar_watch <- function(
   browse = TRUE,
   host = getOption("shiny.host", "127.0.0.1"),
   port = getOption("shiny.port", targets::tar_random_port()),
-  verbose = TRUE
+  verbose = TRUE,
+  supervise = TRUE
 ) {
   pkgs <- c(
     "bs4Dash",
@@ -100,7 +102,7 @@ tar_watch <- function(
     args = args,
     stdout = "|",
     stderr = "|",
-    supervise = TRUE
+    supervise = supervise
   )
   if (browse) {
     url_port(host = host, port = port,  process = process, verbose = verbose)
@@ -177,11 +179,22 @@ tar_watch_app_ui <- function(
       height = height
     )
   )
-  bs4Dash::bs4DashPage(
-    title = "",
-    body = body,
-    navbar = bs4Dash::bs4DashNavbar(controlbarIcon = NULL),
-    sidebar = bs4Dash::bs4DashSidebar(disable = TRUE)
+  # TODO: update when bs4Dash 2 is on CRAN:
+  trn(
+    utils::packageVersion("bs4Dash") >= 2L,
+    bs4Dash::bs4DashPage(
+      title = "",
+      body = body,
+      header = bs4Dash::bs4DashNavbar(controlbarIcon = NULL),
+      sidebar = bs4Dash::bs4DashSidebar(disable = TRUE),
+      dark = FALSE
+    ),
+    bs4Dash::bs4DashPage(
+      title = "",
+      body = body,
+      navbar = bs4Dash::bs4DashNavbar(controlbarIcon = NULL),
+      sidebar = bs4Dash::bs4DashSidebar(disable = TRUE)
+    )
   )
 }
 
@@ -227,6 +240,8 @@ tar_watch_ui <- function(
       closable = FALSE,
       collapsible = FALSE,
       width = 3,
+      # TODO: update when bs4Dash 2 is on CRAN:
+      solidHeader = utils::packageVersion("bs4Dash") >= 2L,
       shinyWidgets::radioGroupButtons(
         inputId = ns("display"),
         label = NULL,
@@ -295,6 +310,8 @@ tar_watch_ui <- function(
       status = "primary",
       closable = FALSE,
       collapsible = FALSE,
+      # TODO: update when bs4Dash 2 is on CRAN:
+      solidHeader = utils::packageVersion("bs4Dash") >= 2L,
       width = 9,
       shiny::uiOutput(ns("display"))
     )
@@ -332,11 +349,21 @@ tar_watch_server <- function(id, height = "650px") {
         if (identical(react_refresh(), TRUE)) {
           shiny::invalidateLater(millis = millis())
         }
-        tar_visnetwork(
-          targets_only = targets_only(),
-          outdated = outdated_tl(),
-          label = label(),
-          level_separation = level_separation()
+        trn(
+          tar_exist_script(),
+          tar_visnetwork(
+            targets_only = targets_only(),
+            outdated = outdated_tl(),
+            label = label(),
+            level_separation = level_separation()
+          ),
+          visNetwork::visNetwork(
+            data_frame(
+              label = "No _targets.R file detected.",
+              shape = "text",
+              font.size = "30"
+            )
+          )
         )
       })
       output$branches <- gt::render_gt({
@@ -344,7 +371,7 @@ tar_watch_server <- function(id, height = "650px") {
           shiny::invalidateLater(millis = millis())
         }
         trn(
-          file.exists(path_progress()),
+          tar_exist_progress(),
           tar_progress_branches_gt(),
           gt_borderless(data_frame(progress = "No progress recorded."))
         )

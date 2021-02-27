@@ -133,12 +133,14 @@ inspection_class <- R6::R6Class(
         target_get_type(pipeline_get_target(pipeline, name))
       })
       progress <- self$progress$database$read_condensed_data()
+      # TODO: remove when targets >= 0.2.0 is in production:
+      progress$progress <- gsub("running", "started", x = progress$progress)
       if (self$outdated) {
         progress <- progress[progress$progress != "built",, drop = FALSE] # nolint
       }
       out <- merge(vertices, progress, all.x = TRUE, sort = FALSE)
       out <- out[order(out$name),, drop = FALSE] # nolint
-      levels <- c("running", "built", "canceled", "errored")
+      levels <- c("started", "built", "canceled", "errored")
       in_levels <- !is.na(out$progress) & out$progress %in% levels
       status <- ifelse(in_levels, out$progress, status)
       status[is.na(status)] <- "dormant"

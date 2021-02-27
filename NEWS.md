@@ -1,10 +1,42 @@
+# targets 0.2.0
+
+## Bug fixes
+
+* In `tar_load()`, subset metadata to avoid accidental attempts to load global objects in `tidyselect` calls.
+* Do not register a pattern as running unless an actual branch is about to start (#304).
+* Use a name spec in `vctrs::vec_c()` (#320, @joelnitta).
+
+## New features
+
+* Add a new `names` argument to `tar_objects()` and `tar_workspaces()` with `tidyselect` functionality.
+* Record info on the main process (PID, R version, `targets` version) in `_targets/meta/process` and write new functions `tar_process()` and `tar_pid()` to retrieve the data (#291, #292).
+* Add a new `targets_only` argument to `tar_meta()`.
+* Add new functions `tar_helper()` and `tar_helper_raw()` to write general-purpose R scripts, using tidy evaluation for as a template mechanism (#290, #291, #292, #306).
+* Export functions to check the existence of various pieces of local storage: `tar_exist_meta()`, `tar_exist_objects()`, `tar_exist_progress()`, `tar_exist_progress()`, `tar_exist_script()` (#310).
+* Add a new `supervise` argument to `tar_watch()`.
+* Add a new `complete_only` argument to `tar_meta()` to optionally return only complete rows (no `NA` values).
+* Catch `callr` errors and refer users to the debugging chapter of the manual.
+
+## Enhancements
+
+* Improve error messages of invalid arguments (#298, @brunocarlin). Removes partial argument matching in most cases.
+* By default, locally enable `crayon` if an only if the calling process is interactive (#302, @ginolhac). Can still be disabled with `options(crayon.enabled = FALSE)` in `_targets.R`.
+* Improve error handling and message for `format = "url"` when the HTTP response status code is not 200 (#303, @petrbouchal).
+* Add more `extras` packages to `tar_renv()` (to support `tar_watch()`).
+* Show informative message instead of error in `tar_watch()` if `_targets.R` does not exist.
+* Clear up the documentation of the `names` argument of `tar_load()` (#314, @jameelalsalam).
+* Do not override `nobody` in custom `curl` handles (#315, @riazarbi).
+* Rename "running" to "started" in the progress metadata. This avoids the implicit claim that `targets` is somehow actively monitoring each job, e.g. through a connection or heartbeat (#318).
+* Set `errormode = "warn"` in `getVDigest()` for files to work around https://github.com/eddelbuettel/digest/issues/49 for network drives on Windows. `targets` already runs those file checks anyway. (#316, @boshek).
+* If a package fails to load, print the library paths `targets` tried to load from.
+
 # targets 0.1.0
 
 ## Bug fixes
 
 * `tar_test()` now skips all tests on Solaris in order to fix the problems shown on the CRAN check page.
 * Enable `allow` and `exclude` to work on imports in `tar_visnetwork()` and `tar_glimpse()`.
-* Put `visNetwork` legends on right to deal with how legend nodes always align right within the legend space.
+* Put `visNetwork` legends on right to avoid crowding the graph.
 
 ## Performance
 

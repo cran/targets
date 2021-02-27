@@ -22,7 +22,7 @@ If \code{ask} and the \code{TAR_ASK} environment variable are both
 indeterminate, defaults to \code{interactive()}.}
 }
 \value{
-Nothing.
+\code{NULL} (invisibly).
 }
 \description{
 The \code{tar_script()} function is a convenient

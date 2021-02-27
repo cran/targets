@@ -17,7 +17,7 @@ tar_script({
 tar_make_clustermq(workers = 3L, reporter = "timestamp")
 tar_destroy()
 
-# If there are problems, inspect the example below.
+# If there are problems above, inspect the example below.
 envir <- globalenv()
 pipeline <- pipeline_init(
   list(
@@ -58,5 +58,5 @@ local$run()
 # scheduler$queue$data # nolint
 # should show downstream branches ready to build.
 # tar_name() # nolint
-# should show the target currently running.
+# should show the target currently in progress.
 tar_destroy()

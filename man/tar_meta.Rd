@@ -4,16 +4,23 @@
 \alias{tar_meta}
 \title{Read a project's metadata.}
 \usage{
-tar_meta(names = NULL, fields = NULL)
+tar_meta(
+  names = NULL,
+  fields = NULL,
+  targets_only = FALSE,
+  complete_only = FALSE
+)
 }
 \arguments{
 \item{names}{Optional, names of the targets. If supplied, \code{tar_meta()}
 only returns metadata on these targets.
 You can supply symbols, a character vector,
-or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
+or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.
+If \code{NULL}, all names are selected.}
 
 \item{fields}{Optional, names of columns/fields to select. If supplied,
 \code{tar_meta()} only returns the selected metadata columns.
+If \code{NULL}, all fields are selected.
 You can supply symbols, a character vector, or \code{tidyselect} helpers
 like \code{\link[=starts_with]{starts_with()}}. The \code{name} column is always included first
 no matter what you select. Choices:
@@ -46,6 +53,12 @@ have them. These include buds of stems and branches of patterns.
 from the last run of the target.
 \item \code{error}: character string of the error message if the target errored.
 }}
+
+\item{targets_only}{Logical, whether to just show information about targets
+or also return metadata on functions and other global objects.}
+
+\item{complete_only}{Logical, whether to return only complete rows
+(no \code{NA} values).}
 }
 \value{
 A data frame with one row per target/object and the selected fields.

@@ -4,16 +4,46 @@ callr_outer <- function(
   callr_function,
   callr_arguments
 ) {
+  tryCatch(
+    callr_dispatch(
+      targets_function,
+      targets_arguments,
+      callr_function,
+      callr_arguments
+    ),
+    callr_error = function(e) {
+      throw_run(
+        conditionMessage(e),
+        "\nVisit https://books.ropensci.org/targets/debugging.html ",
+        "for debugging advice."
+      )
+    }
+  )
+}
+
+callr_dispatch <- function(
+  targets_function,
+  targets_arguments,
+  callr_function,
+  callr_arguments
+) {
   assert_script()
+  targets_options <- list(crayon.enabled = interactive())
   callr_arguments$func <- callr_inner
   callr_arguments$args <- list(
     targets_script = path_script(),
     targets_function = targets_function,
-    targets_arguments = targets_arguments
+    targets_arguments = targets_arguments,
+    targets_options = targets_options
   )
   trn(
     is.null(callr_function),
-    callr_inner(path_script(), targets_function, targets_arguments),
+    callr_inner(
+      targets_script = path_script(),
+      targets_function = targets_function,
+      targets_arguments = targets_arguments,
+      targets_options = targets_options
+    ),
     do.call(
       callr_function,
       prepare_callr_arguments(callr_function, callr_arguments)
@@ -21,7 +51,13 @@ callr_outer <- function(
   )
 }
 
-callr_inner <- function(targets_script, targets_function, targets_arguments) {
+callr_inner <- function(
+  targets_script,
+  targets_function,
+  targets_arguments,
+  targets_options
+) {
+  withr::local_options(targets_options)
   value <- source(targets_script)$value
   targets_arguments$pipeline <- targets::as_pipeline(value)
   targets::pipeline_validate_lite(targets_arguments$pipeline)

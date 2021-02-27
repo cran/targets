@@ -10,8 +10,10 @@
 #'   only returns metadata on these targets.
 #'   You can supply symbols, a character vector,
 #'   or `tidyselect` helpers like [starts_with()].
+#'   If `NULL`, all names are selected.
 #' @param fields Optional, names of columns/fields to select. If supplied,
 #'   `tar_meta()` only returns the selected metadata columns.
+#'   If `NULL`, all fields are selected.
 #'   You can supply symbols, a character vector, or `tidyselect` helpers
 #'   like [starts_with()]. The `name` column is always included first
 #'   no matter what you select. Choices:
@@ -42,6 +44,10 @@
 #'   * `warnings`: character string of warning messages
 #'     from the last run of the target.
 #'   * `error`: character string of the error message if the target errored.
+#' @param targets_only Logical, whether to just show information about targets
+#'   or also return metadata on functions and other global objects.
+#' @param complete_only Logical, whether to return only complete rows
+#'   (no `NA` values).
 #' @examples
 #' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
@@ -56,7 +62,12 @@
 #' tar_meta(starts_with("y_"))
 #' })
 #' }
-tar_meta <- function(names = NULL, fields = NULL) {
+tar_meta <- function(
+  names = NULL,
+  fields = NULL,
+  targets_only = FALSE,
+  complete_only = FALSE
+) {
   assert_store()
   assert_path(path_meta())
   out <- tibble::as_tibble(meta_init()$database$read_condensed_data())
@@ -67,5 +78,13 @@ tar_meta <- function(names = NULL, fields = NULL) {
   if (!is.null(names)) {
     out <- out[match(names, out$name),, drop = FALSE] # nolint
   }
-  out[, base::union("name", fields), drop = FALSE]
+  if (targets_only) {
+    index <- out$type %in% c("function", "object")
+    out <- out[!index,, drop = FALSE] # nolint
+  }
+  out <- out[, base::union("name", fields), drop = FALSE]
+  if (complete_only) {
+    out <- out[stats::complete.cases(out),, drop = FALSE] # nolint
+  }
+  out
 }

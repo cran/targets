@@ -31,7 +31,7 @@
 #'       a pipeline object, which usually means ending with a call to
 #'       [list()]. In practice, (3) and (4) can be combined together
 #'       in the same function call.
-#' @return Nothing.
+#' @return `NULL` (invisibly).
 #' @param code R code to write to `_targets.R`. If `NULL`, an example
 #'   target script is written instead.
 #' @param library_targets logical, whether to write a `library(targets)`
@@ -54,7 +54,11 @@
 #' }, ask = FALSE)
 #' writeLines(readLines("_targets.R"))
 #' })
-tar_script <- function(code = NULL, library_targets = TRUE, ask = NULL) {
+tar_script <- function(
+  code = NULL,
+  library_targets = TRUE,
+  ask = NULL
+) {
   if (!tar_should_overwrite(ask, path_script())) {
     # covered in tests/interactive/test-tar_script.R # nolint
     return(invisible()) # nocov
@@ -62,27 +66,20 @@ tar_script <- function(code = NULL, library_targets = TRUE, ask = NULL) {
   assert_lgl(library_targets, "library_targets must be logical.")
   assert_scalar(library_targets, "library_targets must have length 1.")
   code <- substitute(code)
-  text <- trn(
-    length(code),
-    parse_target_script_code(code),
-    example_target_script()
-  )
-  assert_chr(text, "code arg of tar_script() must be parseable R code.")
+  text <- trn(length(code), deparse_script_code(code), example_target_script())
+  assert_chr(text, "code argument must be parseable R code.")
   if (library_targets) {
     text <- c("library(targets)", text)
   }
   writeLines(text, path_script())
+  invisible()
 }
 
 example_target_script <- function() {
-  path <- system.file(path_script(), package = "targets", mustWork = TRUE)
-  readLines(path)
-}
-
-parse_target_script_code <- function(code) {
-  trn(
-    length(code) > 1L && identical(deparse_safe(code[[1]]), "`{`"),
-    map_chr(code[-1], deparse_safe),
-    deparse_safe(code)
+  path <- system.file(
+    path_script_basename(),
+    package = "targets",
+    mustWork = TRUE
   )
+  readLines(path)
 }

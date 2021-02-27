@@ -142,7 +142,10 @@
 #'   * Custom target-level `future::plan()`, e.g.
 #'     `resources = list(plan = future.callr::callr)`.
 #'   * Custom `curl` handle if `format = "url"`,
-#'     e.g. `resources = list(handle = curl::new_handle())`.
+#'     e.g. `resources = list(handle = curl::new_handle(nobody = TRUE))`.
+#'     In custom handles, most users should manually set `nobody = TRUE`
+#'     so `targets` does not download the entire file when it
+#'     only needs to check the time stamp and ETag.
 #'   * Custom preset for `qs::qsave()` if `format = "qs"`, e.g.
 #'     `resources = list(handle = "archive")`.
 #'   * Custom compression level for `fst::write_fst()` if
@@ -215,19 +218,19 @@ tar_target <- function(
     "library in tar_target() must be NULL or character."
   )
   assert_format(format)
-  iteration <- match.arg(iteration, c("vector", "list", "group"))
-  error <- match.arg(error, c("stop", "continue", "workspace"))
-  memory <- match.arg(memory, c("persistent", "transient"))
+  assert_flag(iteration, c("vector", "list", "group"))
+  assert_flag(error, c("stop", "continue", "workspace"))
+  assert_flag(memory, c("persistent", "transient"))
   assert_lgl(garbage_collection, "garbage_collection must be logical.")
   assert_scalar(garbage_collection, "garbage_collection must be a scalar.")
-  deployment <- match.arg(deployment, c("worker", "main"))
+  assert_flag(deployment, c("worker", "main"))
   assert_dbl(priority)
   assert_scalar(priority)
   assert_ge(priority, 0)
   assert_le(priority, 1)
   assert_list(resources, "resources in tar_target() must be a named list.")
-  storage <- match.arg(storage, c("main", "worker"))
-  retrieval <- match.arg(retrieval, c("main", "worker"))
+  assert_flag(storage, c("main", "worker"))
+  assert_flag(retrieval, c("main", "worker"))
   if (!is.null(cue)) {
     cue_validate(cue)
   }
