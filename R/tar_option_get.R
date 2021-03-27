@@ -31,7 +31,7 @@
 #' }
 tar_option_get <- function(option) {
   assert_flag(option, choices = names(formals(tar_option_set)))
-  tar_envir_options[[option]] %||% tar_option_default(option)
+  tar_envir_options[[option]] %|||% tar_option_default(option)
 }
 
 tar_option_default <- function(option) {
@@ -49,6 +49,7 @@ tar_option_default <- function(option) {
     garbage_collection = FALSE,
     deployment = "worker",
     priority = 0,
+    backoff = 5,
     resources = list(),
     storage = "main",
     retrieval = "main",

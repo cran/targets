@@ -10,7 +10,19 @@
 #'   just feed them to [list()] in your `_targets.R` file.
 #' @inheritParams tar_target
 #' @inheritParams tar_option_set
-#' @param name Character of length 1, name of the target.
+#' @param name Character of length 1, name of the target. Subsequent targets
+#'   can refer to this name symbolically to induce a dependency relationship:
+#'   e.g. `tar_target(downstream_target, f(upstream_target))` is a
+#'   target named `downstream_target` which depends on a target
+#'   `upstream_target` and a function `f()`. In addition, a target's
+#'   name determines its random number generator seed. In this way,
+#'   each target runs with a reproducible seed so someone else
+#'   running the same pipeline should get the same results,
+#'   and no two targets in the same pipeline share the same seed.
+#'   (Even dynamic branches have different names and thus different seeds.)
+#'   You can recover the seed of a completed target
+#'   with `tar_meta(your_target, seed)` and run `set.seed()` on the result
+#'   to locally recreate the target's initial RNG state.
 #' @param command Similar to the `command` argument of [`tar_target()`] except
 #'   the object must already be an expression instead of
 #'   informally quoted code.
@@ -36,7 +48,7 @@
 #'   target_list <- lapply(seq_len(4), function(i) {
 #'     tar_target_raw(
 #'       letters[i + 1],
-#'       substitute(do_something(x), env = list(x = rlang::sym(letters[i])))
+#'       substitute(do_something(x), env = list(x = as.symbol(letters[i])))
 #'     )
 #'   })
 #'   print(target_list[[1]])
@@ -71,7 +83,7 @@ tar_target_raw <- function(
   assert_chr(name, "name arg of tar_target_raw() must be character")
   assert_chr(packages, "packages in tar_target_raw() must be character.")
   assert_chr(
-    library %||% character(0),
+    library %|||% character(0),
     "library in tar_target_raw() must be NULL or character."
   )
   assert_format(format)
@@ -102,7 +114,6 @@ tar_target_raw <- function(
     library = library,
     deps = deps,
     string = string,
-    envir = tar_option_get("envir"),
     format = format,
     iteration = iteration,
     error = error,

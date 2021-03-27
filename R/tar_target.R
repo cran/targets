@@ -8,7 +8,19 @@
 #'   for more details.
 #' @return A target object. Users should not modify these directly,
 #'   just feed them to [list()] in your `_targets.R` file.
-#' @param name Symbol, name of the target.
+#' @param name Symbol, name of the target. Subsequent targets
+#'   can refer to this name symbolically to induce a dependency relationship:
+#'   e.g. `tar_target(downstream_target, f(upstream_target))` is a
+#'   target named `downstream_target` which depends on a target
+#'   `upstream_target` and a function `f()`. In addition, a target's
+#'   name determines its random number generator seed. In this way,
+#'   each target runs with a reproducible seed so someone else
+#'   running the same pipeline should get the same results,
+#'   and no two targets in the same pipeline share the same seed.
+#'   (Even dynamic branches have different names and thus different seeds.)
+#'   You can recover the seed of a completed target
+#'   with `tar_meta(your_target, seed)` and run `set.seed()` on the result
+#'   to locally recreate the target's initial RNG state.
 #' @param command R code to run the target.
 #' @param pattern Language to define branching for a target.
 #'   For example, in a pipeline with numeric vector targets `x` and `y`,
@@ -35,24 +47,44 @@
 #'     most objects, much faster than `"rds"`. Optionally set the
 #'     preset for `qsave()` through the `resources` argument, e.g.
 #'     `tar_target(..., resources = list(preset = "archive"))`.
+#'     Requires the `qs` package (not installed by default).
+#'   * `"feather"`: Uses `arrow::write_feather()` and
+#'     `arrow::read_feather()` (version 2.0). Much faster than `"rds"`,
+#'     but the value must be a data frame. Optionally set
+#'     `compression` and `compression_level` in `arrow::write_feather()`
+#'     through the `resources` argument, e.g.
+#'     `tar_target(..., resources = list(compression = ...))`.
+#'     Requires the `arrow` package (not installed by default).
+#'   * `"parquet"`: Uses `arrow::write_parquet()` and
+#'     `arrow::read_parquet()` (version 2.0). Much faster than `"rds"`,
+#'     but the value must be a data frame. Optionally set
+#'     `compression` and `compression_level` in `arrow::write_parquet()`
+#'     through the `resources` argument, e.g.
+#'     `tar_target(..., resources = list(compression = ...))`.
+#'     Requires the `arrow` package (not installed by default).
 #'   * `"fst"`: Uses `fst::write_fst()` and `fst::read_fst()`.
 #'     Much faster than `"rds"`, but the value must be
 #'     a data frame. Optionally set the compression level for
 #'     `fst::write_fst()` through the `resources` argument, e.g.
 #'     `tar_target(..., resources = list(compress = 100))`.
+#'     Requires the `fst` package (not installed by default).
 #'   * `"fst_dt"`: Same as `"fst"`, but the value is a `data.table`.
 #'     Optionally set the compression level the same way as for `"fst"`.
 #'   * `"fst_tbl"`: Same as `"fst"`, but the value is a `tibble`.
 #'     Optionally set the compression level the same way as for `"fst"`.
 #'   * `"keras"`: Uses `keras::save_model_hdf5()` and
 #'     `keras::load_model_hdf5()`. The value must be a Keras model.
+#'     Requires the `keras` package (not installed by default).
 #'   * `"torch"`: Uses `torch::torch_save()` and `torch::torch_load()`.
 #'     The value must be an object from the `torch` package
 #'     such as a tensor or neural network module.
+#'     Requires the `torch` package (not installed by default).
 #'   * `"file"`: A dynamic file. To use this format,
 #'     the target needs to manually identify or save some data
 #'     and return a character vector of paths
-#'     to the data. Then, `targets` automatically checks those files and cues
+#'     to the data. (These paths must be existing files
+#'     and nonempty directories.)
+#'     Then, `targets` automatically checks those files and cues
 #'     the appropriate build decisions if those files are out of date.
 #'     Those paths must point to files or directories,
 #'     and they must not contain characters `|` or `*`.
@@ -72,7 +104,7 @@
 #'     certain the ETag and Last-Modified time stamp are fully updated
 #'     and available by the time the target's command finishes running.
 #'     `targets` makes no attempt to wait for the web server.
-#'   * `"aws_rds"`, `"aws_qs"`, `"aws_fst"`, `"aws_fst_dt"`,
+#'   * `"aws_rds"`, `"aws_qs"`, `"aws_parquet"`, `"aws_fst"`, `"aws_fst_dt"`,
 #'     `"aws_fst_tbl"`, `"aws_keras"`: AWS-powered versions of the
 #'     respective formats `"rds"`, `"qs"`, etc. The only difference
 #'     is that the data file is uploaded to the AWS S3 bucket
@@ -132,7 +164,8 @@
 #'   the target builds on the host machine / process managing the pipeline.
 #' @param priority Numeric of length 1 between 0 and 1. Controls which
 #'   targets get deployed first when multiple competing targets are ready
-#'   simultaneously. Targets with priorities closer to 1 get built earlier.
+#'   simultaneously. Targets with priorities closer to 1 get built earlier
+#'   (and polled earlier in [tar_make_future()]).
 #'   Only applies to [tar_make_future()] and [tar_make_clustermq()]
 #'   (not [tar_make()]). [tar_make_future()] with no extra settings is
 #'   a drop-in replacement for [tar_make()] in this case.
@@ -148,6 +181,9 @@
 #'     only needs to check the time stamp and ETag.
 #'   * Custom preset for `qs::qsave()` if `format = "qs"`, e.g.
 #'     `resources = list(handle = "archive")`.
+#'   * Arguments `compression` and `compression_level` to
+#'     `arrow::write_feather()` and `arrow:write_parquet()` if `format` is
+#'     `"feather"`, `"parquet"`, `"aws_feather"`, or `"aws_parquet"`.
 #'   * Custom compression level for `fst::write_fst()` if
 #'     `format` is `"fst"`, `"fst_dt"`, or `"fst_tbl"`, e.g.
 #'     `resources = list(compress = 100)`.
@@ -214,7 +250,7 @@ tar_target <- function(
   assert_lgl(tidy_eval, "tidy_eval in tar_target() must be logical.")
   assert_chr(packages, "packages in tar_target() must be character.")
   assert_chr(
-    library %||% character(0),
+    library %|||% character(0),
     "library in tar_target() must be NULL or character."
   )
   assert_format(format)
@@ -239,11 +275,10 @@ tar_target <- function(
   pattern <- as.expression(substitute(pattern))
   target_init(
     name = name,
-    expr = tidy_eval(expr, envir, tidy_eval),
-    pattern = tidy_eval(pattern, envir, tidy_eval),
+    expr = tar_tidy_eval(expr, envir, tidy_eval),
+    pattern = tar_tidy_eval(pattern, envir, tidy_eval),
     packages = packages,
     library = library,
-    envir = envir,
     format = format,
     iteration = iteration,
     error = error,

@@ -1,3 +1,39 @@
+# targets 0.3.0
+
+## Bug fixes
+
+* Fix the "write target at cursor" RStudio addin and move cursor between the parentheses.
+
+## New features
+
+* Add a `backoff` option in `tar_option_set()` to set the maximum upper bound (seconds) for the polling interval (#333).
+* Add a new `tar_github_actions()` function to write a GitHub Actions workflow file for continuous deployment of data analysis pipelines (#339, @jaredlander).
+* Add a new `TAR_MAKE_REPORTER` environment variable to globally set the reporter of the `tar_make*()` functions (#345, @alexpghayes).
+* Support new storage formats "feather", "parquet", "aws_feather", and "aws_parquet" (#355, @riazarbi).
+
+## Performance
+
+* Implement an exponential backoff algorithm for polling the priority queue in `tar_make_clustermq()` and `tar_make_future()` (#333). 
+* In `tar_make_future()`, try to submit a target every time a worker is polled.
+* In `tar_make_future()`, poll workers in order of target priority.
+* Avoid the time delay in exiting on error (from https://github.com/r-lib/callr/issues/185).
+* Clone target objects for the pipeline and scrape more `targets` internal objects out of the environment in order to avoid accidental massive data transfers to workers.
+
+## Enhancements
+
+* Use `rlang::check_installed()` inside `assert_package()` (#331, @malcolmbarrett).
+* Allow `tar_destroy(destroy = "process")`.
+* In `tar_watch()`, increase default `seconds` to 15 (previously 5).
+* In `tar_watch()`, debounce instead of throttle inputs.
+* In `tar_watch()`, add an action button to refresh the outputs.
+* Always deduplicate metadata after `tar_make()`. Will help compute a cache key on GitHub Actions and similar services.
+* Deprecate `tar_deduplicate()` due to the item above.
+* Reorder information in timestamped messages.
+* Document RNG seed generation in `tar_target_raw()`, `tar_meta()`, and `tar_seed()` (#357, @alexpghayes).
+* Switch meaning of `%||%` and `%|||%` to conform to historical precedent.
+* Only show a command line spinner if `reporter = "silent"` (#364, @matthiasgomolka).
+* Target and pipeline objects no longer have an `envir` element.
+
 # targets 0.2.0
 
 ## Bug fixes

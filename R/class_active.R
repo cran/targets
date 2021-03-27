@@ -17,7 +17,6 @@ active_new <- function(
 active_class <- R6::R6Class(
   classname = "tar_active",
   inherit = algorithm_class,
-  class = FALSE,
   portable = FALSE,
   cloneable = FALSE,
   public = list(
@@ -32,12 +31,18 @@ active_class <- R6::R6Class(
       self$process <- process_init()
       self$process$record_process()
     },
-    produce_exports = function(envir) {
-      out <- as.list(envir, all.names = TRUE)
-      # Eliminate high-memory promise objects:
-      map(names(out), ~force(out[[.x]]))
-      names <- fltr(names(out), ~!is_internal_name(.x, envir))
-      out[names]
+    produce_exports = function(envir, is_globalenv = NULL) {
+      map(names(envir), ~force(envir[[.x]])) # try to nix high-mem promises
+      if (is_globalenv %|||% identical(envir, globalenv())) {
+        out <- as.list(envir, all.names = TRUE)
+        out <- out[fltr(names(out), ~!is_internal_name(.x, envir))]
+        out[[".tar_envir_5048826d"]] <- "globalenv"
+      } else {
+        discard <- fltr(names(envir), ~is_internal_name(.x, envir))
+        remove(list = discard, envir = envir)
+        out <- list(.tar_envir_5048826d = envir)
+      }
+      out
     },
     unload_transient = function() {
       pipeline_unload_transient(self$pipeline)
@@ -55,6 +60,7 @@ active_class <- R6::R6Class(
       target_sync_file_meta(target, self$meta)
     },
     process_target = function(name) {
+      self$scheduler$backoff$reset()
       target <- pipeline_get_target(self$pipeline, name)
       target_debug(target)
       target_update_depend(target, self$pipeline, self$meta)
@@ -78,6 +84,7 @@ active_class <- R6::R6Class(
       scheduler <- self$scheduler
       scheduler$reporter$report_end(scheduler$progress)
       path_scratch_del()
+      self$meta$database$deduplicate_storage()
     },
     validate = function() {
       super$validate()

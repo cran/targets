@@ -11,6 +11,7 @@ tar_test("tar_envir() custom default", {
 })
 
 tar_test("tar_envir() in a pipeline with automatic default", {
+  skip_on_cran()
   tar_script({
     f <- function(z) {
       g(z)
@@ -28,6 +29,7 @@ tar_test("tar_envir() in a pipeline with automatic default", {
 })
 
 tar_test("tar_envir() in a pipeline with custom default", {
+  skip_on_cran()
   tar_script({
     f <- function(z) {
       g(z)

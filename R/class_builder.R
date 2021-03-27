@@ -2,7 +2,6 @@ builder_new <- function(
   command = NULL,
   settings = NULL,
   cue = NULL,
-  cache = NULL,
   value = NULL,
   metrics = NULL,
   store = NULL,
@@ -11,7 +10,6 @@ builder_new <- function(
   force(command)
   force(settings)
   force(cue)
-  force(cache)
   force(value)
   force(metrics)
   force(store)
@@ -66,26 +64,26 @@ target_should_run_worker.tar_builder <- function(target) {
 }
 
 #' @export
-target_run.tar_builder <- function(target) {
+target_run.tar_builder <- function(target, envir) {
   on.exit({
     builder_unset_tar_envir_run()
-    cache_clear_objects(target$cache)
     target$subpipeline <- NULL
   })
-  builder_set_tar_envir_run(target)
+  envir <- trn(identical(envir, "globalenv"), globalenv(), envir)
   builder_unserialize_subpipeline(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
-  target_cache_deps(target, target$subpipeline)
-  builder_update_build(target)
+  frames <- frames_produce(envir, target, target$subpipeline)
+  builder_set_tar_envir_run(target, frames)
+  builder_update_build(target, frames_get_envir(frames))
   builder_update_paths(target)
   builder_ensure_object(target, "worker")
   target
 }
 
 #' @export
-target_run_worker.tar_builder <- function(target) {
+target_run_worker.tar_builder <- function(target, envir) {
   target_gc(target)
-  target_run(target)
+  target_run(target, envir)
   builder_serialize_value(target)
   target
 }
@@ -218,8 +216,19 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
   trn(
     identical(target$settings$error, "continue"),
     scheduler$reporter$report_error(target$metrics$error),
-    throw_run(target$metrics$error)
+    builder_exit(target, pipeline, scheduler, meta)
   )
+}
+
+builder_exit <- function(target, pipeline, scheduler, meta) {
+  # TODO: remove this hack that compensates for
+  # https://github.com/r-lib/callr/issues/185:
+  if (!identical(Sys.getenv("TAR_TEST"), "true")) {
+    target$value <- NULL
+    pipeline$targets <- NULL
+  }
+  # Keep this:
+  throw_run(target$metrics$error)
 }
 
 builder_ensure_workspace <- function(target, pipeline, scheduler) {
@@ -239,8 +248,7 @@ builder_record_error_meta <- function(target, pipeline, meta) {
   meta$insert_record(record)
 }
 
-builder_update_build <- function(target) {
-  envir <- cache_get_envir(target$cache)
+builder_update_build <- function(target, envir) {
   build <- command_produce_build(target$command, envir)
   object <- store_coerce_object(target$store, build$object)
   target$value <- value_init(object, target$settings$iteration)
@@ -290,12 +298,14 @@ builder_wait_correct_hash <- function(target) {
   store_ensure_correct_hash(target$store, storage, deployment)
 }
 
-builder_set_tar_envir_run <- function(target) {
+builder_set_tar_envir_run <- function(target, frames) {
   assign(x = "target", value = target, envir = tar_envir_run)
+  assign(x = "frames", value = frames, envir = tar_envir_run)
 }
 
 builder_unset_tar_envir_run <- function() {
-  remove(list = "target", envir = tar_envir_run, inherits = FALSE)
+  list <- c("target", "frames")
+  remove(list = list, envir = tar_envir_run, inherits = FALSE)
 }
 
 builder_serialize_value <- function(target) {

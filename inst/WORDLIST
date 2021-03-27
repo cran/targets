@@ -12,6 +12,7 @@ Ane
 args
 Args
 autoclean
+aws
 Axthelm
 backoff
 Badi
@@ -59,9 +60,12 @@ customizable
 cyclomatic
 da
 DataFest
+debounce
 deduplicate
+deduplication
 del
 demografia
+deprecation
 deps
 dequeue
 dequeued
@@ -77,6 +81,7 @@ dplyr
 DSL
 drakeplanner
 DropBox
+ds
 dt
 Ebihara
 Ecdat

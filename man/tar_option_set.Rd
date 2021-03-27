@@ -17,6 +17,7 @@ tar_option_set(
   garbage_collection = NULL,
   deployment = NULL,
   priority = NULL,
+  backoff = NULL,
   resources = NULL,
   storage = NULL,
   retrieval = NULL,
@@ -51,7 +52,28 @@ everything in \code{tar_option_get("imports")}.}
 when loading \code{packages}.}
 
 \item{envir}{Environment containing functions and global objects
-used in the R commands to run targets.}
+used in the R commands to run targets. Defaults to the global environment.
+If \code{envir} is the global environment, all the promise objects
+are diffused before sending the data to parallel workers
+in \code{\link[=tar_make_future]{tar_make_future()}} and \code{\link[=tar_make_clustermq]{tar_make_clustermq()}},
+but otherwise the environment is unmodified.
+This behavior improves performance by decreasing
+the size of data sent to workers.
+
+If \code{envir} is not the global environment, then it should at least inherit
+from the global environment or base environment
+so \code{targets} can access attached packages.
+In the case of a non-global \code{envir}, \code{targets} attempts to remove
+potentially high memory objects that come directly from \code{targets}.
+That includes \code{tar_target()} objects of class \code{"tar_target"},
+as well as objects of class \code{"tar_pipeline"} or \code{"tar_algorithm"}.
+This behavior improves performance by decreasing
+the size of data sent to workers.
+
+Package environments should not be assigned to \code{envir}.
+To include package objects as upstream dependencies in the pipeline,
+assign the package to the \code{packages} and \code{imports} arguments
+of \code{tar_option_set()}.}
 
 \item{format}{Optional storage format for the target's return value.
 With the exception of \code{format = "file"}, each target
@@ -65,24 +87,44 @@ most objects, but slow.
 most objects, much faster than \code{"rds"}. Optionally set the
 preset for \code{qsave()} through the \code{resources} argument, e.g.
 \code{tar_target(..., resources = list(preset = "archive"))}.
+Requires the \code{qs} package (not installed by default).
+\item \code{"feather"}: Uses \code{arrow::write_feather()} and
+\code{arrow::read_feather()} (version 2.0). Much faster than \code{"rds"},
+but the value must be a data frame. Optionally set
+\code{compression} and \code{compression_level} in \code{arrow::write_feather()}
+through the \code{resources} argument, e.g.
+\code{tar_target(..., resources = list(compression = ...))}.
+Requires the \code{arrow} package (not installed by default).
+\item \code{"parquet"}: Uses \code{arrow::write_parquet()} and
+\code{arrow::read_parquet()} (version 2.0). Much faster than \code{"rds"},
+but the value must be a data frame. Optionally set
+\code{compression} and \code{compression_level} in \code{arrow::write_parquet()}
+through the \code{resources} argument, e.g.
+\code{tar_target(..., resources = list(compression = ...))}.
+Requires the \code{arrow} package (not installed by default).
 \item \code{"fst"}: Uses \code{fst::write_fst()} and \code{fst::read_fst()}.
 Much faster than \code{"rds"}, but the value must be
 a data frame. Optionally set the compression level for
 \code{fst::write_fst()} through the \code{resources} argument, e.g.
 \code{tar_target(..., resources = list(compress = 100))}.
+Requires the \code{fst} package (not installed by default).
 \item \code{"fst_dt"}: Same as \code{"fst"}, but the value is a \code{data.table}.
 Optionally set the compression level the same way as for \code{"fst"}.
 \item \code{"fst_tbl"}: Same as \code{"fst"}, but the value is a \code{tibble}.
 Optionally set the compression level the same way as for \code{"fst"}.
 \item \code{"keras"}: Uses \code{keras::save_model_hdf5()} and
 \code{keras::load_model_hdf5()}. The value must be a Keras model.
+Requires the \code{keras} package (not installed by default).
 \item \code{"torch"}: Uses \code{torch::torch_save()} and \code{torch::torch_load()}.
 The value must be an object from the \code{torch} package
 such as a tensor or neural network module.
+Requires the \code{torch} package (not installed by default).
 \item \code{"file"}: A dynamic file. To use this format,
 the target needs to manually identify or save some data
 and return a character vector of paths
-to the data. Then, \code{targets} automatically checks those files and cues
+to the data. (These paths must be existing files
+and nonempty directories.)
+Then, \code{targets} automatically checks those files and cues
 the appropriate build decisions if those files are out of date.
 Those paths must point to files or directories,
 and they must not contain characters \code{|} or \code{*}.
@@ -102,7 +144,7 @@ trying to use \code{format = "url"} to track uploads. You must be absolutely
 certain the ETag and Last-Modified time stamp are fully updated
 and available by the time the target's command finishes running.
 \code{targets} makes no attempt to wait for the web server.
-\item \code{"aws_rds"}, \code{"aws_qs"}, \code{"aws_fst"}, \code{"aws_fst_dt"},
+\item \code{"aws_rds"}, \code{"aws_qs"}, \code{"aws_parquet"}, \code{"aws_fst"}, \code{"aws_fst_dt"},
 \code{"aws_fst_tbl"}, \code{"aws_keras"}: AWS-powered versions of the
 respective formats \code{"rds"}, \code{"qs"}, etc. The only difference
 is that the data file is uploaded to the AWS S3 bucket
@@ -171,10 +213,26 @@ the target builds on the host machine / process managing the pipeline.}
 
 \item{priority}{Numeric of length 1 between 0 and 1. Controls which
 targets get deployed first when multiple competing targets are ready
-simultaneously. Targets with priorities closer to 1 get built earlier.
+simultaneously. Targets with priorities closer to 1 get built earlier
+(and polled earlier in \code{\link[=tar_make_future]{tar_make_future()}}).
 Only applies to \code{\link[=tar_make_future]{tar_make_future()}} and \code{\link[=tar_make_clustermq]{tar_make_clustermq()}}
 (not \code{\link[=tar_make]{tar_make()}}). \code{\link[=tar_make_future]{tar_make_future()}} with no extra settings is
 a drop-in replacement for \code{\link[=tar_make]{tar_make()}} in this case.}
+
+\item{backoff}{Numeric of length 1, must be greater than or equal to 0.01.
+Maximum upper bound of the random polling interval
+for the priority queue (seconds).
+In high-performance computing (e.g. \code{\link[=tar_make_clustermq]{tar_make_clustermq()}}
+and \code{\link[=tar_make_future]{tar_make_future()}}) it can be expensive to repeatedly poll the
+priority queue if no targets are ready to process. The number of seconds
+between polls is \code{runif(1, 0.01, max(backoff, 0.01 * 1.5 ^ index))},
+where \code{index} is the number of consecutive polls so far that found
+no targets ready to skip or run.
+(If no target is ready, \code{index} goes up by 1. If a target is ready,
+\code{index} resets to 0. For more information on exponential,
+backoff, visit \url{https://en.wikipedia.org/wiki/Exponential_backoff}).
+Raising \code{backoff} is kinder to the CPU etc. but may incur delays
+in some instances.}
 
 \item{resources}{A named list of computing resources. Uses:
 \itemize{
@@ -189,6 +247,9 @@ so \code{targets} does not download the entire file when it
 only needs to check the time stamp and ETag.
 \item Custom preset for \code{qs::qsave()} if \code{format = "qs"}, e.g.
 \code{resources = list(handle = "archive")}.
+\item Arguments \code{compression} and \code{compression_level} to
+\code{arrow::write_feather()} and \code{arrow:write_parquet()} if \code{format} is
+\code{"feather"}, \code{"parquet"}, \code{"aws_feather"}, or \code{"aws_parquet"}.
 \item Custom compression level for \code{fst::write_fst()} if
 \code{format} is \code{"fst"}, \code{"fst_dt"}, or \code{"fst_tbl"}, e.g.
 \code{resources = list(compress = 100)}.

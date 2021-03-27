@@ -38,11 +38,11 @@
 #' }
 tar_make_clustermq <- function(
   names = NULL,
-  reporter = "verbose",
+  reporter = Sys.getenv("TAR_MAKE_REPORTER", unset = "verbose"),
   workers = 1L,
   log_worker = FALSE,
   callr_function = callr::r,
-  callr_arguments = list()
+  callr_arguments = targets::callr_args_default(callr_function, reporter)
 ) {
   assert_package("clustermq")
   assert_script()

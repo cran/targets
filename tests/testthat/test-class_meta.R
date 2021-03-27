@@ -22,7 +22,7 @@ tar_test("meta$get_record()", {
 tar_test("builder metadata recording", {
   out <- meta_init()
   target <- target_init("x", quote(sample.int(100)))
-  pipeline <- pipeline_init(list(target))
+  pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
   local$run()
   meta <- local$meta
@@ -59,7 +59,8 @@ tar_test("meta$record_imports()", {
 tar_test("metadata recorded in local algo", {
   envir <- new.env(parent = baseenv())
   envir$b <- "x"
-  target <- target_init(name = "a", expr = quote(c(1, 1)), envir = envir)
+  tar_option_set(envir = envir)
+  target <- target_init(name = "a", expr = quote(c(1, 1)))
   pipeline <- pipeline_init(list(target))
   local <- local_init(pipeline)
   local$run()
@@ -80,19 +81,19 @@ tar_test("metadata recorded in local algo", {
   expect_equal(sort(data$name), sort(c("a", "b")))
 })
 
-tar_test("metadata storage is not duplicated", {
+tar_test("metadata storage is duplicated", {
   envir <- new.env(parent = baseenv())
   envir$file_create <- function(x) {
     file.create(x)
     x
   }
+  tar_option_set(envir = envir)
   for (index in seq_len(5)) {
     unlink(file.path("_targets", "objects"), recursive = TRUE)
     envir$b <- letters[index]
     target <- target_init(
       name = "a",
       expr = quote(file_create(b)),
-      envir = envir,
       format = "file"
     )
     pipeline <- pipeline_init(list(target))
@@ -100,9 +101,9 @@ tar_test("metadata storage is not duplicated", {
     local$run()
   }
   data <- local$meta$database$read_data()
-  expect_equal(nrow(data), 6L)
-  expect_equal(unique(table(data$name)), 2L)
-  expect_equal(sort(unique(unlist(data$path))), sort(c("d", "e")))
+  expect_equal(nrow(data), 3L)
+  expect_equal(unique(table(data$name)), 1L)
+  expect_equal(sort(unique(unlist(data$path))), sort(c("e")))
 })
 
 tar_test("errored targets get old path and old format in meta", {
@@ -123,17 +124,18 @@ tar_test("errored targets get old path and old format in meta", {
   expect_equal(data$format, "qs")
 })
 
-tar_test("can read old metadata with a error & a non-error", {
+tar_test("can read metadata with a error & a non-error", {
   skip_if_not_installed("qs")
-  x <- target_init(name = "abc", expr = quote(123), format = "qs")
-  local_init(pipeline_init(list(x)))$run()
-  x <- target_init(
-    name = "abc",
-    expr = quote(stop(123)),
-    format = "rds",
-    error = "continue"
+  targets <- list(
+    target_init(name = "abc", expr = quote(123), format = "qs"),
+    target_init(
+      name = "xyz",
+      expr = quote(stop(abc)),
+      format = "qs",
+      error = "continue"
+    )
   )
-  local_init(pipeline_init(list(x)))$run()
+  local_init(pipeline_init(targets))$run()
   data <- meta_init()$database$read_data()
   expect_equal(nrow(data), 2L)
   expect_equal(colnames(data), header_meta())
@@ -141,7 +143,8 @@ tar_test("can read old metadata with a error & a non-error", {
 
 tar_test("meta$produce_depend() empty", {
   envir <- new.env(parent = globalenv())
-  x <- target_init(name = "x", expr = quote(1), envir = envir)
+  tar_option_set(envir = envir)
+  x <- target_init(name = "x", expr = quote(1))
   pipeline <- pipeline_init(list(x))
   local <- local_init(pipeline)
   local$run()
@@ -154,8 +157,9 @@ tar_test("meta$produce_depend() empty", {
 tar_test("meta$produce_depend() nonempty", {
   envir <- new.env(parent = baseenv())
   envir$w <- "w"
-  x <- target_init(name = "x", expr = quote(w), envir = envir)
-  y <- target_init(name = "y", expr = quote(c(w, x)), envir = envir)
+  tar_option_set(envir = envir)
+  x <- target_init(name = "x", expr = quote(w))
+  y <- target_init(name = "y", expr = quote(c(w, x)))
   pipeline <- pipeline_init(list(x, y))
   local <- local_init(pipeline)
   local$run()

@@ -9,11 +9,11 @@
 #'   `rstudioapi::getActiveDocumentContext()`.
 rstudio_addin_tar_load <- function(context = NULL) {
   assert_package("rstudioapi")
-  context <- context %|||% rstudioapi::getActiveDocumentContext()
+  context <- context %||% rstudioapi::getActiveDocumentContext()
   target <- rstudio_symbol_at_cursor(context)
   if (!is.null(target)) {
     cli_blue_bullet(paste("Loading target", target, "into global evironment."))
-    env <- list(target = rlang::sym(target))
+    env <- list(target = as.symbol(target))
     eval(substitute(targets::tar_load(target, envir = globalenv()), env = env))
   }
 }

@@ -80,7 +80,7 @@ tar_sitrep <- function(
   fields = NULL,
   reporter = "silent",
   callr_function = callr::r,
-  callr_arguments = list(spinner = identical(reporter, "silent"))
+  callr_arguments = targets::callr_args_default(callr_function, reporter)
 ) {
   assert_script()
   names_quosure <- rlang::enquo(names)
@@ -126,6 +126,6 @@ tar_sitrep_inner <- function(
   if (!is.null(names)) {
     out <- out[match(names, out$name),, drop = FALSE] # nolint
   }
-  fields <- eval_tidyselect(fields_quosure, colnames(out)) %||% colnames(out)
+  fields <- eval_tidyselect(fields_quosure, colnames(out)) %|||% colnames(out)
   out[, base::union("name", fields), drop = FALSE]
 }

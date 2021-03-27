@@ -37,7 +37,6 @@ future_new <- function(
 future_class <- R6::R6Class(
   classname = "tar_future",
   inherit = active_class,
-  class = FALSE,
   portable = FALSE,
   cloneable = FALSE,
   public = list(
@@ -63,7 +62,7 @@ future_class <- R6::R6Class(
       self$crew <- memory_init()
     },
     update_globals = function() {
-      self$globals <- self$produce_exports(self$pipeline$envir)
+      self$globals <- self$produce_exports(tar_option_get("envir"))
     },
     ensure_globals = function() {
       if (is.null(self$globals)) {
@@ -73,7 +72,7 @@ future_class <- R6::R6Class(
     run_worker = function(target) {
       self$ensure_globals()
       globals <- self$globals
-      globals$.targets_target_5048826d <- target
+      globals$.tar_target_5048826d <- target
       plan_new <- target$settings$resources$plan
       if (!is.null(plan_new)) {
         # Temporary solution to allow heterogeneous workers
@@ -87,7 +86,7 @@ future_class <- R6::R6Class(
         future::plan(plan_new, .cleanup = FALSE)
       }
       future <- future::future(
-        expr = target_run_worker(.targets_target_5048826d),
+        expr = target_run_worker(.tar_target_5048826d, .tar_envir_5048826d),
         packages = "targets",
         globals = globals,
         label = target_get_name(target),
@@ -102,7 +101,7 @@ future_class <- R6::R6Class(
       )
     },
     run_main = function(target) {
-      target_run(target)
+      target_run(target, tar_option_get("envir"))
       target_conclude(
         target,
         self$pipeline,
@@ -122,7 +121,7 @@ future_class <- R6::R6Class(
       self$unload_transient()
     },
     wait = function() {
-      Sys.sleep(0.001)
+      self$scheduler$backoff$wait()
     },
     next_target = function() {
       queue <- self$scheduler$queue
@@ -140,29 +139,46 @@ future_class <- R6::R6Class(
         self$meta
       )
     },
-    scan_worker = function(name) {
+    can_submit = function() {
+      self$crew$count < self$workers &&
+        self$scheduler$queue$is_nonempty()
+    },
+    try_submit = function(wait) {
+      if (self$can_submit()) {
+        self$next_target()
+      } else if (wait) {
+        self$wait()
+      }
+    },
+    process_worker = function(name) {
       worker <- memory_get_object(self$crew, name)
       if (future::resolved(worker)) {
         self$conclude_worker_target(future::value(worker))
         memory_del_objects(self$crew, name)
       }
+      self$try_submit(wait = FALSE)
+    },
+    process_workers = function() {
+      names <- self$crew$names
+      if (!length(names)) {
+        return()
+      }
+      targets <- map(names, ~pipeline_get_target(self$pipeline, .x))
+      priorities <- map_dbl(targets, ~.x$settings$priority)
+      names(priorities) <- names
+      names <- names(sort(priorities, decreasing = TRUE))
+      lapply(names, self$process_worker)
     },
     iterate = function() {
-      lapply(self$crew$names, self$scan_worker)
-      should_submit <- self$crew$count < self$workers &&
-        self$scheduler$queue$is_nonempty()
-      trn(
-        should_submit,
-        self$next_target(),
-        self$wait()
-      )
+      self$process_workers()
+      self$try_submit(wait = TRUE)
     },
     run = function() {
       self$start()
+      on.exit(self$end())
       while (self$scheduler$progress$any_remaining()) {
         self$iterate()
       }
-      self$end()
     },
     end = function() {
       # Cleans up psock clusters.
