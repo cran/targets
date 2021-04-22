@@ -1,5 +1,6 @@
 #' @title Check which targets are outdated.
 #' @export
+#' @family inspect
 #' @description Checks for outdated targets in the pipeline,
 #'   targets that will be rerun automatically if you call
 #'   [tar_make()] or similar. See [tar_cue()] for the rules
@@ -84,7 +85,7 @@ tar_outdated_inner <- function(
   names_all <- pipeline_get_names(pipeline)
   names <- eval_tidyselect(names_quosure, names_all)
   meta <- meta_init()
-  outdated_globals <- trn(
+  outdated_globals <- if_any(
     targets_only,
     character(0),
     tar_outdated_globals(pipeline, meta)

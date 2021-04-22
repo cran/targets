@@ -1,5 +1,6 @@
 #' @title Produce a data frame of information about your targets.
 #' @export
+#' @family inspect
 #' @description Along with [tar_visnetwork()] and [tar_glimpse()],
 #'   `tar_manifest()` helps check that you constructed your pipeline correctly.
 #' @return A data frame of information about the targets in the pipeline.
@@ -125,7 +126,7 @@ tar_manifest_command <- function(expr) {
 }
 
 tar_manifest_pattern <- function(pattern) {
-  trn(
+  if_any(
     is.null(pattern),
     NA_character_,
     string_sub_expression(deparse_safe(pattern, collapse = " "))

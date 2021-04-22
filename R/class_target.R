@@ -37,7 +37,7 @@ target_init <- function(
   )
   command$deps <- unique(c(command$deps, settings$dimensions))
   command$deps <- setdiff(command$deps, name)
-  trn(
+  if_any(
     is.null(settings$pattern),
     stem_new(
       command,
@@ -220,6 +220,15 @@ target_should_run_worker <- function(target) {
 
 #' @export
 target_should_run_worker.default <- function(target) {
+  FALSE
+}
+
+target_needs_worker <- function(target) {
+  UseMethod("target_needs_worker")
+}
+
+#' @export
+target_needs_worker.default <- function(target) {
   FALSE
 }
 

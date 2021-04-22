@@ -36,7 +36,7 @@ callr_dispatch <- function(
     targets_arguments = targets_arguments,
     targets_options = targets_options
   )
-  trn(
+  if_any(
     is.null(callr_function),
     callr_inner(
       targets_script = path_script(),
@@ -57,6 +57,11 @@ callr_inner <- function(
   targets_arguments,
   targets_options
 ) {
+  tar_config <- getNamespace("targets")$tar_config
+  tar_config$unset_lock()
+  tar_config$ensure()
+  tar_config$set_lock()
+  on.exit(tar_config$unset_lock())
   withr::local_options(targets_options)
   value <- source(targets_script)$value
   targets_arguments$pipeline <- targets::as_pipeline(value)
@@ -94,6 +99,6 @@ callr_args_default <- function(callr_function, reporter = NULL) {
   if (is.null(callr_function)) {
     return(list())
   }
-  out <- list(spinner = identical(reporter, "silent"))
+  out <- list(spinner = !identical(reporter, "summary"))
   out[intersect(names(out), names(formals(callr_function)))]
 }

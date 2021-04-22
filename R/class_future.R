@@ -113,14 +113,14 @@ future_class <- R6::R6Class(
       target <- pipeline_get_target(self$pipeline, name)
       target_gc(target)
       target_prepare(target, self$pipeline, self$scheduler)
-      trn(
+      if_any(
         target_should_run_worker(target),
         self$run_worker(target),
         self$run_main(target)
       )
       self$unload_transient()
     },
-    wait = function() {
+    backoff = function() {
       self$scheduler$backoff$wait()
     },
     next_target = function() {
@@ -147,7 +147,7 @@ future_class <- R6::R6Class(
       if (self$can_submit()) {
         self$next_target()
       } else if (wait) {
-        self$wait()
+        self$backoff()
       }
     },
     process_worker = function(name) {

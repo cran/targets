@@ -38,7 +38,7 @@ target_produce_record.tar_pattern <- function(target, pipeline, meta) {
 
 #' @export
 target_skip.tar_pattern <- function(target, pipeline, scheduler, meta) {
-  trn(
+  if_any(
     is.null(target$junction),
     pattern_skip_initial(target, pipeline, scheduler, meta),
     pattern_skip_final(target, pipeline, scheduler, meta)
@@ -47,7 +47,7 @@ target_skip.tar_pattern <- function(target, pipeline, scheduler, meta) {
 
 #' @export
 target_conclude.tar_pattern <- function(target, pipeline, scheduler, meta) {
-  trn(
+  if_any(
     is.null(target$junction),
     pattern_conclude_initial(target, pipeline, scheduler, meta),
     pattern_conclude_final(target, pipeline, scheduler, meta)
@@ -104,6 +104,12 @@ target_produce_junction.tar_pattern <- function(target, pipeline) {
 #' @export
 target_get_type.tar_pattern <- function(target) {
   "pattern"
+}
+
+#' @export
+target_needs_worker.tar_pattern <- function(target) {
+  identical(target$settings$deployment, "worker") &&
+    is.null(target$junction)
 }
 
 #' @export
@@ -225,6 +231,9 @@ pattern_conclude_final <- function(target, pipeline, scheduler, meta) {
   pattern_skip_final(target, pipeline, scheduler, meta)
   pattern_record_meta(target, pipeline, meta)
   patternview_register_final(target$patternview, target, scheduler)
+  if (identical(target$patternview$progress, "built")) {
+    scheduler$reporter$report_built(target, scheduler$progress)
+  }
 }
 
 pattern_skip_initial <- function(target, pipeline, scheduler, meta) {
@@ -266,7 +275,7 @@ pipeline_assert_dimension <- function(target, pipeline, name) {
 
 pattern_record_meta <- function(target, pipeline, meta) {
   name <- target_get_name(target)
-  old_data <- trn(
+  old_data <- if_any(
     meta$exists_record(name),
     meta$get_record(name)$data,
     NA_character_

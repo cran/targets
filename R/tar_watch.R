@@ -1,6 +1,7 @@
 # nocov start # Tested in tests/interactive/test-tar_watch.R
 #' @title Shiny app to watch the dependency graph.
 #' @export
+#' @family progress
 #' @description Launches a background process with a Shiny app
 #'   that calls [tar_visnetwork()] every few seconds.
 #'   To embed this app in other apps, use the Shiny module
@@ -43,7 +44,7 @@
 #' })
 #' }
 tar_watch <- function(
-  seconds = 15,
+  seconds = 10,
   seconds_min = 1,
   seconds_max = 60,
   seconds_step = 1,
@@ -62,9 +63,10 @@ tar_watch <- function(
   pkgs <- c(
     "bs4Dash",
     "gt",
+    "markdown",
     "pingr",
     "shiny",
-    "shinycssloaders",
+    "shinybusy",
     "shinyWidgets",
     "visNetwork"
   )
@@ -165,6 +167,7 @@ tar_watch_app_ui <- function(
   height
 ) {
   body <- bs4Dash::bs4DashBody(
+    shinybusy::add_busy_spinner(position = "top-left"),
     tar_watch_ui(
       id = "tar_watch_id",
       label = "tar_watch_label",
@@ -180,7 +183,7 @@ tar_watch_app_ui <- function(
     )
   )
   # TODO: update when bs4Dash 2 is on CRAN:
-  trn(
+  if_any(
     utils::packageVersion("bs4Dash") >= 2L,
     bs4Dash::bs4DashPage(
       title = "",
@@ -195,210 +198,6 @@ tar_watch_app_ui <- function(
       navbar = bs4Dash::bs4DashNavbar(controlbarIcon = NULL),
       sidebar = bs4Dash::bs4DashSidebar(disable = TRUE)
     )
-  )
-}
-
-#' @title Shiny module UI for tar_watch()
-#' @export
-#' @description Use `tar_watch_ui()` and [tar_watch_server()]
-#'   to include [tar_watch()] as a Shiny module in an app.
-#' @return A Shiny module UI.
-#' @inheritParams shiny::moduleServer
-#' @inheritParams tar_watch_server
-#' @inheritParams tar_visnetwork
-#' @param label Label for the module.
-#' @param seconds Numeric of length 1,
-#'   default number of seconds between refreshes of the graph.
-#'   Can be changed in the app controls.
-#' @param seconds_min Numeric of length 1, lower bound of `seconds`
-#'   in the app controls.
-#' @param seconds_max Numeric of length 1, upper bound of `seconds`
-#'   in the app controls.
-#' @param seconds_step Numeric of length 1, step size of `seconds`
-#'   in the app controls.
-#' @param label_tar_visnetwork Character vector, `label` argument to
-#'   [tar_visnetwork()].
-tar_watch_ui <- function(
-  id,
-  label = "tar_watch_label",
-  seconds = 5,
-  seconds_min = 1,
-  seconds_max = 60,
-  seconds_step = 1,
-  targets_only = FALSE,
-  outdated = TRUE,
-  label_tar_visnetwork = NULL,
-  level_separation = 150,
-  height = "650px"
-) {
-  ns <- shiny::NS(id)
-  shiny::fluidRow(
-    bs4Dash::bs4Card(
-      inputID = ns("control"),
-      title = "Control",
-      status = "primary",
-      closable = FALSE,
-      collapsible = FALSE,
-      width = 3,
-      # TODO: update when bs4Dash 2 is on CRAN:
-      solidHeader = utils::packageVersion("bs4Dash") >= 2L,
-      shinyWidgets::radioGroupButtons(
-        inputId = ns("display"),
-        label = NULL,
-        status = "primary",
-        choiceNames = c("graph", "branches"),
-        choiceValues = c("graph", "branches"),
-        selected = "graph"
-      ),
-      shinyWidgets::actionBttn(
-        inputId = ns("refresh"),
-        label = "refresh",
-        style = "simple",
-        color = "primary",
-        size = "sm",
-        block = FALSE,
-        no_outline = TRUE
-      ),
-      shiny::br(),
-      shiny::br(),
-      shinyWidgets::materialSwitch(
-        inputId = ns("watch"),
-        label = "watch",
-        value = TRUE,
-        status = "primary",
-        right = TRUE
-      ),
-      shinyWidgets::materialSwitch(
-        inputId = ns("targets_only"),
-        label = "targets only",
-        value = targets_only,
-        status = "primary",
-        right = TRUE
-      ),
-      shinyWidgets::materialSwitch(
-        inputId = ns("outdated"),
-        label = "outdated",
-        value = outdated,
-        status = "primary",
-        right = TRUE
-      ),
-      shinyWidgets::pickerInput(
-        inputId = ns("label"),
-        label = NULL,
-        choices = c("time", "size", "branches"),
-        selected = as.character(label_tar_visnetwork),
-        multiple = TRUE,
-        options = shinyWidgets::pickerOptions(
-          actionsBox = TRUE,
-          deselectAllText = "none",
-          selectAllText = "all",
-          noneSelectedText = "no label"
-        )
-      ),
-      shinyWidgets::chooseSliderSkin("Flat", color = "blue"),
-      shiny::sliderInput(
-        inputId = ns("seconds"),
-        label = "seconds",
-        value = seconds,
-        min = seconds_min,
-        max = seconds_max,
-        step = seconds_step,
-        ticks = FALSE
-      ),
-      shiny::sliderInput(
-        inputId = ns("level_separation"),
-        label = "level_separation",
-        value = as.numeric(level_separation),
-        min = 0,
-        max = 1000,
-        step = 10,
-        ticks = FALSE
-      )
-    ),
-    bs4Dash::bs4Card(
-      inputID = ns("progress"),
-      title = "Progress",
-      status = "primary",
-      closable = FALSE,
-      collapsible = FALSE,
-      # TODO: update when bs4Dash 2 is on CRAN:
-      solidHeader = utils::packageVersion("bs4Dash") >= 2L,
-      width = 9,
-      shiny::uiOutput(ns("display"))
-    )
-  )
-}
-
-#' @title Shiny module server for tar_watch()
-#' @export
-#' @description Use [tar_watch_ui()] and `tar_watch_server()`
-#'   to include [tar_watch()] as a Shiny module in an app.
-#' @return A Shiny module server.
-#' @inheritParams shiny::moduleServer
-#' @param height Character of length 1,
-#'   height of the `visNetwork` widget and branches table.
-tar_watch_server <- function(id, height = "650px") {
-  shiny::moduleServer(
-    id,
-    function(input, output, session) {
-      interval <- 200
-      refresh <- shiny::reactiveValues(refresh = tempfile())
-      react_millis <- shiny::reactive(1000 * as.numeric(input$seconds))
-      react_targets <- shiny::reactive(as.logical(input$targets_only))
-      react_outdated <- shiny::reactive(as.logical(input$outdated))
-      react_label <- shiny::reactive(input$label)
-      react_ls <- shiny::reactive(as.numeric(input$level_separation))
-      millis <- shiny::debounce(r = react_millis, millis = interval)
-      targets_only <- shiny::debounce(r = react_targets, millis = interval)
-      outdated_tl <- shiny::debounce(r = react_outdated, millis = interval)
-      label <- shiny::debounce(r = react_label, millis = interval)
-      level_separation <- shiny::debounce(r = react_ls, millis = interval)
-      shiny::observe({
-        if (identical(input$watch, TRUE)) {
-          shiny::invalidateLater(millis = millis())
-          refresh$refresh <- tempfile()
-        }
-      })
-      shiny::observeEvent(input$refresh, refresh$refresh <- tempfile())
-      output$graph <- visNetwork::renderVisNetwork({
-        shiny::req(refresh$refresh)
-        trn(
-          tar_exist_script(),
-          tar_visnetwork(
-            targets_only = targets_only(),
-            outdated = outdated_tl(),
-            label = label(),
-            level_separation = level_separation()
-          ),
-          visNetwork::visNetwork(
-            data_frame(
-              label = "No _targets.R file detected.",
-              shape = "text",
-              font.size = "30"
-            )
-          )
-        )
-      })
-      output$branches <- gt::render_gt({
-        shiny::req(refresh$refresh)
-        trn(
-          tar_exist_progress(),
-          tar_progress_branches_gt(),
-          gt_borderless(data_frame(progress = "No progress recorded."))
-        )
-      }, height = height)
-      output$display <- shiny::renderUI({
-        switch(
-          input$display %|||% "graph",
-          graph = shinycssloaders::withSpinner(
-            visNetwork::visNetworkOutput(session$ns("graph"), height = height)
-          ),
-          branches = shinycssloaders::withSpinner(
-            gt::gt_output(session$ns("branches"))
-          )
-        )
-      })
-    }
   )
 }
 # nocov end

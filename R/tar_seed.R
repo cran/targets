@@ -1,5 +1,6 @@
 #' @title Get the random number generator seed of the target currently running.
 #' @export
+#' @family utilities
 #' @description Get the random number generator seed
 #'   of the target currently running.
 #' @details A target's random number generator seed
@@ -34,7 +35,7 @@ tar_seed <- function(default = 1L) {
   default <- as.integer(default)
   assert_int(default)
   assert_scalar(default)
-  trn(
+  if_any(
     exists(x = "target", envir = tar_envir_run, inherits = FALSE),
     get(x = "target", envir = tar_envir_run)$command$seed,
     as.integer(default)

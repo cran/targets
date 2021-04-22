@@ -36,5 +36,34 @@ tar_test("dynamic files must return characters", {
   )
   pipeline <- pipeline_init(list(x))
   local <- local_init(pipeline = pipeline)
-  expect_error(local$run(), class = "condition_validate")
+  expect_error(local$run(), class = "tar_condition_validate")
+})
+
+tar_test("handle dynamic file errors properly", {
+  x <- target_init(
+    name = "abc",
+    expr = quote(stop("message123")),
+    format = "file"
+  )
+  pipeline <- pipeline_init(list(x))
+  local <- local_init(pipeline = pipeline)
+  expect_error(local$run(), class = "tar_condition_run")
+  expect_equal(tar_meta(abc, error)$error, "message123")
+})
+
+tar_test("inherits from tar_external", {
+  store <- tar_target(x, "x_value", format = "file")$store
+  expect_true(inherits(store, "tar_external"))
+})
+
+tar_test("store_row_path()", {
+  store <- tar_target(x, "x_value", format = "file")$store
+  store$file$path <- "path"
+  expect_equal(store_row_path(store), "path")
+})
+
+tar_test("store_path_from_record()", {
+  store <- tar_target(x, "x_value", format = "file")$store
+  record <- record_init(path = "path", format = "file")
+  expect_equal(store_path_from_record(store, record), "path")
 })

@@ -302,6 +302,7 @@ unhandled
 Univa
 unname
 unparsable
+unparsed
 unserialize
 unserialized
 untimed
@@ -327,7 +328,9 @@ workflowr
 workplan
 workspace
 workspaces
+writeable
 YAML
+yaml
 Yub
 zenodo
 zeromq

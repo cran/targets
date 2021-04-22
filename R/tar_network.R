@@ -1,5 +1,6 @@
 #' @title Return the vertices and edges of a pipeline dependency graph.
 #' @export
+#' @family inspect
 #' @description Analyze the pipeline defined in `_targets.R`
 #'   and return the vertices and edges of the directed acyclic graph
 #'   of dependency relationships.
@@ -7,7 +8,7 @@
 #'   vertices data frame has one row per target with fields to denote
 #'   the type of the target or object (stem, branch, map, cross, function,
 #'   or object) and the target's status
-#'   (up to date, outdated, running, canceled, or errored).
+#'   (up to date, outdated, started, canceled, or errored).
 #'   The edges data frame has one row for every edge and columns `to` and
 #'   `from` to mark the starting and terminating vertices.
 #' @inheritParams tar_outdated

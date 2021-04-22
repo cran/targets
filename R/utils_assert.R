@@ -180,7 +180,7 @@ assert_nonempty <- function(x, msg = NULL) {
   }
 }
 
-assert_nonmissing <- function(x, msg = NULL) {
+assert_none_na <- function(x, msg = NULL) {
   if (anyNA(x)) {
     throw_validate(msg %|||% "x must have no missing values (NA's)")
   }
@@ -216,6 +216,12 @@ assert_path <- function(path, msg = NULL) {
 assert_match <- function(x, pattern, msg = NULL) {
   if (!grepl(pattern = pattern, x = x)) {
     throw_validate(msg %|||% paste(x, "does not match pattern", pattern))
+  }
+}
+
+assert_nonmissing <- function(x, msg = NULL) {
+  if (rlang::is_missing(x)) {
+    throw_validate(msg %|||% "value missing with no default.")
   }
 }
 
@@ -296,10 +302,10 @@ assert_script <- function() {
     "Read https://books.ropensci.org/targets/practices.html#loading-and-configuring-r-packages", # nolint
     "and https://books.ropensci.org/targets/practices.html#packages-based-invalidation", # nolint
     "for the correct way to load packages for {targets} pipelines.",
-    "Suppress this warning with Sys.getenv(TAR_WARN = \"false\")."
+    "Suppress this warning with Sys.setenv(TAR_WARN = \"false\")."
   )
   for (loader in c("load_all", "load_code", "load_data", "load_dll")) {
-    if (Sys.getenv("TAR_WARN") != "false" && loader %in% vars) {
+    if (!identical(Sys.getenv("TAR_WARN"), "false") && loader %in% vars) {
       warn_validate(sprintf(msg, loader))
     }
   }

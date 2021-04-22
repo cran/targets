@@ -1,5 +1,6 @@
 #' @title Get the name of the target currently running.
 #' @export
+#' @family utilities
 #' @description Get the name of the target currently running.
 #' @return Character of length 1. If called inside a pipeline,
 #'   `tar_name()` returns name of the target currently running.
@@ -21,7 +22,7 @@
 tar_name <- function(default = "target") {
   assert_chr(default)
   assert_scalar(default)
-  trn(
+  if_any(
     exists(x = "target", envir = tar_envir_run, inherits = FALSE),
     target_get_name(get(x = "target", envir = tar_envir_run)),
     as.character(default)

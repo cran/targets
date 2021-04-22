@@ -6,7 +6,7 @@ store_new.url <- function(class, file = NULL, resources = NULL) {
 store_url_new <- function(file = NULL, resources = NULL) {
   force(file)
   force(resources)
-  enclass(environment(), c("tar_url", "tar_store"))
+  enclass(environment(), c("tar_url", "tar_external", "tar_store"))
 }
 
 #' @export
@@ -32,14 +32,15 @@ store_produce_path.tar_url <- function(store, name, object) {
 }
 
 #' @export
-store_coerce_object.tar_url <- function(store, object) {
+store_cast_object.tar_url <- function(store, object) {
   as.character(object)
 }
 
 #' @export
-store_assert_format.tar_url <- function(store, object) {
-  if (!is.null(object) && !is.character(object)) {
+store_assert_format.tar_url <- function(store, object, name) {
+  if (!is.character(object)) {
     throw_validate(
+      "target ", name, " did not return a character. ",
       "targets with format = \"url\" must return ",
       "character vectors of URL paths."
     )
@@ -76,6 +77,16 @@ store_has_correct_hash.tar_url <- function(store) {
   all(url_exists(store$file$path, handle)) &&
     identical(url_hash(store$file$path, handle), store$file$hash)
 }
+
+# Tested in tests/interactive/test-class_url.R
+# nocov start
+#' @export
+store_get_timestamp.tar_url <- function(store) {
+  urls <- store$file$path
+  handle <- store$file$handle
+  as.character(map(urls, ~url_headers(.x, handle)[["last-modified"]]))
+}
+# nocov end
 
 #' @export
 store_get_packages.tar_url <- function(store) {

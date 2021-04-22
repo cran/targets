@@ -1,5 +1,5 @@
 tar_test("tar_progress_branches() on empty progress", {
-  tar_script()
+  tar_script(list())
   tar_make(callr_function = NULL)
   tar_make(callr_function = NULL)
   out <- tar_progress_branches()
@@ -17,7 +17,7 @@ tar_test("tar_progress_branches()", {
   expect_error(tar_make(callr_function = NULL))
   out <- tar_progress_branches()
   expect_equal(nrow(out), 2)
-  cols <- c("name", "branches", "started", "built", "canceled", "errored")
+  cols <- c("name", "branches", "started", "built", "errored", "canceled")
   expect_equal(colnames(out), cols)
   out <- tar_progress_branches(names = y)
   expect_equal(nrow(out), 1)

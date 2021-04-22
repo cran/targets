@@ -110,7 +110,7 @@ tar_test("target_deps_deep()", {
   expect_equal(out, exp)
 })
 
-tar_test("insert stem record of a successful stem", {
+tar_test("insert stem record of a successful internal stem", {
   target <- target_init("x", quote(sample.int(100)))
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
@@ -127,11 +127,41 @@ tar_test("insert stem record of a successful stem", {
   expect_equal(data$type, "stem")
   expect_equal(nchar(data$command), 16L)
   expect_equal(nchar(data$depend), 16L)
-  expect_equal(data$path, list(file.path("_targets", "objects", "x")))
+  expect_equal(data$path, list(NA_character_))
   expect_equal(nchar(data$data), 16L)
   expect_true(data$bytes > 0)
   expect_true(data$time > 0)
   expect_equal(data$format, "rds")
+  expect_equal(data$iteration, "vector")
+  expect_equal(data$children, list(NA_character_))
+  expect_true(is.numeric(data$seconds))
+  expect_true(is.na(data$warnings))
+  expect_true(is.na(data$error))
+})
+
+tar_test("insert stem record of a external stem", {
+  writeLines("abcabcabcabcabcabcabcabcabcabcabcabcabcabc", "y")
+  target <- target_init("x", quote("y"), format = "file")
+  pipeline <- pipeline_init(list(target), clone_targets = FALSE)
+  local <- local_init(pipeline)
+  local$run()
+  meta <- local$meta
+  db <- meta$database
+  db$ensure_storage()
+  db$reset_storage()
+  record <- target_produce_record(target, pipeline, meta)
+  db$insert_row(record_produce_row(record))
+  data <- db$read_data()
+  expect_equal(data$name, "x")
+  expect_true(is.na(data$parent))
+  expect_equal(data$type, "stem")
+  expect_equal(nchar(data$command), 16L)
+  expect_equal(nchar(data$depend), 16L)
+  expect_equal(data$path, list("y"))
+  expect_equal(nchar(data$data), 16L)
+  expect_true(data$bytes > 0)
+  expect_true(data$time > 0)
+  expect_equal(data$format, "file")
   expect_equal(data$iteration, "vector")
   expect_equal(data$children, list(NA_character_))
   expect_true(is.numeric(data$seconds))
@@ -168,7 +198,7 @@ tar_test("stem$produce_record() of a errored stem", {
   target <- target_init("x", quote(stop(123)))
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
-  expect_error(local$run(), class = "condition_run")
+  expect_error(local$run(), class = "tar_condition_run")
   meta <- local$meta
   record <- target_produce_record(target, pipeline, meta)
   expect_silent(record_validate(record))
@@ -193,7 +223,7 @@ tar_test("stem$produce_record() with no error message", {
   target <- target_init("x", quote(stop()))
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
-  expect_error(local$run(), class = "condition_run")
+  expect_error(local$run(), class = "tar_condition_run")
   meta <- local$meta
   record <- target_produce_record(target, pipeline, meta)
   expect_equal(record$error, ".")
@@ -248,7 +278,7 @@ tar_test("buds names stay in metadata on error", {
       tar_target(y, x, pattern = map(x))
     )
   })
-  expect_error(tar_make(callr_function = NULL), class = "condition_run")
+  expect_error(tar_make(callr_function = NULL), class = "tar_condition_run")
   buds <- tar_meta(x, children)$children[[1]]
   expect_equal(length(unique(buds)), 3L)
   expect_true(all(grepl("x_", buds)))
@@ -324,7 +354,7 @@ tar_test("packages load errors are recorded (#228)", {
   tar_script(list(tar_target(x, 1, packages = "kls;;;hfajksdf")))
   expect_error(
     suppressWarnings(tar_make(callr_function = NULL)),
-    class = "condition_run"
+    class = "tar_condition_run"
   )
   out <- tar_progress()
   expect_equal(out$progress, "errored")

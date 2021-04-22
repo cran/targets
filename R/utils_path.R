@@ -7,6 +7,10 @@ path_script_basename <- function() {
 }
 
 path_store <- function() {
+  tar_config$get_store() %|||% path_store_default()
+}
+
+path_store_default <- function() {
   "_targets"
 }
 
@@ -16,6 +20,10 @@ path_objects <- function(name) {
 
 path_objects_dir <- function() {
   file.path(path_store(), "objects")
+}
+
+path_objects_dir_cloud <- function() {
+  file.path(path_store_default(), "objects", fsep = "/")
 }
 
 path_meta_dir <- function() {
@@ -36,6 +44,10 @@ path_process <- function() {
 
 path_scratch <- function(pattern = "") {
   tempfile(pattern = pattern, tmpdir = path_scratch_dir())
+}
+
+path_scratch_fixed <- function(name) {
+  file.path(path_scratch_dir(), name)
 }
 
 path_scratch_dir <- function() {

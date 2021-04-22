@@ -1,11 +1,12 @@
 #' @title Set target options.
 #' @export
+#' @family configuration
 #' @description Set target options, including default arguments to
 #'   [tar_target()] such as packages, storage format,
 #'   iteration type, and cue. See default options with [tar_option_get()].
 #'   To use `tar_option_set()` effectively, put it in your workflow's
 #'   `_targets.R` script before calls to [tar_target()] or [tar_target_raw()].
-#' @return Nothing.
+#' @return `NULL` (invisibly).
 #' @inheritParams tar_target
 #' @param imports Character vector of package names to track
 #'   global dependencies. For example, if you write
@@ -244,7 +245,7 @@ tar_option_set_retrieval <- function(retrieval) {
 
 tar_option_set_cue <- function(cue) {
   cue <- cue %|||% tar_option_get("cue")
-  trn(is.null(cue), NULL, cue_validate(cue))
+  if_any(is.null(cue), NULL, cue_validate(cue))
   assign("cue", cue, envir = tar_envir_options)
 }
 

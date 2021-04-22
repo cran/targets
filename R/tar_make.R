@@ -1,5 +1,6 @@
 #' @title Run a pipeline of targets.
 #' @export
+#' @family pipeline
 #' @description Run the pipeline you defined in `_targets.R`. `tar_make()`
 #'   runs the correct targets in the correct order and stores the return
 #'   values in `_targets/objects/`.
@@ -18,8 +19,9 @@
 #'   * `"silent"`: print nothing.
 #'   * `"timestamp"`: print a time-stamped message for each target that runs.
 #'   * `"summary"`: print a running total of the number of each targets in
-#'     each status category (queued, running, skipped, build, canceled,
-#'     or errored).
+#'     each status category (queued, started, skipped, build, canceled,
+#'     or errored). Also show a timestamp (`"%H:%M %OS2"` `strptime()` format)
+#'     of the last time the progress changed and printed to the screen.
 #' @examples
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({

@@ -25,19 +25,33 @@ rstudioapi::restartSession()
 tar_destroy()
 unlink("_targets.R")
 
-# With dynamic branching panel:
+# View the progress tables. Should see some of each status except started.
 library(targets)
+tar_script({
+  list(
+    tar_target(x, seq_len(2)),
+    tar_target(y, stop("error message"), pattern = map(x), error = "continue"),
+    tar_target(z, tar_cancel(), pattern = map(x)),
+    tar_target(w, x, pattern = map(x)),
+    tar_target(
+      forever, {
+      Sys.sleep(Inf)
+      c(x, y, z, w)
+    })
+  )
+})
+tar_make() # Stop early.
+tar_watch(background = FALSE)
+
+# Should see running branches in the table.
+library(targets)
+tar_destroy()
 tar_script({
   tar_option_set(error = "continue")
   sleep_run <- function(...) Sys.sleep(10)
-  sleep_run_stop <- function(...) {
-    Sys.sleep(10)
-    stop("oops")
-  }
   list(
     tar_target(batch, seq_len(4)),
-    tar_target(data1, sleep_run(batch), pattern = map(batch)),
-    tar_target(data2, sleep_run_stop(batch), pattern = map(batch))
+    tar_target(data1, sleep_run(batch), pattern = map(batch))
   )
 })
 # Select the "branches" box:

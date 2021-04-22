@@ -66,7 +66,7 @@ clustermq_class <- R6::R6Class(
         queue = queue,
         reporter = reporter
       )
-      self$workers <- workers
+      self$workers <- as.integer(workers)
       self$crew <- crew
       self$log_worker <- log_worker
     },
@@ -93,6 +93,13 @@ clustermq_class <- R6::R6Class(
       self$create_crew()
       self$set_common_data(envir)
     },
+    any_upcoming_jobs = function() {
+      need_workers <- fltr(
+        counter_get_names(self$scheduler$progress$queued),
+        ~target_needs_worker(pipeline_get_target(self$pipeline, .x))
+      )
+      length(need_workers) > 0L
+    },
     run_worker = function(target) {
       self$crew$send_call(
         expr = target_run_worker(target, .tar_envir_5048826d),
@@ -100,7 +107,7 @@ clustermq_class <- R6::R6Class(
       )
     },
     run_main = function(target) {
-      self$crew$send_wait()
+      self$wait_or_shutdown()
       target_run(target, tar_option_get("envir"))
       target_conclude(
         target,
@@ -113,7 +120,7 @@ clustermq_class <- R6::R6Class(
       target <- pipeline_get_target(self$pipeline, name)
       target_gc(target)
       target_prepare(target, self$pipeline, self$scheduler)
-      trn(
+      if_any(
         target_should_run_worker(target),
         self$run_worker(target),
         self$run_main(target)
@@ -121,7 +128,7 @@ clustermq_class <- R6::R6Class(
       self$unload_transient()
     },
     skip_target = function(target) {
-      self$crew$send_wait()
+      self$wait_or_shutdown()
       target_skip(
         target,
         self$pipeline,
@@ -130,20 +137,37 @@ clustermq_class <- R6::R6Class(
       )
       target_sync_file_meta(target, self$meta)
     },
-    # Requires a longer target to guarantee test coverage.
-    # Tested in tests/hpc/test-clustermq.R.
+    shut_down_worker = function() {
+      if (self$workers > 0L) {
+        self$crew$send_shutdown_worker()
+        self$workers <- self$workers - 1L
+      }
+    },
+    # Requires a long-running pipeline to guarantee test coverage,
+    # which is not appropriate for fully automated unit tests.
+    # Covered in tests/interactive/test-parallel.R
+    # and tests/hpc/test-clustermq.R.
     # nocov start
-    wait = function() {
-      self$crew$send_wait()
+    wait_or_shutdown = function() {
+      try(
+        if_any(
+          self$any_upcoming_jobs(),
+          self$crew$send_wait(),
+          self$shut_down_worker()
+        )
+      )
+    },
+    backoff = function() {
+      self$wait_or_shutdown()
       self$scheduler$backoff$wait()
     },
     # nocov end
     next_target = function() {
       queue <- self$scheduler$queue
-      trn(
+      if_any(
         queue$should_dequeue(),
         self$process_target(queue$dequeue()),
-        self$wait()
+        self$backoff()
       )
     },
     conclude_worker_target = function(target) {
@@ -160,17 +184,15 @@ clustermq_class <- R6::R6Class(
       )
     },
     iterate = function() {
-      message <- self$crew$receive_data()
+      message <- if_any(self$workers > 0L, self$crew$receive_data(), list())
       self$conclude_worker_target(message$result)
-      if (!identical(message$token, "set_common_data_token")) {
+      token <- message$token
+      if (self$workers > 0L && !identical(token, "set_common_data_token")) {
         self$crew$send_common_data()
       } else if (self$scheduler$queue$is_nonempty()) {
         self$next_target()
       } else {
-        # To cover this line, we need a longer and more complicated pipeline
-        # than would be appropriate for fully automated testing.
-        # tests/hpc/test-clustermq.R has a couple longer tests.
-        self$crew$send_shutdown_worker() # nocov
+        self$shut_down_worker()
       }
     },
     produce_prelocal = function() {
@@ -198,7 +220,7 @@ clustermq_class <- R6::R6Class(
       on.exit(self$end())
       tryCatch(
         self$produce_prelocal()$run(),
-        condition_prelocal = function(e) NULL
+        tar_condition_prelocal = function(e) NULL
       )
       if (self$scheduler$queue$is_nonempty()) {
         self$run_clustermq()

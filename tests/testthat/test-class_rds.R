@@ -13,11 +13,31 @@ tar_test("rds update_object()", {
 })
 
 tar_test("misspelled format", {
-  expect_error(tar_target(x, 1, format = "r2ds"), class = "condition_validate")
+  expect_error(
+    tar_target(x, 1, format = "r2ds"),
+    class = "tar_condition_validate"
+  )
 })
 
 tar_test("rds packages", {
   x <- tar_target(x, 1, format = "rds")
   out <- store_get_packages(x$store)
   expect_equal(out, character(0))
+})
+
+tar_test("does not inherit from tar_external", {
+  store <- tar_target(x, "x_value", format = "rds")$store
+  expect_false(inherits(store, "tar_external"))
+})
+
+tar_test("store_row_path()", {
+  store <- tar_target(x, "x_value", format = "rds")$store
+  store$file$path <- "path"
+  expect_equal(store_row_path(store), NA_character_)
+})
+
+tar_test("store_path_from_record()", {
+  store <- tar_target(x, "x_value", format = "rds")$store
+  record <- record_init(name = "x", path = "path", format = "rds")
+  expect_equal(store_path_from_record(store, record), path_objects("x"))
 })

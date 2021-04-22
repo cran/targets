@@ -6,7 +6,7 @@ store_new.file <- function(class, file = NULL, resources = NULL) {
 store_file_new <- function(file = NULL, resources = NULL) {
   force(file)
   force(resources)
-  enclass(environment(), c("tar_store_file", "tar_store"))
+  enclass(environment(), c("tar_store_file", "tar_external", "tar_store"))
 }
 
 #' @export
@@ -32,14 +32,15 @@ store_produce_path.tar_store_file <- function(store, name, object) { # nolint
 }
 
 #' @export
-store_coerce_object.tar_store_file <- function(store, object) { # nolint
+store_cast_object.tar_store_file <- function(store, object) { # nolint
   as.character(object)
 }
 
 #' @export
-store_assert_format.tar_store_file <- function(store, object) { # nolint
-  if (!is.null(object) && !is.character(object)) {
+store_assert_format.tar_store_file <- function(store, object, name) { # nolint
+  if (!is.character(object)) {
     throw_validate(
+      "target ", name, " did not return a character. ",
       "dynamic files (targets with format = \"file\") must return ",
       "character vectors of file or directory paths."
     )
@@ -61,7 +62,7 @@ store_ensure_correct_hash.tar_store_file <- function(
   storage,
   deployment
 ) {
-  trn(
+  if_any(
     identical(deployment, "worker"),
     store_wait_correct_hash(store),
     assert_path(store$file$path)

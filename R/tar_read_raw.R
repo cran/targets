@@ -1,5 +1,6 @@
 #' @title Read a target's value from storage (raw version)
 #' @export
+#' @family data
 #' @description Like [tar_read()] except `name` is a character string.
 #'   Do not use in `knitr` or R Markdown reports with `tarchetypes::tar_knit()`
 #'   or `tarchetypes::tar_render()`.
@@ -33,8 +34,9 @@ tar_read_inner <- function(name, branches, meta) {
   if (!any(index)) {
     throw_validate("target ", name, " not found")
   }
-  record <- do.call(record_init, lapply(meta[max(which(index)), ], unlist))
-  trn(
+  row <- meta[max(which(index)),, drop = FALSE] # nolint
+  record <- record_from_row(row)
+  if_any(
     record$type %in% c("stem", "branch"),
     read_builder(record),
     read_pattern(name, record, meta, branches)
@@ -53,14 +55,14 @@ read_pattern <- function(name, record, meta, branches) {
     names <- names[branches]
   }
   if (length(diff <- setdiff(names, meta$name))) {
-    diff <- trn(anyNA(diff), "branches out of range", diff)
+    diff <- if_any(anyNA(diff), "branches out of range", diff)
     throw_validate("branches not in metadata: ", paste(diff, collapse = ", "))
   }
   meta <- meta[meta$name %in% names,, drop = FALSE] # nolint
   if (nrow(meta)) {
     meta <- meta[match(names, meta$name),, drop = FALSE] # nolint
   }
-  records <- map_rows(meta, ~do.call(record_init, lapply(.x, unlist)))
+  records <- map_rows(meta, ~record_from_row(.x))
   objects <- lapply(records, read_builder)
   value <- value_init(iteration = record$iteration)
   value_produce_aggregate(value, objects)

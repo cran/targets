@@ -64,12 +64,17 @@ target_should_run_worker.tar_builder <- function(target) {
 }
 
 #' @export
+target_needs_worker.tar_builder <- function(target) {
+  identical(target$settings$deployment, "worker")
+}
+
+#' @export
 target_run.tar_builder <- function(target, envir) {
   on.exit({
     builder_unset_tar_envir_run()
     target$subpipeline <- NULL
   })
-  envir <- trn(identical(envir, "globalenv"), globalenv(), envir)
+  envir <- if_any(identical(envir, "globalenv"), globalenv(), envir)
   builder_unserialize_subpipeline(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
@@ -119,6 +124,7 @@ builder_conclude <- function(target, pipeline, scheduler, meta) {
   target_patternview_meta(target, pipeline, meta)
   pipeline_register_loaded(pipeline, target_get_name(target))
   scheduler$progress$register_built(target)
+  scheduler$reporter$report_built(target, scheduler$progress)
 }
 
 builder_error <- function(target, pipeline, scheduler, meta) {
@@ -213,7 +219,7 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
   if (identical(target$settings$error, "workspace")) {
     builder_save_workspace(target, pipeline, scheduler)
   }
-  trn(
+  if_any(
     identical(target$settings$error, "continue"),
     scheduler$reporter$report_error(target$metrics$error),
     builder_exit(target, pipeline, scheduler, meta)
@@ -222,7 +228,8 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
 
 builder_exit <- function(target, pipeline, scheduler, meta) {
   # TODO: remove this hack that compensates for
-  # https://github.com/r-lib/callr/issues/185:
+  # https://github.com/r-lib/callr/issues/185.
+  # No longer necessary in callr >= 3.7.0.
   if (!identical(Sys.getenv("TAR_TEST"), "true")) {
     target$value <- NULL
     pipeline$targets <- NULL
@@ -250,7 +257,11 @@ builder_record_error_meta <- function(target, pipeline, meta) {
 
 builder_update_build <- function(target, envir) {
   build <- command_produce_build(target$command, envir)
-  object <- store_coerce_object(target$store, build$object)
+  object <- build$object
+  if (is.null(build$metrics$error)) {
+    store_assert_format(target$store, build$object, target_get_name(target))
+    object <- store_cast_object(target$store, object)
+  }
   target$value <- value_init(object, target$settings$iteration)
   target$metrics <- build$metrics
   invisible()
@@ -328,11 +339,11 @@ builder_sitrep <- function(target, meta) {
     record = cue_record(cue, target, meta),
     always = cue_always(cue, target, meta),
     never = cue_never(cue, target, meta),
-    command = trn(record, NA, cue_command(cue, target, meta)),
-    depend = trn(record, NA, cue_depend(cue, target, meta)),
-    format = trn(record, NA, cue_format(cue, target, meta)),
-    iteration = trn(record, NA, cue_iteration(cue, target, meta)),
-    file = trn(record, NA, cue_file(cue, target, meta))
+    command = if_any(record, NA, cue_command(cue, target, meta)),
+    depend = if_any(record, NA, cue_depend(cue, target, meta)),
+    format = if_any(record, NA, cue_format(cue, target, meta)),
+    iteration = if_any(record, NA, cue_iteration(cue, target, meta)),
+    file = if_any(record, NA, cue_file(cue, target, meta))
   )
 }
 

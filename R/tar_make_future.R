@@ -1,6 +1,7 @@
 #' @title Run a pipeline of targets in parallel with transient
 #'   `future` workers.
 #' @export
+#' @family pipeline
 #' @description This function is like [tar_make()] except that targets
 #'   run in parallel with transient `future` workers. It requires
 #'   that you declare your `future::plan()` inside the `_targets.R` script.
@@ -18,9 +19,11 @@
 #' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
-#'   future::plan(future::multisession)
-#'   tar_option_set()
-#'   list(tar_target(x, 1 + 1))
+#'   future::plan(future::multisession, workers = 2)
+#'   list(
+#'     tar_target(x, 1 + 1),
+#'     tar_target(y, 1 + 1)
+#'   )
 #' }, ask = FALSE)
 #' tar_make_future()
 #' })

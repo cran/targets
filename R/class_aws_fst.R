@@ -1,3 +1,4 @@
+#' @export
 store_new.aws_fst <- function(class, file = NULL, resources = NULL) {
   aws_fst_new(file = file, resources = resources)
 }
@@ -7,7 +8,7 @@ aws_fst_new <- function(file = NULL, resources = NULL) {
   force(resources)
   enclass(
     environment(),
-    c("tar_aws_fst", "tar_aws", "tar_fst", "tar_store")
+    c("tar_aws_fst", "tar_aws",  "tar_external", "tar_fst", "tar_store")
   )
 }
 

@@ -32,11 +32,7 @@ url_hash <- function(url, handle = NULL) {
 }
 
 url_hash_impl <- function(url, handle) {
-  assert_internet()
-  handle <- url_handle(handle)
-  req <- curl::curl_fetch_memory(url, handle = handle)
-  headers <- curl::parse_headers_list(req$headers)
-  url_process_error(url, req, headers)
+  headers <- url_headers(url = url, handle = handle)
   etag <- paste(headers[["etag"]], collapse = "")
   mtime <- paste(headers[["last-modified"]], collapse = "")
   out <- paste0(etag, mtime)
@@ -48,6 +44,15 @@ url_handle <- function(handle = NULL) {
   handle <- handle %|||% curl::new_handle(nobody = TRUE)
   assert_inherits(handle, "curl_handle")
   handle
+}
+
+url_headers <- function(url, handle) {
+  assert_internet()
+  handle <- url_handle(handle)
+  req <- curl::curl_fetch_memory(url, handle = handle)
+  headers <- curl::parse_headers_list(req$headers)
+  url_process_error(url, req, headers)
+  headers
 }
 
 url_process_error <- function(url, req, headers) {
@@ -71,16 +76,16 @@ url_process_error <- function(url, req, headers) {
 # nocov start
 url_port <- function(host, port, process, verbose = TRUE) {
   spin <- cli::make_spinner()
-  trn(verbose, spin$spin(), NULL)
+  if_any(verbose, spin$spin(), NULL)
   while (!pingr::is_up(destination = host, port = port)) {
-    trn(
+    if_any(
       process$is_alive(),
       Sys.sleep(0.01),
       throw_run(process$read_all_error())
     )
-    trn(verbose, spin$spin(), NULL)
+    if_any(verbose, spin$spin(), NULL)
   }
-  trn(verbose, spin$finish(), NULL)
+  if_any(verbose, spin$finish(), NULL)
   url <- paste0("http://", host, ":", port)
   utils::browseURL(url)
 }

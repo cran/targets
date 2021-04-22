@@ -5,7 +5,7 @@
 \title{Shiny app to watch the dependency graph.}
 \usage{
 tar_watch(
-  seconds = 15,
+  seconds = 10,
   seconds_min = 1,
   seconds_max = 60,
   seconds_step = 1,
@@ -113,3 +113,13 @@ tar_make()
 })
 }
 }
+\seealso{
+Other progress: 
+\code{\link{tar_poll}()},
+\code{\link{tar_progress_branches}()},
+\code{\link{tar_progress_summary}()},
+\code{\link{tar_progress}()},
+\code{\link{tar_watch_server}()},
+\code{\link{tar_watch_ui}()}
+}
+\concept{progress}

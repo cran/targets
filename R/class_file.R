@@ -68,7 +68,7 @@ file_ensure_hash <- function(file) {
     size = size,
     bytes = bytes
   )
-  hash <- trn(do, file_hash(files), file$hash)
+  hash <- if_any(do, file_hash(files), file$hash)
   file$hash <- hash
   file$time <- time
   file$size <- size
@@ -81,7 +81,7 @@ file_has_correct_hash <- function(file) {
   time <- file_time(info)
   bytes <- file_bytes(info)
   size <- file_size(bytes)
-  trn(
+  if_any(
     file_should_rehash(
       file = file,
       time = time,
@@ -95,7 +95,7 @@ file_has_correct_hash <- function(file) {
 
 file_validate_path <- function(path) {
   assert_nonempty(path, "a target must have at least one output file.")
-  assert_nonmissing(path, paste("missing output file for target:", path))
+  assert_none_na(path, paste("missing output file for target:", path))
   assert_chr_no_delim(path, "target output file path must not contain | or *")
 }
 
@@ -143,7 +143,13 @@ file_info <- function(files) {
 }
 
 file_time <- function(info) {
-  digest_obj64(max(c(-Inf, replace_na(as.numeric(info$mtime), -Inf))))
+  diff <- difftime(
+    time1 = info$mtime,
+    time2 = file_time_reference,
+    units = "days",
+    tz = "UTC"
+  )
+  file_diff_chr(max(replace_na(c(as.numeric(diff), 0), 0)))
 }
 
 file_bytes <- function(info) {
@@ -153,4 +159,27 @@ file_bytes <- function(info) {
 
 file_size <- function(bytes) {
   digest_obj64(bytes)
+}
+
+file_diff_chr <- function(dbl) {
+  sprintf("t%ss", as.character(dbl))
+}
+
+file_diff_dbl <- function(chr) {
+  as.numeric(gsub(pattern = "^t|s$", replacement = "", x = chr))
+}
+
+file_time_posixct <- function(chr) {
+  diff <- as.difftime(file_diff_dbl(chr), units = "days")
+  file_time_system_tz(diff + file_time_reference)
+}
+
+file_time_reference <- as.POSIXct(
+  "1970-01-01 00:00:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "UTC"
+)
+
+file_time_system_tz <- function(x) {
+  as.POSIXct(as.POSIXlt(x, tz = Sys.timezone()))
 }

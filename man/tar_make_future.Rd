@@ -27,8 +27,9 @@ and \code{"verbose"} otherwise. Choices:
 \item \code{"silent"}: print nothing.
 \item \code{"timestamp"}: print a time-stamped message for each target that runs.
 \item \code{"summary"}: print a running total of the number of each targets in
-each status category (queued, running, skipped, build, canceled,
-or errored).
+each status category (queued, started, skipped, build, canceled,
+or errored). Also show a timestamp (\code{"\%H:\%M \%OS2"} \code{strptime()} format)
+of the last time the progress changed and printed to the screen.
 }}
 
 \item{workers}{Positive integer, maximum number of transient
@@ -65,11 +66,19 @@ see the \code{future.batchtools} package documentation.
 if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
-  future::plan(future::multisession)
-  tar_option_set()
-  list(tar_target(x, 1 + 1))
+  future::plan(future::multisession, workers = 2)
+  list(
+    tar_target(x, 1 + 1),
+    tar_target(y, 1 + 1)
+  )
 }, ask = FALSE)
 tar_make_future()
 })
 }
 }
+\seealso{
+Other pipeline: 
+\code{\link{tar_make_clustermq}()},
+\code{\link{tar_make}()}
+}
+\concept{pipeline}

@@ -201,7 +201,7 @@ tar_test("error relaying", {
     )
   )
   local <- local_init(pipeline)
-  expect_error(local$run(), class = "condition_run")
+  expect_error(local$run(), class = "tar_condition_run")
 })
 
 tar_test("maps produce correct junctions and bud niblings", {
@@ -438,7 +438,7 @@ tar_test("map over empty stem", {
     )
   )
   local <- local_init(pipeline)
-  expect_error(local$run(), class = "condition_run")
+  expect_error(local$run(), class = "tar_condition_run")
 })
 
 tar_test("empty mapping variable", {
@@ -450,7 +450,7 @@ tar_test("empty mapping variable", {
   )
   expect_error(
     local_init(pipeline)$run(),
-    class = "condition_run"
+    class = "tar_condition_run"
   )
 })
 
@@ -464,7 +464,7 @@ tar_test("inconformable mapping variables", {
   )
   expect_error(
     local_init(pipeline)$run(),
-    class = "condition_validate"
+    class = "tar_condition_validate"
   )
 })
 
@@ -482,7 +482,7 @@ tar_test("must branch over stems and patterns", {
     )
   )
   algo <- local_init(pipeline = pipeline)
-  expect_error(algo$run(), class = "condition_validate")
+  expect_error(algo$run(), class = "tar_condition_validate")
 })
 
 tar_test("pattern dims are always deps", {
@@ -536,7 +536,7 @@ tar_test("prohibit branching over stem files", {
     )
   )
   algo <- local_init(pipeline)
-  expect_error(algo$run(), class = "condition_validate")
+  expect_error(algo$run(), class = "tar_condition_validate")
 })
 
 tar_test("cross pattern initializes correctly", {
@@ -652,7 +652,7 @@ tar_test("empty crossing variable", {
   )
   expect_error(
     local_init(pipeline)$run(),
-    class = "condition_run"
+    class = "tar_condition_run"
   )
 })
 
@@ -743,17 +743,6 @@ tar_test("sample pattern in pipeline", {
   expect_equal(length(out), 2)
 })
 
-tar_test("pattern validate", {
-  x <- target_init("x", expr = quote(1 + 1), pattern = quote(map(a, b)))
-  expect_silent(target_validate(x))
-})
-
-tar_test("pattern validate with bad junction", {
-  x <- target_init("x", expr = quote(1 + 1), pattern = quote(map(a, b)))
-  x$junction <- junction_new()
-  expect_error(target_validate(x), class = "condition_validate")
-})
-
 tar_test("cross pattern validate", {
   x <- target_init("x", expr = quote(1 + 1), pattern = quote(cross(a, b)))
   expect_silent(target_validate(x))
@@ -772,4 +761,26 @@ tar_test("aggregate names of branches with length > 1 (#320)", {
   expect_equal(length(names(out)), 4)
   expect_equal(length(unique(names(out))), 4)
   expect_equal(unname(out), c(1, 1, 2, 2))
+})
+
+tar_test("target_needs_worker(pattern)", {
+  x <- tar_target(y, rep(x, 2), pattern = map(x), deployment = "worker")
+  expect_true(target_needs_worker(x))
+  x$junction <- list()
+  expect_false(target_needs_worker(x))
+  x <- tar_target(y, rep(x, 2), pattern = map(x), deployment = "main")
+  expect_false(target_needs_worker(x))
+  x$junction <- list()
+  expect_false(target_needs_worker(x))
+})
+
+tar_test("pattern validate", {
+  x <- target_init("x", expr = quote(1 + 1), pattern = quote(map(a, b)))
+  expect_silent(target_validate(x))
+})
+
+tar_test("pattern validate with bad junction", {
+  x <- target_init("x", expr = quote(1 + 1), pattern = quote(map(a, b)))
+  x$junction <- junction_new()
+  expect_error(target_validate(x), class = "tar_condition_validate")
 })

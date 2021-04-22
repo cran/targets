@@ -1,8 +1,9 @@
 #' @title Set up package dependencies for compatibility with `renv`
 #' @export
+#' @family scripts
 #' @seealso <https://rstudio.github.io/renv/articles/renv.html>
 #' @description Write package dependencies to a script file
-#'   (by default, named `_packages.R` in the root project directory).
+#'   (by default, named `_targets_packages.R` in the root project directory).
 #'   Each package is written to a separate line
 #'   as a standard [library()] call (e.g. `library(package)`) so
 #'   `renv` can identify them automatically.
@@ -44,7 +45,7 @@
 #'     list()
 #'   }, ask = FALSE)
 #'   tar_renv()
-#'   writeLines(readLines("_packages.R"))
+#'   writeLines(readLines("_targets_packages.R"))
 #' })
 #' tar_option_reset()
 tar_renv <- function(
@@ -53,14 +54,15 @@ tar_renv <- function(
     "clustermq",
     "future",
     "gt",
+    "markdown",
     "pingr",
     "rstudioapi",
     "shiny",
-    "shinycssloaders",
+    "shinybusy",
     "shinyWidgets",
     "visNetwork"
   ),
-  path = "_packages.R",
+  path = "_targets_packages.R",
   callr_function = callr::r,
   callr_arguments = targets::callr_args_default(callr_function)
 ) {

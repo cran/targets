@@ -1,5 +1,6 @@
 #' @title List saved target workspaces.
 #' @export
+#' @family debug
 #' @description List target workspaces currently saved to
 #'   `_targets/workspaces/`. See [tar_workspace()] for more information.
 #' @return Character vector of available workspaces to load with
@@ -23,7 +24,7 @@
 #' })
 #' }
 tar_workspaces <- function(names = NULL) {
-  choices <- trn(
+  choices <- if_any(
     dir.exists(path_workspaces_dir()),
     sort(list.files(path_workspaces_dir(), all.files = TRUE, no.. = TRUE)),
     character(0)

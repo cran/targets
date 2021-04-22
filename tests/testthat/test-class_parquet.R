@@ -40,3 +40,53 @@ tar_test("parquet packages", {
   out <- store_get_packages(x$store)
   expect_equal(out, "arrow")
 })
+
+tar_test("parquet format captures error messages", {
+  tar_script(tar_target(x, stop("message123"), format = "parquet"))
+  expect_error(
+    tar_make(callr_function = NULL),
+    class = "tar_condition_run"
+  )
+  expect_equal(tar_meta(x, error)$error, "message123")
+})
+
+tar_test("same with error = \"continue\"", {
+  tar_script(
+    tar_target(x, stop("message123"), format = "parquet", error = "continue")
+  )
+  tar_make(callr_function = NULL)
+  expect_equal(tar_meta(x, error)$error, "message123")
+})
+
+tar_test("parquet format cannot store non-data-frames", {
+  tar_script(tar_target(x, 1:2, format = "parquet"))
+  expect_error(
+    tar_make(callr_function = NULL),
+    class = "tar_condition_validate"
+  )
+})
+
+tar_test("same with error = \"continue\"", {
+  tar_script(tar_target(x, 1:2, format = "parquet", error = "continue"))
+  expect_error(
+    tar_make(callr_function = NULL),
+    class = "tar_condition_validate"
+  )
+})
+
+tar_test("does not inherit from tar_external", {
+  store <- tar_target(x, "x_value", format = "parquet")$store
+  expect_false(inherits(store, "tar_external"))
+})
+
+tar_test("store_row_path()", {
+  store <- tar_target(x, "x_value", format = "parquet")$store
+  store$file$path <- "path"
+  expect_equal(store_row_path(store), NA_character_)
+})
+
+tar_test("store_path_from_record()", {
+  store <- tar_target(x, "x_value", format = "parquet")$store
+  record <- record_init(name = "x", path = "path", format = "parquet")
+  expect_equal(store_path_from_record(store, record), path_objects("x"))
+})

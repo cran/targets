@@ -65,7 +65,7 @@ settings_new <- function(
 
 settings_produce_pattern <- function(pattern) {
   pattern <- as.expression(pattern)
-  trn(is.null(pattern[[1]]), NULL, pattern)
+  if_any(is.null(pattern[[1]]), NULL, pattern)
 }
 
 settings_produce_dimensions <- function(pattern) {
@@ -103,15 +103,30 @@ settings_validate_pattern <- function(name, pattern, dimensions) {
   assert_nonempty(dimensions)
   assert_not_in(name, dimensions)
   assert_unique(dimensions, "duplicate grouping variable in pattern.")
-  methods <- ls(dynamic_methods$self, all.names = FALSE)
-  methods <- setdiff(methods, c("private", "self"))
-  vars <- all.vars(pattern, functions = TRUE, unique = TRUE)
-  vars <- setdiff(vars, c(methods, dimensions))
-  if (length(vars)) {
+  symbols <- all.vars(pattern, functions = TRUE, unique = TRUE)
+  non_functions <- all.vars(pattern, functions = FALSE, unique = TRUE)
+  functions <- setdiff(symbols, non_functions)
+  illegal <- fltr(
+    functions,
+    ~!exists(.x, envir = dynamic_methods$self) & !exists(.x, envir = baseenv())
+  )
+  if (length(illegal) > 0L) {
     string <- string_sub_expression(deparse_safe(pattern))
-    throw_validate("invalid pattern: ", string)
+    throw_validate(
+      "invalid dynamic branching pattern: ",
+      string,
+      ". Illegal symbols found: ",
+      paste(illegal, collapse = ", "),
+      ". Patterns must be valid choices from tar_pattern() such as map(), ",
+      "and the arguments must be names of upstream targets or ",
+      "expressions using only the base environment."
+    )
   }
 }
+
+settings_validate_pattern_names <- c(
+  ls(dynamic_init()$self, all.names = FALSE)
+)
 
 settings_validate <- function(settings) {
   assert_correct_fields(settings, settings_new)

@@ -35,7 +35,7 @@ store_read_object <- function(store) {
 }
 
 store_read_object.default <- function(store) {
-  store_coerce_object(store, store_read_path(store, store$file$path))
+  store_cast_object(store, store_read_path(store, store$file$path))
 }
 
 store_read_path <- function(store, path) {
@@ -52,7 +52,7 @@ store_write_object.default <- function(store, object) {
   stage <- store$file$stage
   dir_create(dirname(path))
   dir_create(dirname(stage))
-  store_write_path(store, store_coerce_object(store, object), stage)
+  store_write_path(store, store_cast_object(store, object), stage)
   file.rename(stage, path)
 }
 
@@ -80,6 +80,24 @@ store_produce_path.default <- function(store, name, object) {
   path_objects(name)
 }
 
+store_row_path <- function(store) {
+  UseMethod("store_row_path")
+}
+
+#' @export
+store_row_path.default <- function(store) {
+  NA_character_
+}
+
+store_path_from_record <- function(store, record) {
+  UseMethod("store_path_from_record")
+}
+
+#' @export
+store_path_from_record.default <- function(store, record) {
+  path_objects(record$name)
+}
+
 store_update_stage <- function(store, name, object) {
   store$file$stage <- store_produce_stage(store, name, object)
 }
@@ -93,21 +111,20 @@ store_produce_stage.default <- function(store, name, object) {
   path_scratch(pattern = name)
 }
 
-store_coerce_object <- function(store, object) {
-  store_assert_format(store, object)
-  UseMethod("store_coerce_object")
+store_cast_object <- function(store, object) {
+  UseMethod("store_cast_object")
 }
 
-store_coerce_object.default <- function(store, object) {
+store_cast_object.default <- function(store, object) {
   object
 }
 
-store_assert_format <- function(store, object) {
+store_assert_format <- function(store, object, name) {
   UseMethod("store_assert_format")
 }
 
 #' @export
-store_assert_format.default <- function(store, object) {
+store_assert_format.default <- function(store, object, name) {
 }
 
 store_early_hash <- function(store) {
@@ -249,6 +266,15 @@ store_unserialize_value <- function(store, target) {
 
 #' @export
 store_unserialize_value.default <- function(store, target) {
+}
+
+store_get_timestamp <- function(store) {
+  UseMethod("store_get_timestamp")
+}
+
+#' @export
+store_get_timestamp.default <- function(store) {
+  file_info(store$file$path)$mtime
 }
 
 store_validate <- function(store) {

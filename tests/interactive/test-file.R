@@ -25,6 +25,8 @@ tar_test("file_ensure_hash() on a huge file", {
   file_ensure_hash(file) # Should be fast.
   expect_false(file$hash == hash)
   expect_gt(file$bytes, bytes)
+  # Clean up.
+  unlink(tmp)
 })
 
 tar_test("file_ensure_hash() on a huge file in pipeline", {
@@ -35,7 +37,7 @@ tar_test("file_ensure_hash() on a huge file in pipeline", {
     tar_option_set(packages = character(0))
     list(tar_target(x_target, "tempfile", format = "file"))
   })
-  expr <- tidy_eval(expr, environment(), TRUE)
+  expr <- tar_tidy_eval(expr, environment(), TRUE)
   do.call(tar_script, list(code = expr))
   file <- file_init(path = tmp)
   x <- paste(letters, collapse = "")

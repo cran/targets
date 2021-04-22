@@ -1,5 +1,6 @@
 #' @title Define a target using unrefined names and language objects.
 #' @export
+#' @family targets
 #' @description `tar_target_raw()` is just like [tar_target()] except
 #'   it avoids non-standard evaluation for the arguments: `name`
 #'   is a character string, `command` and `pattern` are language objects,
@@ -80,7 +81,10 @@ tar_target_raw <- function(
   retrieval = targets::tar_option_get("retrieval"),
   cue = targets::tar_option_get("cue")
 ) {
+  assert_nonmissing(name, "every target must have a name.")
   assert_chr(name, "name arg of tar_target_raw() must be character")
+  assert_nzchar(name, "target name must be nonempty.")
+  assert_nonmissing(command, paste("target", name, "has no command."))
   assert_chr(packages, "packages in tar_target_raw() must be character.")
   assert_chr(
     library %|||% character(0),

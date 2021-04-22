@@ -28,8 +28,9 @@ and \code{"verbose"} otherwise. Choices:
 \item \code{"silent"}: print nothing.
 \item \code{"timestamp"}: print a time-stamped message for each target that runs.
 \item \code{"summary"}: print a running total of the number of each targets in
-each status category (queued, running, skipped, build, canceled,
-or errored).
+each status category (queued, started, skipped, build, canceled,
+or errored). Also show a timestamp (\code{"\%H:\%M \%OS2"} \code{strptime()} format)
+of the last time the progress changed and printed to the screen.
 }}
 
 \item{workers}{Positive integer, number of persistent \code{clustermq} workers
@@ -86,3 +87,9 @@ tar_make_clustermq()
 }
 }
 }
+\seealso{
+Other pipeline: 
+\code{\link{tar_make_future}()},
+\code{\link{tar_make}()}
+}
+\concept{pipeline}

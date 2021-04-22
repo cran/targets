@@ -1,5 +1,6 @@
 #' @title Declare a target.
 #' @export
+#' @family targets
 #' @description A target is a single step of computation in a pipeline.
 #'   It runs an R command and returns a value.
 #'   This value gets treated as an R object that can be used
@@ -96,7 +97,10 @@
 #'     except the return value of the target is a URL that already exists
 #'     and serves as input data for downstream targets. Optionally
 #'     supply a custom `curl` handle through the `resources` argument, e.g.
-#'     `tar_target(..., resources = list(handle = curl::new_handle()))`.
+#'     `tar_target(..., resources = list(handle = curl::new_handle(nobody = TRUE)))`. # nolint
+#'     in `new_handle()`, `nobody = TRUE` is important because it
+#'     ensures `targets` just downloads the metadata instead of
+#'     the entire data file when it checks time stamps and hashes.
 #'     The data file at the URL needs to have an ETag or a Last-Modified
 #'     time stamp, or else the target will throw an error because
 #'     it cannot track the data. Also, use extreme caution when
@@ -138,7 +142,11 @@
 #' @param error Character of length 1, what to do if the target
 #'   runs into an error. If `"stop"`, the whole pipeline stops
 #'   and throws an error. If `"continue"`, the error is recorded,
-#'   but the pipeline keeps going.
+#'   but the pipeline keeps going. `error = "workspace"` is just like
+#'   `error = "stop"` except `targets` saves a special workspace file
+#'   to support interactive debugging outside the pipeline.
+#'   (Visit <https://books.ropensci.org/targets/debugging.html>
+#'   to learn how to debug targets using saved workspaces.)
 #' @param memory Character of length 1, memory strategy.
 #'   If `"persistent"`, the target stays in memory
 #'   until the end of the pipeline (unless `storage` is `"worker"`,
@@ -246,7 +254,8 @@ tar_target <- function(
   cue = targets::tar_option_get("cue")
 ) {
   name <- deparse_language(substitute(name))
-  assert_chr(name, "name arg of tar_target() must be a symbol")
+  assert_chr(name, "target name must be a symbol")
+  assert_nzchar(name, "target name must be nonempty.")
   assert_lgl(tidy_eval, "tidy_eval in tar_target() must be logical.")
   assert_chr(packages, "packages in tar_target() must be character.")
   assert_chr(
@@ -272,6 +281,7 @@ tar_target <- function(
   }
   envir <- tar_option_get("envir")
   expr <- as.expression(substitute(command))
+  assert_nonmissing(expr[[1]], paste("target", name, "has no command."))
   pattern <- as.expression(substitute(pattern))
   target_init(
     name = name,

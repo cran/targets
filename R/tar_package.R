@@ -12,7 +12,7 @@
 #'   and `drake` by Will Landau (2018, \doi{doi:10.21105/joss.00550}).
 #' @name targets-package
 #' @importFrom callr r r_bg
-#' @importFrom cli col_green make_spinner symbol
+#' @importFrom cli cli_alert_info col_green make_spinner symbol
 #' @importFrom codetools findGlobals
 #' @importFrom data.table data.table fread fwrite set
 #' @importFrom digest digest digest2int
@@ -25,10 +25,11 @@
 #' @importFrom tibble as_tibble
 #' @importFrom tidyselect all_of any_of contains ends_with everything
 #'   last_col matches num_range one_of starts_with
-#' @importFrom utils browseURL globalVariables head menu packageVersion stack
-#'   tail
+#' @importFrom utils browseURL capture.output globalVariables head menu
+#'   packageVersion stack tail
 #' @importFrom vctrs vec_c vec_rbind vec_size vec_slice
 #' @importFrom withr local_dir local_envvar local_options with_dir with_seed
+#' @importFrom yaml read_yaml
 NULL
 
 utils::globalVariables(

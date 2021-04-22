@@ -1,5 +1,6 @@
 #' @title Identify the file path where a target will be stored.
 #' @export
+#' @family utilities
 #' @description Identify the file path where a target will be stored
 #'   after the target finishes running in the pipeline.
 #' @details `tar_path(name = your_target)` just returns
@@ -31,7 +32,7 @@ tar_path <- function(name = NULL, default = NA_character_) {
   name <- deparse_language(substitute(name))
   assert_chr(name %|||% character(0), "name arg of tar_path() must be a symbol")
   assert_chr(default)
-  trn(
+  if_any(
     is.null(name),
     tar_path_running(default),
     path_objects(name)
@@ -39,7 +40,7 @@ tar_path <- function(name = NULL, default = NA_character_) {
 }
 
 tar_path_running <- function(default) {
-  trn(
+  if_any(
     exists(x = "target", envir = tar_envir_run, inherits = FALSE),
     path_objects(target_get_name(get(x = "target", envir = tar_envir_run))),
     as.character(default)

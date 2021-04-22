@@ -2,7 +2,7 @@
 % Please edit documentation in R/tar_progress.R
 \name{tar_progress}
 \alias{tar_progress}
-\title{Read the target progress of the latest run of the pipeline.}
+\title{Read progress.}
 \usage{
 tar_progress(names = NULL, fields = "progress")
 }
@@ -49,3 +49,13 @@ tar_progress(starts_with("y_"))
 })
 }
 }
+\seealso{
+Other progress: 
+\code{\link{tar_poll}()},
+\code{\link{tar_progress_branches}()},
+\code{\link{tar_progress_summary}()},
+\code{\link{tar_watch_server}()},
+\code{\link{tar_watch_ui}()},
+\code{\link{tar_watch}()}
+}
+\concept{progress}

@@ -1,3 +1,51 @@
+# targets 0.4.1
+
+* Fix CRAN test error on Windows R-devel.
+* Do not inherit `roxygen2` docstrings from `shiny`.
+* Handle more missing `Suggests:` packages.
+* Unset the config lock before reading `targets.yaml` in the `callr` process.
+
+# targets 0.4.0
+
+## Bug fixes
+
+* Avoid `file.rename()` errors when migrating staged temporary files (#410).
+* Return correct error messages from feather and parquet formats (#388). Now calling `assert_df()` from `store_assert_format()` instead of `store_cast_object()`. And now those last two functions are not called at all if the target throws an error.
+* Retry writing lines to database files so Windows machines can run `tar_poll()` at the same time as the pipeline (#393).
+* Rename file written by `tar_renv()` to `_targets_packages.R` (#397).
+* Ensure metadata is loaded to compute labels properly when `outdated = FALSE` in `tar_visnetwork()`.
+
+## New features
+
+* Implement `tar_timestamp()` and `tar_timestamp_raw()` to get the last modified timestamp of a target's data (#378).
+* Implement `tar_progress_summary()` to compactly summarize all pipeline progress (#380).
+* Add a `characters` argument of `tar_traceback()` to cap the traceback line lengths (#383).
+* Add new "summary" and "about" views to `tar_watch()` (#382).
+* Implement `tar_poll()` to repeatedly poll runtime progress in the R console (#381). `tar_poll()` is a lightweight alternative to `tar_watch()`.
+* Change the color of the "dormant" status in the graph.
+* Add a `tar_envvar()` function to list values of special environment variables supported in `targets`. The help file explains each environment variable in detail.
+* Support extra project-level configuration settings with `_targets.yaml` (#297). New functions `tar_config_get()` and `tar_config_set()` interact with the `_targets.yaml` file. Currently only supports the `store` field to set the data store path to something other than `_targets/`.
+
+## Performance
+
+* Shut down superfluous persistent workers earlier in dynamic branching and when all remaining targets have `deployment = "main"` (#398, #399, #404, @pat-s).
+
+## Enhancements
+
+* Attempt to print only the useful part of the traceback in `tar_traceback()` (#383).
+* Add a line break at the end of the "summary" reporter so warnings do not mangle the output.
+* In `tar_watch()`, use `shinybusy` instead of `shinycssloaders` and keep current output on display while new output is rendering (#386, @rcorty).
+* Right-align the headers and counts in the "summary" and "forecast" reporters.
+* Add a timestamp to the "summary" reporter.
+* Make the reporters show when a target ends (#391, @mattwarkentin).
+* Make the reporters show when a pattern ends if the pattern built at least one target and none of the targets errored or canceled.
+* Use words "start" and "built" in reporters.
+* Use the region of the AWS S3 bucket instead of the local `AWS_DEFAULT_REGION` environment variable (`check_region = TRUE`; #400, @tomsing1).
+* In `tar_meta()`, return `POSIXct` times in the time zone of the calling system (#131).
+* Throw informative error messages when a target's name or command is missing (#413, @liutiming).
+* Bring back ALTREP in `qs::qread()` now that `qs` 0.24.1 requires `stringfish` >= 1.5.0 (#147, @glep).
+* Relax dynamic branching checks so `pattern = slice(...)` can take multiple indexes (#406, #419, @djbirke, @alexgphayes)
+
 # targets 0.3.1
 
 ## Bug fixes
