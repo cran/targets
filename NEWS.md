@@ -1,3 +1,9 @@
+# targets 0.4.2
+
+## Bug fixes
+
+* Do not use time stamps to monitor the config file (e.g. `_targets.yaml`). Fixes CRAN check errors from version 0.4.1.
+
 # targets 0.4.1
 
 * Fix CRAN test error on Windows R-devel.
