@@ -10,8 +10,9 @@
 #'   to defining external interfaces on top of the `targets` package to create
 #'   pipelines.
 #' @return Value of a target option.
-#' @param option Character of length 1, name of an option to get.
+#' @param name Character of length 1, name of an option to get.
 #'   Must be one of the argument names of [tar_option_set()].
+#' @param option Deprecated, use the `name` argument instead.
 #' @examples
 #' tar_option_get("format") # default format before we set anything
 #' tar_target(x, 1)$settings$format
@@ -20,7 +21,7 @@
 #' tar_target(x, 1)$settings$format
 #' tar_option_reset() # reset the format
 #' tar_target(x, 1)$settings$format
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set(cue = tar_cue(mode = "always")) # All targets always run.
@@ -30,32 +31,38 @@
 #' tar_make()
 #' })
 #' }
-tar_option_get <- function(option) {
-  assert_flag(option, choices = names(formals(tar_option_set)))
-  tar_envir_options[[option]] %|||% tar_option_default(option)
-}
-
-tar_option_default <- function(option) {
+tar_option_get <- function(name = NULL, option = NULL) {
+  if (!is.null(option)) {
+    tar_warn_deprecate(
+      "the option argument of tar_option_get() ",
+      "was deprecated in targets version 0.5.0.9000 (2021-05-30). ",
+      "use the name argument instead."
+    )
+    name <- option
+  }
+  tar_assert_nonempty(name)
+  tar_assert_flag(name, choices = names(formals(tar_option_set)))
   switch(
-    option,
-    tidy_eval = TRUE,
-    packages = (.packages()),
-    imports = character(0),
-    library = NULL,
-    envir = globalenv(),
-    format = "rds",
-    iteration = "vector",
-    error = "stop",
-    memory = "persistent",
-    garbage_collection = FALSE,
-    deployment = "worker",
-    priority = 0,
-    backoff = 5,
-    resources = list(),
-    storage = "main",
-    retrieval = "main",
-    cue = targets::tar_cue(),
-    debug = character(0),
-    workspaces = character(0)
+    name,
+    tidy_eval = tar_options$get_tidy_eval(),
+    packages = tar_options$get_packages(),
+    imports = tar_options$get_imports(),
+    library = tar_options$get_library(),
+    envir = tar_options$get_envir(),
+    format = tar_options$get_format(),
+    iteration = tar_options$get_iteration(),
+    error = tar_options$get_error(),
+    memory = tar_options$get_memory(),
+    garbage_collection = tar_options$get_garbage_collection(),
+    deployment = tar_options$get_deployment(),
+    priority = tar_options$get_priority(),
+    backoff = tar_options$get_backoff(),
+    resources = tar_options$get_resources(),
+    storage = tar_options$get_storage(),
+    retrieval = tar_options$get_retrieval(),
+    cue = tar_options$get_cue(),
+    debug = tar_options$get_debug(),
+    workspaces = tar_options$get_workspaces(),
+    workspace_on_error = tar_options$get_workspace_on_error()
   )
 }

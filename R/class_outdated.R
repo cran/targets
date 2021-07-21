@@ -2,6 +2,7 @@ outdated_init <- function(
   pipeline = NULL,
   meta = meta_init(),
   names = NULL,
+  shortcut = FALSE,
   queue = "sequential",
   reporter = "silent"
 ) {
@@ -9,6 +10,7 @@ outdated_init <- function(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
     reporter = reporter,
     checked = counter_init(),
@@ -20,6 +22,7 @@ outdated_new <- function(
   pipeline = NULL,
   meta = NULL,
   names = NULL,
+  shortcut = NULL,
   queue = NULL,
   reporter = NULL,
   checked = NULL,
@@ -29,6 +32,7 @@ outdated_new <- function(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
     reporter = reporter,
     checked = checked,
@@ -49,6 +53,7 @@ outdated_class <- R6::R6Class(
       pipeline = NULL,
       meta = NULL,
       names = NULL,
+      shortcut = NULL,
       queue = NULL,
       reporter = NULL,
       checked = NULL,
@@ -58,15 +63,19 @@ outdated_class <- R6::R6Class(
         pipeline = pipeline,
         meta = meta,
         names = names,
+        shortcut = shortcut,
         queue = queue,
         reporter = reporter
       )
       self$checked <- checked
       self$outdated <- outdated
     },
+    # nocov start
+    # Covered in tests/interactive/test-reporter.R.
     cli_data = function() {
       data_frame(checked = self$checked$count, outdated = self$outdated$count)
     },
+    # nocov end
     is_outdated = function(name) {
       counter_exists_name(self$outdated, name)
     },
@@ -96,7 +105,13 @@ outdated_class <- R6::R6Class(
     },
     process_builder_exists = function(target) {
       tryCatch(
-        target_skip(target, self$pipeline, self$scheduler, self$meta),
+        target_skip(
+          target = target,
+          pipeline = self$pipeline,
+          scheduler = self$scheduler,
+          meta = self$meta,
+          active = FALSE
+        ),
         error = function(e) warning(e$message)
       )
       target_update_depend(target, self$pipeline, self$meta)
@@ -124,7 +139,13 @@ outdated_class <- R6::R6Class(
         self$register_outdated(target_get_name(target))
         return()
       }
-      target_skip(target, self$pipeline, self$scheduler, self$meta)
+      target_skip(
+        target = target,
+        pipeline = self$pipeline,
+        scheduler = self$scheduler,
+        meta = self$meta,
+        active = FALSE
+      )
       if (any(map_lgl(target_get_children(target), self$is_outdated))) {
         self$register_outdated(target_get_name(target))
       }

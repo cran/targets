@@ -39,14 +39,18 @@ tar_github_actions <- function(
   path = file.path(".github", "workflows", "targets.yaml"),
   ask = NULL
 ) {
-  assert_chr(path, "path must be a character")
-  assert_scalar(path, "path must have length 1")
-  if (!tar_should_overwrite(ask, path)) {
+  tar_assert_chr(path, "path must be a character")
+  tar_assert_scalar(path, "path must have length 1")
+  if (!tar_should_overwrite(path = path, ask = ask)) {
     # covered in tests/interactive/test-tar_github_actions.R # nolint
     return(invisible()) # nocov
   }
   dir_create(dirname(path))
-  source <- system.file("targets.yaml", package = "targets", mustWork = TRUE)
+  source <- system.file(
+    file.path("templates", "github_actions.yaml"),
+    package = "targets",
+    mustWork = TRUE
+  )
   file.copy(source, path, overwrite = TRUE)
   invisible()
 }

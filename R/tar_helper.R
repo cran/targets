@@ -2,7 +2,8 @@
 #' @export
 #' @family scripts
 #' @description Write a helper R script for a `targets` pipeline.
-#'   Could be supporting functions or the `_targets.R` file itself.
+#'   Could be supporting functions or the target script file
+#'   (default: `_targets.R`) itself.
 #' @details `tar_helper()` is a specialized version of [tar_script()]
 #'   with flexible paths and tidy evaluation.
 #' @return `NULL` (invisibly)
@@ -30,8 +31,8 @@ tar_helper <- function(
   envir = parent.frame()
 ) {
   force(envir)
-  assert_lgl(tidy_eval, "tidy_eval must be a character.")
-  assert_scalar(tidy_eval, "tidy_eval must have length 1.")
-  assert_envir(envir)
+  tar_assert_lgl(tidy_eval)
+  tar_assert_scalar(tidy_eval)
+  tar_assert_envir(envir)
   tar_helper_raw(path, tar_tidy_eval(substitute(code), envir, tidy_eval))
 }

@@ -4,7 +4,7 @@
 \alias{tar_branches}
 \title{Reconstruct the branch names and the names of their dependencies.}
 \usage{
-tar_branches(name, pattern)
+tar_branches(name, pattern, store = targets::tar_config_get("store"))
 }
 \arguments{
 \item{name}{Symbol, name of the target.}
@@ -14,6 +14,15 @@ For example, in a pipeline with numeric vector targets \code{x} and \code{y},
 \code{tar_target(z, x + y, pattern = map(x, y))} implicitly defines
 branches of \code{z} that each compute \code{x[1] + y[1]}, \code{x[2] + y[2]},
 and so on. See the user manual for details.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 A \code{tibble} with one row per branch and one column for each target
@@ -36,7 +45,7 @@ so we cannot always know what the names of the branches will be
 in advance (or even how many there will be).
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(
@@ -53,6 +62,9 @@ tar_branches(dynamic, pattern = cross(z, map(x, y)))
 }
 \seealso{
 Other branching: 
+\code{\link{tar_branch_index}()},
+\code{\link{tar_branch_names_raw}()},
+\code{\link{tar_branch_names}()},
 \code{\link{tar_pattern}()}
 }
 \concept{branching}

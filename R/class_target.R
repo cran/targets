@@ -20,7 +20,7 @@ target_init <- function(
 ) {
   seed <- produce_seed(name)
   command <- command_init(expr, packages, library, seed, deps, string)
-  cue <- cue %|||% cue_default
+  cue <- cue %|||% cue_init()
   settings <- settings_init(
     name = name,
     format = format,
@@ -193,7 +193,7 @@ target_produce_record <- function(target, pipeline, meta) {
   UseMethod("target_produce_record")
 }
 
-target_skip <- function(target, pipeline, scheduler, meta) {
+target_skip <- function(target, pipeline, scheduler, meta, active) {
   UseMethod("target_skip")
 }
 
@@ -207,11 +207,6 @@ target_prepare.default <- function(target, pipeline, scheduler) {
 
 target_should_run <- function(target, meta) {
   UseMethod("target_should_run")
-}
-
-#' @export
-target_should_run.default <- function(target, meta) {
-  TRUE
 }
 
 target_should_run_worker <- function(target) {
@@ -232,12 +227,12 @@ target_needs_worker.default <- function(target) {
   FALSE
 }
 
-target_run <- function(target, envir) {
+target_run <- function(target, envir, path_store) {
   UseMethod("target_run")
 }
 
 #' @export
-target_run.default <- function(target, envir) {
+target_run.default <- function(target, envir, path_store) {
 }
 
 #' @title Internal function to run a target on a worker.
@@ -245,12 +240,15 @@ target_run.default <- function(target, envir) {
 #' @keywords internal
 #' @description For internal purposes only. Not a user-side function.
 #' @param target A target object.
-target_run_worker <- function(target, envir) {
+#' @param envir An environment or the string `"globalenv"`.
+#' @param path_store Character of length 1, path to the data store.
+#' @param options List, exported from an object of class `"tar_options"`.
+target_run_worker <- function(target, envir, path_store, options) {
   UseMethod("target_run_worker")
 }
 
 #' @export
-target_run_worker.default <- function(target, envir) {
+target_run_worker.default <- function(target, envir, path_store, options) {
 }
 
 target_gc <- function(target) {
@@ -286,6 +284,24 @@ target_is_branchable <- function(target) {
 #' @export
 target_is_branchable.default <- function(target) {
   FALSE
+}
+
+target_bootstrap <- function(target, pipeline, meta) {
+  UseMethod("target_bootstrap")
+}
+
+target_bootstrap_record <- function(target, meta) {
+  name <- target$settings$name
+  if (!meta$exists_record(name)) {
+    tar_throw_validate(
+      "cannot bootstrap target ",
+      name,
+      " because there is no record of ",
+      name,
+      " the metadata. Run the pipeline with shortcut = FALSE to create it."
+    )
+  }
+  meta$get_record(name)
 }
 
 target_subpipeline_copy <- function(target, keep_value) {

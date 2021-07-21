@@ -11,7 +11,7 @@ tar_test("feather format", {
     format = "feather"
   )
   builder_update_build(x, envir = envir)
-  builder_update_paths(x)
+  builder_update_paths(x, path_store_default())
   builder_update_object(x)
   exp <- envir$f()
   expect_equal(arrow::read_feather(x$store$file$path), exp)
@@ -19,9 +19,36 @@ tar_test("feather format", {
   expect_silent(target_validate(x))
 })
 
-tar_test("bad compression level throws error", {
+tar_test("bad compression level throws error (structured resources)", {
   skip_on_cran()
   skip_if_not_installed("arrow")
+  tar_script({
+    list(
+      tar_target(
+        abc,
+        data.frame(x = 1, y = 2),
+        format = "feather",
+        resources = tar_resources(
+          feather = tar_resources_feather(compression = "bad")
+        )
+      )
+    )
+  })
+  expect_error(tar_make(callr_function = NULL))
+})
+
+tar_test("bad compression level throws error (unstructured resources)", {
+  skip_on_cran()
+  skip_if_not_installed("arrow")
+  expect_warning(
+    tar_target(
+      abc,
+      data.frame(x = 1, y = 2),
+      format = "feather",
+      resources = list(compression = "bad")
+    ),
+    class = "tar_condition_deprecate"
+  )
   tar_script({
     list(
       tar_target(
@@ -32,16 +59,20 @@ tar_test("bad compression level throws error", {
       )
     )
   })
-  expect_error(tar_make(callr_function = NULL))
+  suppressWarnings(
+    expect_error(tar_make(callr_function = NULL))
+  )
 })
 
 tar_test("feather packages", {
+  skip_on_cran()
   x <- tar_target(x, 1, format = "feather")
   out <- store_get_packages(x$store)
   expect_equal(out, "arrow")
 })
 
 tar_test("feather format captures error messages", {
+  skip_on_cran()
   tar_script(tar_target(x, stop("message123"), format = "feather"))
   expect_error(
     tar_make(callr_function = NULL),
@@ -51,6 +82,7 @@ tar_test("feather format captures error messages", {
 })
 
 tar_test("same with error = \"continue\"", {
+  skip_on_cran()
   tar_script(
     tar_target(x, stop("message123"), format = "feather", error = "continue")
   )
@@ -59,6 +91,7 @@ tar_test("same with error = \"continue\"", {
 })
 
 tar_test("feather format cannot store non-data-frames", {
+  skip_on_cran()
   tar_script(tar_target(x, 1:2, format = "feather"))
   expect_error(
     tar_make(callr_function = NULL),
@@ -67,6 +100,7 @@ tar_test("feather format cannot store non-data-frames", {
 })
 
 tar_test("same with error = \"continue\"", {
+  skip_on_cran()
   tar_script(tar_target(x, 1:2, format = "feather", error = "continue"))
   expect_error(
     tar_make(callr_function = NULL),
@@ -75,18 +109,24 @@ tar_test("same with error = \"continue\"", {
 })
 
 tar_test("does not inherit from tar_external", {
+  skip_on_cran()
   store <- tar_target(x, "x_value", format = "feather")$store
   expect_false(inherits(store, "tar_external"))
 })
 
 tar_test("store_row_path()", {
+  skip_on_cran()
   store <- tar_target(x, "x_value", format = "feather")$store
   store$file$path <- "path"
   expect_equal(store_row_path(store), NA_character_)
 })
 
 tar_test("store_path_from_record()", {
+  skip_on_cran()
   store <- tar_target(x, "x_value", format = "feather")$store
   record <- record_init(name = "x", path = "path", format = "feather")
-  expect_equal(store_path_from_record(store, record), path_objects("x"))
+  expect_equal(
+    store_path_from_record(store, record, path_store_default()),
+    path_objects(path_store_default(), "x")
+  )
 })

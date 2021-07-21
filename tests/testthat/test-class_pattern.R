@@ -710,7 +710,7 @@ tar_test("head pattern in pipeline", {
     )
   })
   tar_make(callr_function = NULL)
-  expect_equal(tar_read(dynamic), seq_len(2))
+  expect_equal(unname(tar_read(dynamic)), seq_len(2))
 })
 
 tar_test("tail pattern in pipeline", {
@@ -721,7 +721,7 @@ tar_test("tail pattern in pipeline", {
     )
   })
   tar_make(callr_function = NULL)
-  expect_equal(tar_read(dynamic), tail(seq_len(26), 2))
+  expect_equal(unname(tar_read(dynamic)), tail(seq_len(26), 2))
 })
 
 tar_test("sample pattern in pipeline", {
@@ -772,6 +772,42 @@ tar_test("target_needs_worker(pattern)", {
   expect_false(target_needs_worker(x))
   x$junction <- list()
   expect_false(target_needs_worker(x))
+})
+
+tar_test("bootstrap a pattern for a shortcut pattern and stem", {
+  tar_script({
+    list(
+      tar_target(w, seq_len(2)),
+      tar_target(x, w, pattern = map(w)),
+      tar_target(y, x, pattern = map(x)),
+      tar_target(z, sum(x))
+    )
+  })
+  tar_make(callr_function = NULL)
+  expect_equal(unname(tar_read(y)), c(1L, 2L))
+  expect_equal(tar_read(z), 3L)
+  tar_make(names = c("y", "z"), shortcut = TRUE, callr_function = NULL)
+  p <- tar_progress()
+  expect_equal(nrow(p), 4L)
+  expect_equal(p$progress[grepl("^y_", p$name)], rep("skipped", 2L))
+  expect_equal(p$progress[p$name == "y"], "skipped")
+  expect_equal(p$progress[p$name == "z"], "skipped")
+  tar_script({
+    list(
+      tar_target(w, seq_len(2)),
+      tar_target(x, w, pattern = map(w)),
+      tar_target(y, x + 1L, pattern = map(x)),
+      tar_target(z, sum(x) + 1L)
+    )
+  })
+  tar_make(names = c("y", "z"), shortcut = TRUE, callr_function = NULL)
+  expect_equal(unname(tar_read(y)), c(2L, 3L))
+  expect_equal(tar_read(z), 4L)
+  p <- tar_progress()
+  expect_equal(nrow(p), 4L)
+  expect_equal(p$progress[grepl("^y_", p$name)], rep("built", 2L))
+  expect_equal(p$progress[p$name == "y"], "built")
+  expect_equal(p$progress[p$name == "z"], "built")
 })
 
 tar_test("pattern validate", {

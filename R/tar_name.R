@@ -12,7 +12,7 @@
 #' @examples
 #' tar_name()
 #' tar_name(default = "custom_target_name")
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(tar_target(x, tar_name()), ask = FALSE)
 #' tar_make()
@@ -20,11 +20,11 @@
 #' })
 #' }
 tar_name <- function(default = "target") {
-  assert_chr(default)
-  assert_scalar(default)
+  tar_assert_chr(default)
+  tar_assert_scalar(default)
   if_any(
-    exists(x = "target", envir = tar_envir_run, inherits = FALSE),
-    target_get_name(get(x = "target", envir = tar_envir_run)),
+    tar_runtime$exists_target(),
+    target_get_name(tar_runtime$get_target()),
     as.character(default)
   )
 }

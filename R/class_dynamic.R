@@ -23,9 +23,9 @@ dynamic_class <- R6::R6Class(
   public = list(
     map = function(...) {
       args <- list(...)
-      assert_scalar(
+      tar_assert_scalar(
         unique(map_int(args, nrow)),
-        paste("unequal lengths of vars in", deparse_safe(sys.call()))
+        paste("unequal lengths of vars in", tar_deparse_safe(sys.call()))
       )
       omit_rownames(do.call(cbind, args))
     },
@@ -39,9 +39,23 @@ dynamic_class <- R6::R6Class(
       omit_rownames(utils::tail(x = x, n = n))
     },
     slice = function(x, index = 1L) {
+      tar_assert_in(
+        index,
+        seq_len(nrow(x)),
+        "index is out of bounds in pattern = slice()."
+      )
       omit_rownames(x[index,, drop = FALSE]) # nolint
     },
     sample = function(x, n = 1L) {
+      tar_assert_positive(n, "n must be positive in pattern = sample().")
+      tar_assert_le(
+        n,
+        nrow(x),
+        paste(
+          "in pattern = sample(), n must be not exceed",
+          "the number of possible branches."
+        )
+      )
       index <- sample.int(n = nrow(x), size = n, replace = FALSE)
       self$slice(x = x, index = index)
     }

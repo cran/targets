@@ -1,4 +1,5 @@
 progress_init <- function(
+  path_store = path_store_default(),
   queued = counter_init(),
   started = counter_init(),
   built = counter_init(),
@@ -7,7 +8,7 @@ progress_init <- function(
   warned = counter_init(),
   canceled = counter_init()
 ) {
-  database <- database_progress()
+  database <- database_progress(path_store = path_store)
   progress_new(
     database = database,
     queued = queued,
@@ -112,8 +113,7 @@ progress_class <- R6::R6Class(
       counter_del_name(self$started, name)
       counter_set_name(self$warned, name)
     },
-    write_progress = function(target, progress) {
-      db <- self$database
+    produce_row = function(target, progress) {
       name <- target_get_name(target)
       type <- target_get_type(target)
       branches <- if_any(
@@ -121,26 +121,42 @@ progress_class <- R6::R6Class(
         0L,
         length(omit_na(target_get_children(target)))
       )
-      row <- list(
+      list(
         name = name,
         type = type,
         parent = target_get_parent(target),
         branches = branches,
         progress = progress
       )
-      db$write_row(row)
+    },
+    write_progress = function(target, progress) {
+      self$database$write_row(self$produce_row(target, progress))
+    },
+    enqueue_progress = function(target, progress) {
+      self$database$enqueue_row(self$produce_row(target, progress))
+    },
+    enqueue_skipped = function(target) {
+      self$enqueue_progress(target, progress = "skipped")
     },
     write_started = function(target) {
+      self$database$dequeue_rows()
       self$write_progress(target, progress = "started")
     },
     write_built = function(target) {
+      self$database$dequeue_rows()
       self$write_progress(target, progress = "built")
     },
     write_errored = function(target) {
+      self$database$dequeue_rows()
       self$write_progress(target, progress = "errored")
     },
     write_canceled = function(target) {
+      self$database$dequeue_rows()
       self$write_progress(target, progress = "canceled")
+    },
+    register_skipped = function(target) {
+      self$assign_skipped(target)
+      self$enqueue_skipped(target)
     },
     register_started = function(target) {
       self$assign_started(target)
@@ -186,6 +202,9 @@ progress_class <- R6::R6Class(
         time = time_stamp_short()
       )
     },
+    abridge = function() {
+      counter_del_names(self$queued, counter_get_names(self$queued))
+    },
     validate = function() {
       counter_validate(self$queued)
       counter_validate(self$started)
@@ -197,9 +216,9 @@ progress_class <- R6::R6Class(
   )
 )
 
-database_progress <- function() {
+database_progress <- function(path_store) {
   database_init(
-    path = path_progress(),
+    path = path_progress(path_store = path_store),
     header = header_progress(),
   )
 }

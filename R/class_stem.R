@@ -41,7 +41,7 @@ target_get_type_cli.tar_stem <- function(target) {
 #' @export
 target_produce_junction.tar_stem <- function(target, pipeline) {
   target_ensure_value(target, pipeline)
-  stem_assert_nonempty(target)
+  stem_tar_assert_nonempty(target)
   hashes <- value_hash_slices(target$value)
   names <- paste0(target_get_parent(target), "_", hashes)
   junction_init(target_get_parent(target), names)
@@ -58,7 +58,7 @@ target_produce_record.tar_stem <- function(target, pipeline, meta) {
     depend = meta$get_depend(target_get_name(target)),
     path = file$path,
     data = file$hash,
-    time = file$time,
+    time = file$time %||nf% file_time_now(),
     size = file$size,
     bytes = file$bytes,
     format = target$settings$format,
@@ -71,7 +71,7 @@ target_produce_record.tar_stem <- function(target, pipeline, meta) {
 }
 
 #' @export
-target_skip.tar_stem <- function(target, pipeline, scheduler, meta) {
+target_skip.tar_stem <- function(target, pipeline, scheduler, meta, active) {
   NextMethod()
   stem_restore_buds(target, pipeline, scheduler, meta)
 }
@@ -93,16 +93,24 @@ target_is_branchable.tar_stem <- function(target) {
 
 #' @export
 target_validate.tar_stem <- function(target) {
-  assert_correct_fields(target, stem_new)
+  tar_assert_correct_fields(target, stem_new)
   NextMethod()
   if (!is.null(target$junction)) {
     junction_validate(target$junction)
   }
 }
 
-stem_assert_nonempty <- function(target) {
+#' @export
+target_bootstrap.tar_stem <- function(target, pipeline, meta) {
+  NextMethod()
+  stem_restore_junction(target, pipeline, meta)
+  stem_insert_buds(target, pipeline)
+  invisible()
+}
+
+stem_tar_assert_nonempty <- function(target) {
   if (value_count_slices(target$value) < 1L) {
-    throw_run(
+    tar_throw_run(
       "cannot branch over empty target (",
       target_get_name(target),
       ")"
@@ -116,21 +124,21 @@ stem_produce_buds <- function(target) {
   map(seq_along(names), ~bud_init(settings, names[.x], .x))
 }
 
-stem_insert_buds <- function(target, pipeline, scheduler) {
+stem_insert_buds <- function(target, pipeline) {
   map(stem_produce_buds(target), pipeline_set_target, pipeline = pipeline)
 }
 
 stem_ensure_buds <- function(target, pipeline, scheduler) {
   if (length(target_downstream_branching(target, pipeline, scheduler))) {
     stem_ensure_junction(target, pipeline)
-    stem_insert_buds(target, pipeline, scheduler)
+    stem_insert_buds(target, pipeline)
   }
 }
 
 stem_restore_buds <- function(target, pipeline, scheduler, meta) {
   if (length(target_downstream_branching(target, pipeline, scheduler))) {
     stem_restore_junction(target, pipeline, meta)
-    stem_insert_buds(target, pipeline, scheduler)
+    stem_insert_buds(target, pipeline)
   }
 }
 
@@ -161,7 +169,7 @@ stem_restore_junction <- function(target, pipeline, meta) {
 #' @export
 print.tar_stem <- function(x, ...) {
   cat(
-    "<stem target>",
+    "<tar_stem>",
     "\n  name:", target_get_name(x),
     "\n  command:\n   ",
     produce_lines(string_sub_expression(x$command$string)),
@@ -171,7 +179,8 @@ print.tar_stem <- function(x, ...) {
     "\n  memory mode:", x$settings$memory,
     "\n  storage mode:", x$settings$storage,
     "\n  retrieval mode:", x$settings$retrieval,
-    "\n  deploy to:", x$settings$deployment,
+    "\n  deployment mode:", x$settings$deployment,
+    "\n  priority:", x$settings$priority,
     "\n  resources:\n   ",
     produce_lines(paste_list(x$settings$resources)),
     "\n  cue:\n   ",

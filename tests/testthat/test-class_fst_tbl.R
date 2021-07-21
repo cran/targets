@@ -11,7 +11,7 @@ tar_test("fst_tbl format", {
     format = "fst_tbl"
   )
   builder_update_build(x, envir = envir)
-  builder_update_paths(x)
+  builder_update_paths(x, path_store_default())
   builder_update_object(x)
   exp <- envir$f()
   out <- tibble::as_tibble(fst::read_fst(x$store$file$path))
@@ -34,12 +34,12 @@ tar_test("fst_tbl coercion", {
   )
   builder_update_build(x, envir)
   expect_true(inherits(x$value$object, "tbl_df"))
-  builder_update_paths(x)
+  builder_update_paths(x, path_store_default())
   builder_update_object(x)
   expect_true(inherits(target_read_value(x)$object, "tbl_df"))
 })
 
-tar_test("bad compression level throws error", {
+tar_test("bad compression level throws error (unstructured resources)", {
   skip_if_not_installed("fst")
   skip_if_not_installed("tibble")
   tar_script({
@@ -52,9 +52,20 @@ tar_test("bad compression level throws error", {
       )
     )
   })
-  expect_error(
-    tar_make(callr_function = NULL),
-    class = "tar_condition_validate"
+  expect_warning(
+    tar_target(
+      abc,
+      data.frame(x = 1, y = 2),
+      format = "fst_tbl",
+      resources = list(compress = "bad")
+    ),
+    class = "tar_condition_deprecate"
+  )
+  suppressWarnings(
+    expect_error(
+      tar_make(callr_function = NULL),
+      class = "tar_condition_validate"
+    )
   )
 })
 
@@ -78,5 +89,8 @@ tar_test("store_row_path()", {
 tar_test("store_path_from_record()", {
   store <- tar_target(x, "x_value", format = "fst_tbl")$store
   record <- record_init(name = "x", path = "path", format = "fst_tbl")
-  expect_equal(store_path_from_record(store, record), path_objects("x"))
+  expect_equal(
+    store_path_from_record(store, record, path_store_default()),
+    path_objects(path_store_default(), "x")
+  )
 })

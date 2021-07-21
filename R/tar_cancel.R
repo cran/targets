@@ -7,7 +7,7 @@
 #'   cannot interrupt a target from another process.
 #' @param condition Logical of length 1, whether to cancel the target.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(tar_target(x, tar_cancel(1 > 0)))
 #' tar_make() # Should cancel target x.
@@ -15,8 +15,10 @@
 #' }
 tar_cancel <- function(condition = TRUE) {
   condition <- force(condition)
-  assert_lgl(condition, "condition in tar_cancel() must be logical")
+  tar_assert_lgl(condition, "condition in tar_cancel() must be logical")
   if (condition) {
-    throw_cancel("throw_cancel() is only valid inside a targets pipeline.")
+    tar_throw_cancel(
+      "tar_throw_cancel() is only valid inside a targets pipeline."
+    )
   }
 }

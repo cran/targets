@@ -1,20 +1,33 @@
 scheduler_init <- function(
   pipeline = pipeline_init(),
+  meta = meta_init(),
   queue = "parallel",
-  reporter = "verbose"
+  reporter = "verbose",
+  names = NULL,
+  shortcut = FALSE
 ) {
+  pipeline <- pipeline_prune_shortcut(pipeline, names, shortcut)
   edges <- pipeline_upstream_edges(pipeline, targets_only = TRUE)
-  graph <- graph_init(remove_loops(edges))
   igraph <- igraph::simplify(igraph::graph_from_data_frame(edges))
-  assert_dag(igraph, "dependency graph contains a cycle")
+  tar_assert_target_dag(igraph)
+  graph <- graph_init(remove_loops(edges))
   priorities <- pipeline_get_priorities(pipeline)
   names <- scheduler_topo_sort(igraph, priorities, queue)
   queue <- queue_init(queue, names, initial_ranks(names, graph, priorities))
   queued <- counter_init(names)
-  progress <- progress_init(queued = queued)
+  progress <- progress_init(
+    path_store = meta$get_path_store(),
+    queued = queued
+  )
   reporter <- reporter_init(reporter)
   backoff <- backoff_init(max = tar_option_get("backoff"))
-  scheduler_new(graph, queue, progress, reporter, backoff)
+  scheduler_new(
+    graph = graph,
+    queue = queue,
+    progress = progress,
+    reporter = reporter,
+    backoff = backoff
+  )
 }
 
 scheduler_topo_sort <- function(igraph, priorities, queue) {
@@ -78,6 +91,11 @@ scheduler_class <- R6::R6Class(
         deps
       )
       length(deps_queued) + length(deps_started)
+    },
+    abridge = function(target) {
+      self$reporter$report_error(target$metrics$error)
+      self$progress$abridge()
+      self$queue$abridge()
     },
     validate = function() {
       self$graph$validate()

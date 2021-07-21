@@ -21,6 +21,10 @@
 #'   in the app controls.
 #' @param label_tar_visnetwork Character vector, `label` argument to
 #'   [tar_visnetwork()].
+#' @param display Character of length 1, which display to show first.
+#' @param displays Character vector of choices for the display.
+#'   Elements can be any of
+#'   `"graph"`, `"summary"`, `"branches"`, or `"about"`.
 tar_watch_ui <- function(
   id,
   label = "tar_watch_label",
@@ -29,11 +33,38 @@ tar_watch_ui <- function(
   seconds_max = 60,
   seconds_step = 1,
   targets_only = FALSE,
-  outdated = TRUE,
+  outdated = FALSE,
   label_tar_visnetwork = NULL,
   level_separation = 150,
-  height = "650px"
+  degree_from = 1L,
+  degree_to = 1L,
+  height = "650px",
+  display = "summary",
+  displays = c("summary", "branches", "progress", "graph", "about")
 ) {
+  tar_assert_watch_packages()
+  tar_assert_dbl(seconds)
+  tar_assert_dbl(seconds_min)
+  tar_assert_dbl(seconds_max)
+  tar_assert_dbl(seconds_step)
+  tar_assert_scalar(seconds)
+  tar_assert_scalar(seconds_min)
+  tar_assert_scalar(seconds_max)
+  tar_assert_scalar(seconds_step)
+  tar_assert_scalar(degree_from)
+  tar_assert_scalar(degree_to)
+  tar_assert_dbl(degree_from)
+  tar_assert_dbl(degree_to)
+  tar_assert_ge(degree_from, 0L)
+  tar_assert_ge(degree_to, 0L)
+  tar_assert_in(
+    displays,
+    c("summary", "branches", "progress", "graph", "about")
+  )
+  tar_assert_in(display, displays)
+  seconds_min <- min(seconds_min, seconds)
+  seconds_max <- max(seconds_max, seconds)
+  seconds_step <- min(seconds_step, seconds_max)
   ns <- shiny::NS(id)
   shiny::fluidRow(
     bs4Dash::bs4Card(
@@ -49,9 +80,9 @@ tar_watch_ui <- function(
         inputId = ns("display"),
         label = NULL,
         status = "primary",
-        choiceNames = c("graph", "summary", "branches", "about"),
-        choiceValues = c("graph", "summary", "branches", "about"),
-        selected = "graph",
+        choiceNames = displays,
+        choiceValues = displays,
+        selected = display,
         direction = "vertical"
       ),
       shinyWidgets::actionBttn(
@@ -117,6 +148,20 @@ tar_watch_ui <- function(
         max = 1000,
         step = 10,
         ticks = FALSE
+      ),
+      shiny::numericInput(
+        inputId = ns("degree_from"),
+        label = "degree_from",
+        value = as.numeric(degree_from),
+        min = 0,
+        step = 1
+      ),
+      shiny::numericInput(
+        inputId = ns("degree_to"),
+        label = "degree_to",
+        value = as.numeric(degree_to),
+        min = 0,
+        step = 1
       )
     ),
     bs4Dash::bs4Card(

@@ -6,7 +6,7 @@ tar_test("qs format", {
     format = "qs"
   )
   builder_update_build(x, baseenv())
-  builder_update_paths(x)
+  builder_update_paths(x, path_store_default())
   builder_update_object(x)
   exp <- 2L
   expect_equal(qs::qread(x$store$file$path), exp)
@@ -14,7 +14,7 @@ tar_test("qs format", {
   expect_silent(target_validate(x))
 })
 
-tar_test("bad compression level throws error", {
+tar_test("bad compression level throws error (structured resources)", {
   skip_if_not_installed("qs")
   tar_script({
     list(
@@ -22,13 +22,38 @@ tar_test("bad compression level throws error", {
         abc,
         1,
         format = "qs",
-        resources = list(preset = NA_real_)
+        resources = tar_resources(
+          qs = tar_resources_qs(preset = "bad")
+        )
       )
     )
   })
-  expect_error(
-    tar_make(callr_function = NULL),
-    class = "tar_condition_validate"
+  expect_error(tar_make(callr_function = NULL))
+})
+
+tar_test("bad compression level throws error (unstructured resources)", {
+  skip_if_not_installed("qs")
+  tar_script({
+    list(
+      tar_target(
+        abc,
+        1,
+        format = "qs",
+        resources = list(preset = "bad")
+      )
+    )
+  })
+  expect_warning(
+    tar_target(
+      abc,
+      1,
+      format = "qs",
+      resources = list(preset = "bad")
+    ),
+    class = "tar_condition_deprecate"
+  )
+  suppressWarnings(
+    expect_error(tar_make(callr_function = NULL))
   )
 })
 
@@ -52,5 +77,8 @@ tar_test("store_row_path()", {
 tar_test("store_path_from_record()", {
   store <- tar_target(x, "x_value", format = "qs")$store
   record <- record_init(name = "x", path = "path", format = "qs")
-  expect_equal(store_path_from_record(store, record), path_objects("x"))
+  expect_equal(
+    store_path_from_record(store, record, path_store_default()),
+    path_objects(path_store_default(), "x")
+  )
 })

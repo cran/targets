@@ -5,12 +5,22 @@
 \title{Summarize target progress.}
 \usage{
 tar_progress_summary(
-  fields = c("started", "built", "errored", "canceled", "since")
+  fields = c("skipped", "started", "built", "errored", "canceled", "since"),
+  store = targets::tar_config_get("store")
 )
 }
 \arguments{
 \item{fields}{Optional, names of progress data columns to read.
 Set to \code{NULL} to read all fields.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 A data frame with one row and the following
@@ -30,7 +40,7 @@ optional columns that can be selected with \code{fields}.
 Summarize the progress of a run of the pipeline.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(

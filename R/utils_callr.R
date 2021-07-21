@@ -2,17 +2,22 @@ callr_outer <- function(
   targets_function,
   targets_arguments,
   callr_function,
-  callr_arguments
+  callr_arguments,
+  envir,
+  script
 ) {
+  tar_assert_script(script)
   tryCatch(
     callr_dispatch(
-      targets_function,
-      targets_arguments,
-      callr_function,
-      callr_arguments
+      targets_function = targets_function,
+      targets_arguments = targets_arguments,
+      callr_function = callr_function,
+      callr_arguments = callr_arguments,
+      envir = envir,
+      script = script
     ),
     callr_error = function(e) {
-      throw_run(
+      tar_throw_run(
         conditionMessage(e),
         "\nVisit https://books.ropensci.org/targets/debugging.html ",
         "for debugging advice."
@@ -25,24 +30,26 @@ callr_dispatch <- function(
   targets_function,
   targets_arguments,
   callr_function,
-  callr_arguments
+  callr_arguments,
+  envir,
+  script
 ) {
-  assert_script()
-  targets_options <- list(crayon.enabled = interactive())
+  options <- list(crayon.enabled = interactive())
   callr_arguments$func <- callr_inner
   callr_arguments$args <- list(
-    targets_script = path_script(),
     targets_function = targets_function,
     targets_arguments = targets_arguments,
-    targets_options = targets_options
+    options = options,
+    script = script
   )
   if_any(
     is.null(callr_function),
     callr_inner(
-      targets_script = path_script(),
       targets_function = targets_function,
       targets_arguments = targets_arguments,
-      targets_options = targets_options
+      options = options,
+      envir = envir,
+      script = script
     ),
     do.call(
       callr_function,
@@ -52,19 +59,23 @@ callr_dispatch <- function(
 }
 
 callr_inner <- function(
-  targets_script,
   targets_function,
   targets_arguments,
-  targets_options
+  options,
+  envir = NULL,
+  script
 ) {
-  tar_config <- getNamespace("targets")$tar_config
-  tar_config$unset_lock()
-  tar_config$ensure()
-  tar_config$set_lock()
-  on.exit(tar_config$unset_lock())
-  withr::local_options(targets_options)
-  value <- source(targets_script)$value
-  targets_arguments$pipeline <- targets::as_pipeline(value)
+  force(envir)
+  parent <- parent.frame()
+  if (is.null(envir)) {
+    envir <- parent
+  }
+  old_envir <- targets::tar_option_get("envir")
+  targets::tar_option_set(envir = envir)
+  on.exit(tar_option_set(envir = old_envir))
+  withr::local_options(options)
+  targets <- eval(parse(text = readLines(script)), envir = envir)
+  targets_arguments$pipeline <- targets::as_pipeline(targets)
   targets::pipeline_validate_lite(targets_arguments$pipeline)
   do.call(targets_function, targets_arguments)
 }

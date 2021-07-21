@@ -2,15 +2,19 @@ active_new <- function(
   pipeline = NULL,
   meta = NULL,
   names = NULL,
+  shortcut = NULL,
   queue = NULL,
-  reporter = NULL
+  reporter = NULL,
+  envir = NULL
 ) {
   active_class$new(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
-    reporter = reporter
+    reporter = reporter,
+    envir = envir
   )
 }
 
@@ -20,18 +24,45 @@ active_class <- R6::R6Class(
   portable = FALSE,
   cloneable = FALSE,
   public = list(
+    envir = NULL,
     process = NULL,
+    initialize = function(
+      pipeline = NULL,
+      meta = NULL,
+      names = NULL,
+      shortcut = NULL,
+      queue = NULL,
+      reporter = NULL,
+      envir = NULL
+    ) {
+      super$initialize(
+        pipeline = pipeline,
+        meta = meta,
+        names = names,
+        shortcut = shortcut,
+        queue = queue,
+        reporter = reporter
+      )
+      self$envir <- envir
+    },
     ensure_meta = function() {
       self$meta$validate()
       self$meta$database$preprocess(write = TRUE)
+      self$write_gitignore()
       self$meta$record_imports(self$pipeline$imports, self$pipeline)
       self$meta$restrict_records(self$pipeline)
     },
+    write_gitignore = function() {
+      writeLines(
+        c("*", "!.gitignore", "!meta"),
+        path_gitignore(self$meta$get_path_store())
+      )
+    },
     ensure_process = function() {
-      self$process <- process_init()
+      self$process <- process_init(path_store = self$meta$get_path_store())
       self$process$record_process()
     },
-    produce_exports = function(envir, is_globalenv = NULL) {
+    produce_exports = function(envir, path_store, is_globalenv = NULL) {
       map(names(envir), ~force(envir[[.x]])) # try to nix high-mem promises
       if (is_globalenv %|||% identical(envir, globalenv())) {
         out <- as.list(envir, all.names = TRUE)
@@ -42,6 +73,8 @@ active_class <- R6::R6Class(
         remove(list = discard, envir = envir)
         out <- list(.tar_envir_5048826d = envir)
       }
+      out[[".tar_path_store_5048826d"]] <- path_store
+      out[[".tar_options_5048826d"]] <- tar_options$export()
       out
     },
     unload_transient = function() {
@@ -52,10 +85,11 @@ active_class <- R6::R6Class(
     },
     skip_target = function(target) {
       target_skip(
-        target,
-        self$pipeline,
-        self$scheduler,
-        self$meta
+        target = target,
+        pipeline = self$pipeline,
+        scheduler = self$scheduler,
+        meta = self$meta,
+        active = TRUE
       )
       target_sync_file_meta(target, self$meta)
     },
@@ -69,21 +103,23 @@ active_class <- R6::R6Class(
         self$run_target(name),
         self$skip_target(target)
       )
-      builder_ensure_workspace(target, self$pipeline, self$scheduler)
     },
     start = function() {
       pipeline_prune_names(self$pipeline, self$names)
-      self$update_scheduler()
       self$ensure_meta()
+      self$update_scheduler()
+      self$bootstrap_shortcut_deps()
       self$ensure_process()
       self$scheduler$progress$database$reset_storage()
       self$scheduler$reporter$report_start()
     },
     end = function() {
-      pipeline_unload_loaded(self$pipeline)
       scheduler <- self$scheduler
+      scheduler$progress$database$dequeue_rows()
+      self$meta$database$dequeue_rows()
+      pipeline_unload_loaded(self$pipeline)
       scheduler$reporter$report_end(scheduler$progress)
-      path_scratch_del()
+      path_scratch_del(path_store = self$meta$get_path_store())
       self$meta$database$deduplicate_storage()
     },
     validate = function() {

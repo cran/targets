@@ -66,7 +66,7 @@ build_load_packages <- function(packages, library) {
     "in library paths",
     paste(library, collapse = ", ")
   )
-  assert_true(all(out), msg)
+  tar_assert_true(all(out), msg)
 }
 
 build_run_expr <- function(expr, envir, seed, packages, library) {
@@ -101,11 +101,15 @@ build_time_seconds <- function() {
 }
 
 build_message <- function(condition) {
-  out <- substr(paste(conditionMessage(condition), collapse = " "), 0L, 128L)
+  out <- substr(
+    paste(conditionMessage(condition), collapse = " "),
+    start = 0L,
+    stop = 2048L
+  )
   if_any(nzchar(out), out, ".")
 }
 
 build_validate <- function(build) {
-  assert_correct_fields(build, build_new)
+  tar_assert_correct_fields(build, build_new)
   metrics_validate(build$metrics)
 }

@@ -2,16 +2,20 @@ future_init <- function(
   pipeline = NULL,
   meta = meta_init(),
   names = NULL,
+  shortcut = FALSE,
   queue = "parallel",
   reporter = "verbose",
+  envir = tar_option_get("envir"),
   workers = 1L
 ) {
   future_new(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
     reporter = reporter,
+    envir = envir,
     workers = as.integer(workers)
   )
 }
@@ -20,16 +24,20 @@ future_new <- function(
   pipeline = NULL,
   meta = NULL,
   names = NULL,
+  shortcut = NULL,
   queue = NULL,
   reporter = NULL,
+  envir = NULL,
   workers = NULL
 ) {
   future_class$new(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
     reporter = reporter,
+    envir = envir,
     workers = workers
   )
 }
@@ -47,22 +55,29 @@ future_class <- R6::R6Class(
       pipeline = NULL,
       meta = NULL,
       names = NULL,
+      shortcut = NULL,
       queue = NULL,
       reporter = NULL,
+      envir = NULL,
       workers = NULL
     ) {
       super$initialize(
         pipeline = pipeline,
         meta = meta,
         names = names,
+        shortcut = shortcut,
         queue = queue,
-        reporter = reporter
+        reporter = reporter,
+        envir = envir
       )
       self$workers <- workers
       self$crew <- memory_init()
     },
     update_globals = function() {
-      self$globals <- self$produce_exports(tar_option_get("envir"))
+      self$globals <- self$produce_exports(
+        envir = self$envir,
+        path_store = self$meta$get_path_store()
+      )
     },
     ensure_globals = function() {
       if (is.null(self$globals)) {
@@ -73,7 +88,8 @@ future_class <- R6::R6Class(
       self$ensure_globals()
       globals <- self$globals
       globals$.tar_target_5048826d <- target
-      plan_new <- target$settings$resources$plan
+      plan_new <- target$settings$resources$future$plan %|||%
+        target$settings$resources$plan
       if (!is.null(plan_new)) {
         # Temporary solution to allow heterogeneous workers
         # from different plans. Uses .cleanup = FALSE # nolint
@@ -85,15 +101,28 @@ future_class <- R6::R6Class(
         on.exit(future::plan(plan_old, .cleanup = FALSE))
         future::plan(plan_new, .cleanup = FALSE)
       }
-      future <- future::future(
-        expr = target_run_worker(.tar_target_5048826d, .tar_envir_5048826d),
+      # TODO: default to resources from the future plan
+      # after unstructured resources are totally defunct.
+      resources <- target$settings$resources$future$resources %|||%
+        target$settings$resources # compat: deprecated unstructured resources
+      args <- list(
+        expr = quote(
+          target_run_worker(
+            target = .tar_target_5048826d,
+            envir = .tar_envir_5048826d,
+            path_store = .tar_path_store_5048826d,
+            options = .tar_options_5048826d
+          )
+        ),
+        substitute = TRUE,
         packages = "targets",
         globals = globals,
         label = target_get_name(target),
-        resources = target$settings$resources,
+        resources = resources,
         lazy = FALSE,
         seed = 0L
       )
+      future <- do.call(what = future::future, args = args)
       memory_set_object(
         self$crew,
         name = target_get_name(target),
@@ -101,7 +130,11 @@ future_class <- R6::R6Class(
       )
     },
     run_main = function(target) {
-      target_run(target, tar_option_get("envir"))
+      target_run(
+        target = target,
+        envir = self$envir,
+        path_store = self$meta$get_path_store()
+      )
       target_conclude(
         target,
         self$pipeline,
@@ -138,6 +171,7 @@ future_class <- R6::R6Class(
         self$scheduler,
         self$meta
       )
+      self$scheduler$backoff$reset()
     },
     can_submit = function() {
       self$crew$count < self$workers &&
@@ -190,7 +224,7 @@ future_class <- R6::R6Class(
     },
     validate = function() {
       super$validate()
-      assert_int(self$workers)
+      tar_assert_int(self$workers)
     }
   )
 )

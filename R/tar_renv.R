@@ -64,19 +64,23 @@ tar_renv <- function(
   ),
   path = "_targets_packages.R",
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function)
+  callr_arguments = targets::callr_args_default(callr_function),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script")
 ) {
-  assert_script()
-  assert_chr(extras, "extras must be a character vector")
-  assert_chr(path, "path must have type character")
-  assert_scalar(path, "path must have length 1")
-  assert_callr_function(callr_function)
-  assert_list(callr_arguments, "callr_arguments must be a list.")
+  force(envir)
+  tar_assert_chr(extras)
+  tar_assert_chr(path)
+  tar_assert_scalar(path)
+  tar_assert_callr_function(callr_function)
+  tar_assert_list(callr_arguments)
   callr_outer(
     targets_function = tar_renv_inner,
     targets_arguments = list(extras = extras, path = path),
     callr_function = callr_function,
-    callr_arguments = callr_arguments
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script
   )
   invisible()
 }

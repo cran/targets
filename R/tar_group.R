@@ -21,7 +21,7 @@
 #'   `targets` will use to find subsets of your data frame.
 #' @param x Grouped data frame from `dplyr::group_by()`
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' # The tar_group() function simply creates
 #' # a tar_group column to partition the rows
 #' # of a data frame.
@@ -60,14 +60,16 @@
 #' })
 #' }
 tar_group <- function(x) {
-  assert_package("dplyr")
+  tar_assert_package("dplyr")
   groups <- attr(x, "groups")
   if (is.null(groups)) {
-    throw_validate(
+    tar_throw_validate(
       "tar_group() must take a grouped data frame from dplyr::group_by()"
     )
   }
   x$tar_group <- tar_group_column(x, groups)
+  attr(x, "groups") <- NULL
+  class(x) <- setdiff(class(x), "grouped_df")
   x
 }
 

@@ -15,17 +15,25 @@ value_produce_slice.tar_group <- function(value, index) { # nolint
 }
 
 #' @export
+value_produce_slice_kernel.tar_group <- function(value, index) { # nolint
+  out <- value_produce_slice(value = value, index = index)
+  out$tar_group <- NULL
+  attr(out, "out.attrs") <- NULL
+  out
+}
+
+#' @export
 value_produce_aggregate.tar_group <- function(value, objects) { # nolint
   do.call(vctrs::vec_rbind, objects)
 }
 
 #' @export
 value_validate.tar_group <- function(value) {
-  assert_df(
+  tar_assert_df(
     value$object,
     msg = "iteration = \"group\" requires data frame targets."
   )
-  assert_in(
+  tar_assert_in(
     "tar_group",
     choices = colnames(value$object),
     msg = paste(

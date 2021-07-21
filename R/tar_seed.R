@@ -24,7 +24,7 @@
 #' @examples
 #' tar_seed()
 #' tar_seed(default = 123L)
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(tar_target(returns_seed, tar_seed()), ask = FALSE)
 #' tar_make()
@@ -33,11 +33,11 @@
 #' }
 tar_seed <- function(default = 1L) {
   default <- as.integer(default)
-  assert_int(default)
-  assert_scalar(default)
+  tar_assert_int(default)
+  tar_assert_scalar(default)
   if_any(
-    exists(x = "target", envir = tar_envir_run, inherits = FALSE),
-    get(x = "target", envir = tar_envir_run)$command$seed,
+    tar_runtime$exists_target(),
+    tar_runtime$get_target()$command$seed,
     as.integer(default)
   )
 }

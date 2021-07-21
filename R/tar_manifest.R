@@ -9,7 +9,8 @@
 #' @inheritParams tar_validate
 #' @param names Names of the targets to show. Set to `NULL` to
 #'   show all the targets (default). Otherwise, you can supply
-#'   symbols, a character vector, or `tidyselect` helpers like [starts_with()].
+#'   symbols, a character vector, or `tidyselect` helpers like
+#'   [all_of()] and [starts_with()].
 #' @param fields Names of the fields, or columns, to show. Set to `NULL` to
 #'   show all the fields (default). Otherwise, you can supply
 #'   symbols, a character vector, or `tidyselect` helpers like [starts_with()].
@@ -29,6 +30,10 @@
 #'   * `retrieval`: Retrieval mode for high-performance computing scenarios.
 #'   * `deployment`: Where/whether to deploy the target in high-performance
 #'     computing scenarios.
+#'   * `priority`: Numeric of length 1 between 0 and 1. Controls which
+#'     targets get deployed first when multiple competing targets are ready
+#'     simultaneously. Targets with priorities closer to 1 get built earlier
+#'     (and polled earlier in [tar_make_future()]).
 #'   * `resources`: A list of target-specific resource requirements for
 #'     [tar_make_future()].
 #'   * `cue_mode`: Cue mode from [tar_cue()].
@@ -40,7 +45,7 @@
 #'   * `packages`: List columns of packages loaded before building the target.
 #'   * `library`: List column of library paths to load the packages.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   tar_option_set()
@@ -62,11 +67,13 @@ tar_manifest <- function(
   names = NULL,
   fields = c("name", "command", "pattern"),
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function)
+  callr_arguments = targets::callr_args_default(callr_function),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script")
 ) {
-  assert_script()
-  assert_callr_function(callr_function)
-  assert_list(callr_arguments, "callr_arguments mut be a list.")
+  force(envir)
+  tar_assert_callr_function(callr_function)
+  tar_assert_list(callr_arguments, "callr_arguments mut be a list.")
   targets_arguments <- list(
     names_quosure = rlang::enquo(names),
     fields_quosure = rlang::enquo(fields)
@@ -75,7 +82,9 @@ tar_manifest <- function(
     targets_function = tar_manifest_inner,
     targets_arguments = targets_arguments,
     callr_function = callr_function,
-    callr_arguments = callr_arguments
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script
   )
 }
 
@@ -86,11 +95,12 @@ tar_manifest_inner <- function(
 ) {
   igraph <- pipeline_produce_igraph(pipeline, targets_only = TRUE)
   all_names <- topo_sort_igraph(igraph)
-  names <- eval_tidyselect(names_quosure, all_names) %|||% all_names
+  names <- tar_tidyselect_eval(names_quosure, all_names) %|||% all_names
   names <- intersect(all_names, names)
   out <- map(names, ~tar_manifest_target(pipeline_get_target(pipeline, .x)))
   out <- do.call(rbind, out)
-  fields <- eval_tidyselect(fields_quosure, colnames(out)) %|||% colnames(out)
+  fields <- tar_tidyselect_eval(fields_quosure, colnames(out)) %|||%
+    colnames(out)
   out[, base::union("name", fields), drop = FALSE]
 }
 
@@ -106,6 +116,7 @@ tar_manifest_target <- function(target) {
     storage = target$settings$storage,
     retrieval = target$settings$retrieval,
     deployment = target$settings$deployment,
+    priority = target$settings$priority,
     resources = list(target$settings$resources),
     cue_mode = target$cue$mode,
     cue_command = target$cue$command,
@@ -120,7 +131,7 @@ tar_manifest_target <- function(target) {
 }
 
 tar_manifest_command <- function(expr) {
-  out <- deparse_safe(expr, collapse = " \\n ")
+  out <- tar_deparse_safe(expr, collapse = " \\n ")
   out <- mask_pointers(out)
   string_sub_expression(out)
 }
@@ -129,6 +140,6 @@ tar_manifest_pattern <- function(pattern) {
   if_any(
     is.null(pattern),
     NA_character_,
-    string_sub_expression(deparse_safe(pattern, collapse = " "))
+    string_sub_expression(tar_deparse_safe(pattern, collapse = " "))
   )
 }

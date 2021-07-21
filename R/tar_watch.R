@@ -13,6 +13,8 @@
 #' @return A handle to `callr::r_bg()` background process running the app.
 #' @inheritParams callr::r_bg
 #' @inheritParams tar_watch_ui
+#' @inheritParams tar_watch_server
+#' @param exclude Character vector of nodes to omit from the graph.
 #' @param label Label argument to [tar_visnetwork()].
 #' @param background Logical, whether to run the app in a background process
 #'   so you can still use the R console while the app is running.
@@ -49,10 +51,16 @@ tar_watch <- function(
   seconds_max = 60,
   seconds_step = 1,
   targets_only = FALSE,
-  outdated = TRUE,
+  exclude = ".Random.seed",
+  outdated = FALSE,
   label = NULL,
   level_separation = 150,
+  degree_from = 1L,
+  degree_to = 1L,
+  config = "_targets.yaml",
   height = "650px",
+  display = "summary",
+  displays = c("summary", "branches", "progress", "graph", "about"),
   background = TRUE,
   browse = TRUE,
   host = getOption("shiny.host", "127.0.0.1"),
@@ -60,39 +68,46 @@ tar_watch <- function(
   verbose = TRUE,
   supervise = TRUE
 ) {
-  pkgs <- c(
-    "bs4Dash",
-    "gt",
-    "markdown",
-    "pingr",
-    "shiny",
-    "shinybusy",
-    "shinyWidgets",
-    "visNetwork"
-  )
-
-  assert_package(pkgs)
-  assert_dbl(seconds, "seconds must be numeric.")
-  assert_dbl(seconds_min, "seconds_min must be numeric.")
-  assert_dbl(seconds_max, "seconds_max must be numeric.")
-  assert_dbl(seconds_step, "seconds_step must be numeric.")
-  assert_scalar(seconds, "seconds must have length 1.")
-  assert_scalar(seconds_min, "seconds_min must have length 1.")
-  assert_scalar(seconds_max, "seconds_max must have length 1.")
-  assert_scalar(seconds_step, "seconds_step must have length 1.")
+  tar_assert_watch_packages()
+  tar_assert_chr(exclude)
+  tar_assert_dbl(seconds)
+  tar_assert_dbl(seconds_min)
+  tar_assert_dbl(seconds_max)
+  tar_assert_dbl(seconds_step)
+  tar_assert_scalar(seconds)
+  tar_assert_scalar(seconds_min)
+  tar_assert_scalar(seconds_max)
+  tar_assert_scalar(seconds_step)
+  tar_assert_scalar(degree_from)
+  tar_assert_scalar(degree_to)
+  tar_assert_dbl(degree_from)
+  tar_assert_dbl(degree_to)
+  tar_assert_ge(degree_from, 0L)
+  tar_assert_ge(degree_to, 0L)
   seconds_min <- min(seconds_min, seconds)
   seconds_max <- max(seconds_max, seconds)
   seconds_step <- min(seconds_step, seconds_max)
+  tar_assert_in(
+    displays,
+    c("summary", "branches", "progress", "graph", "about")
+  )
+  tar_assert_in(display, displays)
   args <- list(
     seconds = seconds,
     seconds_min = seconds_min,
     seconds_max = seconds_max,
     seconds_step = seconds_step,
     targets_only = targets_only,
+    exclude = exclude,
     outdated = outdated,
     label = label,
     level_separation = level_separation,
+    degree_from = degree_from,
+    degree_to = degree_to,
+    config = config,
     height = height,
+    display = display,
+    displays = displays,
     host = host,
     port = port
   )
@@ -121,10 +136,16 @@ tar_watch_app <- function(
   seconds_max,
   seconds_step,
   targets_only,
+  exclude,
   outdated,
   label,
   level_separation,
+  degree_from,
+  degree_to,
+  config,
   height,
+  display,
+  displays,
   host,
   port
 ) {
@@ -137,10 +158,19 @@ tar_watch_app <- function(
     outdated = outdated,
     label = label,
     level_separation = level_separation,
-    height = height
+    degree_from = degree_from,
+    degree_to = degree_to,
+    height = height,
+    display = display,
+    displays = displays
   )
   server <- function(input, output, session) {
-    targets::tar_watch_server("tar_watch_id", height = height)
+    targets::tar_watch_server(
+      id = "tar_watch_id",
+      height = height,
+      exclude = exclude,
+      config = config
+    )
   }
   options <- list(host = host, port = port)
   print(shiny::shinyApp(ui = ui, server = server, options = options))
@@ -164,7 +194,11 @@ tar_watch_app_ui <- function(
   outdated,
   label,
   level_separation,
-  height
+  degree_from,
+  degree_to,
+  height,
+  display,
+  displays
 ) {
   body <- bs4Dash::bs4DashBody(
     shinybusy::add_busy_spinner(position = "top-left"),
@@ -179,7 +213,11 @@ tar_watch_app_ui <- function(
       outdated = outdated,
       label_tar_visnetwork = label,
       level_separation = level_separation,
-      height = height
+      degree_from = degree_from,
+      degree_to = degree_to,
+      height = height,
+      display = display,
+      displays = displays
     )
   )
   # TODO: update when bs4Dash 2 is on CRAN:

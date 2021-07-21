@@ -1,7 +1,8 @@
 #' @title Run a pipeline of targets.
 #' @export
 #' @family pipeline
-#' @description Run the pipeline you defined in `_targets.R`. `tar_make()`
+#' @description Run the pipeline you defined in the targets
+#'   script file (default: `_targets.R`). `tar_make()`
 #'   runs the correct targets in the correct order and stores the return
 #'   values in `_targets/objects/`.
 #' @return `NULL` except if `callr_function = callr::r_bg()`, in which case
@@ -10,11 +11,21 @@
 #' @inheritParams tar_validate
 #' @param names Names of the targets to build or check. Set to `NULL` to
 #'   check/build all the targets (default). Otherwise, you can supply
-#'   symbols, a character vector, or `tidyselect` helpers like [starts_with()].
+#'   symbols, a character vector, or `tidyselect` helpers like
+#'   [all_of()] and [starts_with()].
+#'   Applies to ordinary targets (stem) and whole dynamic branching targets
+#'   (patterns) by not individual dynamic branches.
+#' @param shortcut Logical of length 1, how to interpret the `names` argument.
+#'   If `shortcut` is `FALSE` (default) then the function checks
+#'   all targets upstream of `names` as far back as the dependency graph goes.
+#'   `shortcut = TRUE` increases speed if there are a lot of
+#'   up-to-date targets, but it assumes all the dependencies
+#'   are up to date, so please use with caution.
+#'   It relies on stored metadata for information about upstream dependencies.
+#'   `shortcut = TRUE` only works if you set `names`.
 #' @param reporter Character of length 1, name of the reporter to user.
 #'   Controls how messages are printed as targets run in the pipeline.
-#'   Defaults to the `TAR_MAKE_REPORTER` environment variable if set
-#'   and `"verbose"` otherwise. Choices:
+#'   Defaults to `tar_config_get("reporter_make")`. Choices:
 #'   * `"verbose"`: print one message for each target that runs (default).
 #'   * `"silent"`: print nothing.
 #'   * `"timestamp"`: print a time-stamped message for each target that runs.
@@ -41,39 +52,59 @@
 #' })
 tar_make <- function(
   names = NULL,
-  reporter = Sys.getenv("TAR_MAKE_REPORTER", unset = "verbose"),
+  shortcut = targets::tar_config_get("shortcut"),
+  reporter = targets::tar_config_get("reporter_make"),
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function, reporter)
+  callr_arguments = targets::callr_args_default(callr_function, reporter),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script"),
+  store = targets::tar_config_get("store")
 ) {
-  assert_script()
-  assert_flag(reporter, tar_make_reporters())
-  assert_callr_function(callr_function)
-  assert_list(callr_arguments, "callr_arguments mut be a list.")
+  force(envir)
+  tar_assert_scalar(shortcut)
+  tar_assert_lgl(shortcut)
+  tar_assert_flag(reporter, tar_make_reporters())
+  tar_assert_callr_function(callr_function)
+  tar_assert_list(callr_arguments)
   targets_arguments <- list(
+    path_store = store,
     names_quosure = rlang::enquo(names),
+    shortcut = shortcut,
     reporter = reporter
   )
   out <- callr_outer(
     targets_function = tar_make_inner,
     targets_arguments = targets_arguments,
     callr_function = callr_function,
-    callr_arguments = callr_arguments
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script
   )
   invisible(out)
 }
 
-tar_make_inner <- function(pipeline, names_quosure, reporter) {
+tar_make_inner <- function(
+  pipeline,
+  path_store,
+  names_quosure,
+  shortcut,
+  reporter
+) {
   pipeline_reset_deployments(pipeline)
-  names <- eval_tidyselect(names_quosure, pipeline_get_names(pipeline))
+  names <- tar_tidyselect_eval(names_quosure, pipeline_get_names(pipeline))
+  queue <- if_any(
+    pipeline_uses_priorities(pipeline),
+    "parallel",
+    "sequential"
+  )
   local_init(
     pipeline = pipeline,
+    meta = meta_init(path_store = path_store),
     names = names,
-    queue = "sequential",
-    reporter = reporter
+    shortcut = shortcut,
+    queue = queue,
+    reporter = reporter,
+    envir = tar_option_get("envir")
   )$run()
   invisible()
-}
-
-tar_make_reporters <- function() {
-  c("verbose", "silent", "timestamp", "summary")
 }

@@ -1,24 +1,17 @@
 #' @title Visualize an abridged fast dependency graph.
 #' @export
 #' @family inspect
-#' @description Analyze the pipeline defined in `_targets.R`
+#' @description Analyze the pipeline defined in the target script file
+#'   (default: `_targets.R`)
 #'   and visualize the directed acyclic graph of targets.
 #'   Unlike [tar_visnetwork()], `tar_glimpse()` does not account for
 #'   metadata or progress information, which means the graph
 #'   renders faster. Also, `tar_glimpse()` omits functions and other global
 #'   objects by default (but you can include them with `targets_only = FALSE`).
 #' @return A `visNetwork` HTML widget object.
-#' @inheritParams tar_validate
+#' @inheritParams tar_network
 #' @param targets_only Logical, whether to restrict the output to just targets
-#'   (`FALSE`) or to also include imported global functions and objects.
-#' @param allow Optional, define the set of allowable vertices in the graph.
-#'   Set to `NULL` to allow all vertices in the pipeline and environment
-#'   (default). Otherwise, you can supply symbols, a character vector, or
-#'   `tidyselect` helpers like [starts_with()].
-#' @param exclude Optional, define the set of exclude vertices from the graph.
-#'   Set to `NULL` to exclude no vertices.
-#'   Otherwise, you can supply symbols, a character vector, or `tidyselect`
-#'   helpers like [starts_with()].
+#'   (`FALSE`) or to also include global functions and objects.
 #' @param level_separation Numeric of length 1,
 #'   `levelSeparation` argument of `visNetwork::visHierarchicalLayout()`.
 #'   Controls the distance between hierarchical levels.
@@ -26,6 +19,12 @@
 #'   is far from 1. If `level_separation` is `NULL`,
 #'   the `levelSeparation` argument of `visHierarchicalLayout()`
 #'   defaults to `150`.
+#' @param degree_from Integer of length 1. When you click on a node,
+#'   the graph highlights a neighborhood of that node. `degree_from`
+#'   controls the number of edges the neighborhood extends upstream.
+#' @param degree_to Integer of length 1. When you click on a node,
+#'   the graph highlights a neighborhood of that node. `degree_to`
+#'   controls the number of edges the neighborhood extends downstream.
 #' @examples
 #' if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
@@ -38,50 +37,86 @@
 #'   )
 #' }, ask = FALSE)
 #' tar_glimpse()
-#' tar_glimpse(allow = starts_with("y"))
+#' tar_glimpse(allow = starts_with("y")) # see also all_of()
 #' })
 #' }
 tar_glimpse <- function(
   targets_only = TRUE,
+  names = NULL,
+  shortcut = FALSE,
   allow = NULL,
   exclude = ".Random.seed",
   level_separation = NULL,
+  degree_from = 1L,
+  degree_to = 1L,
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function)
+  callr_arguments = targets::callr_args_default(callr_function),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script"),
+  store = targets::tar_config_get("store")
 ) {
-  assert_script()
-  assert_package("visNetwork")
-  assert_lgl(targets_only, "targets_only must be logical.")
-  assert_callr_function(callr_function)
-  assert_list(callr_arguments, "callr_arguments mut be a list.")
+  force(envir)
+  tar_assert_package("visNetwork")
+  tar_assert_lgl(targets_only)
+  tar_assert_scalar(degree_from)
+  tar_assert_scalar(degree_to)
+  tar_assert_dbl(degree_from)
+  tar_assert_dbl(degree_to)
+  tar_assert_ge(degree_from, 0L)
+  tar_assert_ge(degree_to, 0L)
+  tar_assert_callr_function(callr_function)
+  tar_assert_list(callr_arguments)
   targets_arguments <- list(
+    path_store = store,
     targets_only = targets_only,
+    names_quosure = rlang::enquo(names),
+    shortcut = shortcut,
     allow_quosure = rlang::enquo(allow),
     exclude_quosure = rlang::enquo(exclude),
-    level_separation = level_separation
+    level_separation = level_separation,
+    degree_from = degree_from,
+    degree_to = degree_to
   )
   callr_outer(
     targets_function = tar_glimpse_inner,
     targets_arguments = targets_arguments,
     callr_function = callr_function,
-    callr_arguments = callr_arguments
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script
   )
 }
 
 tar_glimpse_inner <- function(
   pipeline,
+  path_store,
   targets_only,
+  names_quosure,
+  shortcut,
   allow_quosure,
   exclude_quosure,
-  level_separation
+  level_separation,
+  degree_from,
+  degree_to
 ) {
-  network <- glimpse_init(pipeline)
+  meta <- meta_init(path_store = path_store)
+  progress <- progress_init(path_store = path_store)
+  names <- tar_tidyselect_eval(names_quosure, pipeline_get_names(pipeline))
+  network <- glimpse_init(
+    pipeline = pipeline,
+    meta = meta,
+    progress = progress,
+    targets_only = targets_only,
+    names = names,
+    shortcut = shortcut,
+    allow = allow_quosure,
+    exclude = exclude_quosure
+  )
   visual <- visnetwork_init(
     network = network,
-    targets_only = targets_only,
-    allow = allow_quosure,
-    exclude = exclude_quosure,
-    level_separation = level_separation
+    level_separation = level_separation,
+    degree_from = degree_from,
+    degree_to = degree_to
   )
   visual$update()
   visual$visnetwork

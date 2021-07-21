@@ -2,7 +2,8 @@
 #' @export
 #' @family scripts
 #' @description Write a helper R script for a `targets` pipeline.
-#'   Could be supporting functions or the `_targets.R` file itself.
+#'   Could be supporting functions or the target script file
+#'   (default: `_targets.R`) itself.
 #' @details `tar_helper_raw()` is a specialized version of [tar_script()]
 #'   with flexible paths and tidy evaluation. It is like [tar_helper()]
 #'   except that `code` is an "evaluated" argument rather than a quoted one.
@@ -16,8 +17,8 @@
 #' tar_helper_raw(path, quote(x <- 1))
 #' writeLines(readLines(path))
 tar_helper_raw <- function(path = NULL, code = NULL) {
-  assert_chr(path, "path must be a character.")
-  assert_scalar(path, "path must have length 1.")
+  tar_assert_chr(path)
+  tar_assert_scalar(path)
   dir_create(dirname(path))
   writeLines(deparse_script_code(code), path)
   invisible()

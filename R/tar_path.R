@@ -11,6 +11,7 @@
 #'   argument defaults to the name of the target,
 #'   so `tar_path()` returns `_targets/objects/x`.
 #' @return Character, file path to a hypothetical target.
+#' @inheritParams tar_validate
 #' @param name Symbol, name of a target.
 #'   If `NULL`, `tar_path()` returns the path of the target currently running
 #'   in a pipeline.
@@ -21,28 +22,35 @@
 #' @examples
 #' tar_path()
 #' tar_path(your_target)
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(tar_target(returns_path, tar_path()), ask = FALSE)
 #' tar_make()
 #' tar_read(returns_path)
 #' })
 #' }
-tar_path <- function(name = NULL, default = NA_character_) {
-  name <- deparse_language(substitute(name))
-  assert_chr(name %|||% character(0), "name arg of tar_path() must be a symbol")
-  assert_chr(default)
+tar_path <- function(
+  name = NULL,
+  default = NA_character_,
+  store = targets::tar_config_get("store")
+) {
+  name <- tar_deparse_language(substitute(name))
+  tar_assert_chr(name %|||% character(0))
+  tar_assert_chr(default)
   if_any(
     is.null(name),
-    tar_path_running(default),
-    path_objects(name)
+    tar_path_running(default, path_store = store),
+    path_objects(path_store = store, name = name)
   )
 }
 
-tar_path_running <- function(default) {
+tar_path_running <- function(default, path_store) {
   if_any(
-    exists(x = "target", envir = tar_envir_run, inherits = FALSE),
-    path_objects(target_get_name(get(x = "target", envir = tar_envir_run))),
+    tar_runtime$exists_target(),
+    path_objects(
+      path_store = path_store,
+      name = target_get_name(tar_runtime$get_target())
+    ),
     as.character(default)
   )
 }

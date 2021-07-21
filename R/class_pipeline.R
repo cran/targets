@@ -24,9 +24,9 @@ pipeline_new <- function(
 
 pipeline_targets_init <- function(targets, clone_targets) {
   targets <- targets %|||% list()
-  assert_target_list(targets)
+  tar_assert_target_list(targets)
   names <- map_chr(targets, ~.x$settings$name)
-  assert_unique_targets(names)
+  tar_assert_unique_targets(names)
   if (clone_targets) {
     # If the user has target objects in the global environment,
     # loading data into them may cause huge data transfers to workers.
@@ -51,6 +51,10 @@ pipeline_get_priorities <- function(pipeline) {
     ~pipeline_get_target(pipeline, .x)$settings$priority,
     USE.NAMES = TRUE
   )
+}
+
+pipeline_uses_priorities <- function(pipeline) {
+  any(length(unique(pipeline_get_priorities(pipeline))) > 1L)
 }
 
 pipeline_reset_priorities <- function(pipeline) {
@@ -112,14 +116,6 @@ pipeline_upstream_edges <- function(pipeline, targets_only = TRUE) {
 pipeline_produce_igraph <- function(pipeline, targets_only = TRUE) {
   edges <- pipeline_upstream_edges(pipeline, targets_only = targets_only)
   igraph::simplify(igraph::graph_from_data_frame(edges))
-}
-
-pipeline_produce_scheduler <- function(
-  pipeline,
-  queue = "parallel",
-  reporter = "verbose"
-) {
-  scheduler_init(pipeline = pipeline, queue = queue, reporter = reporter)
 }
 
 pipeline_register_loaded_target <- function(pipeline, name) { # nolint
@@ -210,6 +206,15 @@ pipeline_prune_targets <- function(pipeline, names) {
   remove(list = discard, envir = pipeline$targets, inherits = FALSE)
 }
 
+pipeline_prune_shortcut <- function(pipeline, names, shortcut) {
+  if (is.null(names) || !shortcut) {
+    return(pipeline)
+  }
+  available <- intersect(names, pipeline_get_names(pipeline))
+  targets <- map(available, ~pipeline_get_target(pipeline, .x))
+  pipeline_init(targets = targets, clone_targets = FALSE)
+}
+
 pipeline_get_packages <- function(pipeline) {
   out <- map(
     pipeline_get_names(pipeline),
@@ -218,13 +223,23 @@ pipeline_get_packages <- function(pipeline) {
   sort(unique(unlist(out)))
 }
 
+pipeline_bootstrap_deps <- function(pipeline, meta, names) {
+  deps <- map(names, ~pipeline_get_target(pipeline, .x)$command$deps)
+  deps <- intersect(unique(unlist(deps)), pipeline_get_names(pipeline))
+  deps <- setdiff(x = deps, y = names)
+  map(
+    deps,
+    ~target_bootstrap(pipeline_get_target(pipeline, .x), pipeline, meta)
+  )
+}
+
 pipeline_validate_targets <- function(targets) {
   eapply(targets, function(target) target_validate(target))
 }
 
 pipeline_validate_dag <- function(igraph) {
   if (!igraph::is_dag(igraph)) {
-    throw_validate("graph contains a cycle.")
+    tar_throw_validate("graph contains a cycle.")
   }
 }
 
@@ -238,7 +253,7 @@ pipeline_validate_conflicts <- function(pipeline) {
     "in _targets.R."
   )
   if (length(conflicts) && !identical(Sys.getenv("TAR_WARN"), "false")) {
-    warn_validate(msg)
+    tar_warn_validate(msg)
   }
 }
 
@@ -256,8 +271,8 @@ pipeline_validate <- function(pipeline) {
 #' @description Internal function. Do not invoke directly.
 #' @param pipeline A pipeline object.
 pipeline_validate_lite <- function(pipeline) {
-  assert_inherits(pipeline, "tar_pipeline", msg = "invalid pipeline.")
-  assert_correct_fields(pipeline, pipeline_new)
+  tar_assert_inherits(pipeline, "tar_pipeline", msg = "invalid pipeline.")
+  tar_assert_correct_fields(pipeline, pipeline_new)
   pipeline_validate_conflicts(pipeline)
 }
 
@@ -287,12 +302,6 @@ as_pipeline.default <- function(x) {
 #' @keywords internal
 print.tar_pipeline <- function(x, ...) {
   count <- length(pipeline_get_names(x))
-  msg <- paste0(
-    "<pipeline with ",
-    count,
-    " target",
-    if_any(identical(count, 1L), "", "s"),
-    ">"
-  )
+  msg <- paste("<tar_pipeline>\n  targets:", count)
   cat(msg)
 }

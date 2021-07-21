@@ -1,39 +1,35 @@
 visnetwork_init <- function(
   network,
-  targets_only = FALSE,
-  allow = NULL,
-  exclude = NULL,
   label = NULL,
-  level_separation = NULL
+  level_separation = NULL,
+  degree_from = 1L,
+  degree_to = 1L
 ) {
   visnetwork_new(
     network = network,
-    targets_only = targets_only,
-    allow = allow,
-    exclude = exclude,
     label = label,
-    level_separation = level_separation
+    level_separation = level_separation,
+    degree_from = degree_from,
+    degree_to = degree_to
   )
 }
 
 visnetwork_new <- function(
   network = NULL,
-  targets_only = NULL,
-  allow = NULL,
-  exclude = NULL,
   label = NULL,
-  legend = NULL,
   level_separation = NULL,
+  degree_from = NULL,
+  degree_to = NULL,
+  legend = NULL,
   visnetwork = NULL
 ) {
   visnetwork_class$new(
     network = network,
-    targets_only = targets_only,
-    allow = allow,
-    exclude = exclude,
     label = label,
-    legend = legend,
     level_separation = level_separation,
+    degree_from = degree_from,
+    degree_to = degree_to,
+    legend = legend,
     visnetwork = visnetwork
   )
 }
@@ -46,32 +42,29 @@ visnetwork_class <- R6::R6Class(
   cloneable = FALSE,
   public = list(
     network = NULL,
-    targets_only = NULL,
-    allow = NULL,
-    exclude = NULL,
     label = NULL,
-    legend = NULL,
     level_separation = NULL,
+    degree_from = NULL,
+    degree_to = NULL,
+    legend = NULL,
     visnetwork = NULL,
     initialize = function(
       network = NULL,
-      targets_only = NULL,
-      allow = NULL,
-      exclude = NULL,
       label = NULL,
+      level_separation = NULL,
+      degree_from = NULL,
+      degree_to = NULL,
       legend = NULL,
-      visnetwork = NULL,
-      level_separation = NULL
+      visnetwork = NULL
     ) {
       super$initialize(
-        network = network,
-        targets_only = targets_only,
-        allow = allow,
-        exclude = exclude
+        network = network
       )
       self$label <- label
       self$legend <- legend
       self$level_separation <- level_separation
+      self$degree_from <- degree_from
+      self$degree_to <- degree_to
       self$visnetwork <- visnetwork
     },
     produce_colors = function(status) {
@@ -82,7 +75,8 @@ visnetwork_class <- R6::R6Class(
         started = "#DC863B",
         canceled = "#FAD510",
         errored = "#C93312",
-        dormant = "#D2D2D0",
+        queued = "#D2D2D0",
+        skipped = "#7500D1",
         none = "#94a4ac"
       )
       colors[status]
@@ -116,7 +110,7 @@ visnetwork_class <- R6::R6Class(
       legend
     },
     produce_visnetwork = function() {
-      assert_package("visNetwork")
+      tar_assert_package("visNetwork")
       vertices <- self$network$vertices
       edges <- self$network$edges
       vertices <- self$update_label(vertices)
@@ -126,7 +120,15 @@ visnetwork_class <- R6::R6Class(
         out,
         smooth = list(type = "cubicBezier", forceDirection = "horizontal")
       )
-      out <- visNetwork::visOptions(out, collapse = TRUE)
+      out <- visNetwork::visOptions(
+        graph = out,
+        collapse = TRUE,
+        highlightNearest = list(
+          enabled = TRUE,
+          algorithm = "hierarchical",
+          degree = list(from = self$degree_from, to = self$degree_to)
+        )
+      )
       out <- visNetwork::visLegend(
         graph = out,
         useGroups = FALSE,
@@ -206,13 +208,19 @@ visnetwork_class <- R6::R6Class(
     },
     validate = function() {
       super$validate()
-      assert_in(self$label, c("time", "size", "branches"))
+      tar_assert_in(self$label, c("time", "size", "branches"))
       if (!is.null(self$legend)) {
-        assert_df(self$legend)
+        tar_assert_df(self$legend)
       }
       if (!is.null(self$visnetwork)) {
-        assert_identical(class(self$visnetwork)[1], "visNetwork")
+        tar_assert_identical(class(self$visnetwork)[1], "visNetwork")
       }
+      tar_assert_scalar(self$degree_from)
+      tar_assert_scalar(self$degree_to)
+      tar_assert_dbl(self$degree_from)
+      tar_assert_dbl(self$degree_to)
+      tar_assert_ge(self$degree_from, 0L)
+      tar_assert_ge(self$degree_to, 0L)
     }
   )
 )

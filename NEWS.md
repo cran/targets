@@ -1,3 +1,90 @@
+# targets 0.6.0
+
+## Bug fixes
+
+* Allow `tar_poll()` to lose and then regain connection to the progress file.
+* Make sure changes to the `tar_group` column of `iteration = "group"` data frames do not invalidate slices (#507, @lindsayplatt).
+
+## New features
+
+* In Target Markdown, add a new `tar_interactive` global option to select interactive mode or non-interactive mode (#469).
+* Highlight a graph neighborhood when the user clicks a node. Control the neighborhood degree with new arguments `degree_from` and `degree_to` of `tar_visnetwork()` and `tar_glimpse()` (#474, @rgayler).
+* Make the target script path configurable in `tar_config_set()` (#476).
+* Add a `tar_script` chunk option in Target Markdown to control where the `{targets}` language engine writes the target script and helper scripts (#478).
+* Add new arguments `script` and `store` to choose custom paths to the target script file and data store for individual function calls (#477).
+* Allow users to set an alternative path to the YAML configuration file for the current R session (#477). Most users have no reason to set this path, it is only for niche applications like Shiny apps with `targets` backends. Unavoidably, the path gets reset to `_targets.yaml` when the session restarts.
+* Add new `_targets.yaml` config options `reporter_make`, `reporter_outdated`, and `workers` to control function argument defaults shared across multiple functions called outside `_targets.R` (#498, @ianeveperry).
+* Add `tar_load_globals()` for debugging, testing, prototyping, and teaching (#496, @malcolmbarrett).
+* Add structure to the `resources` argument of `tar_target()` to avoid conflicts among formats and HPC backends (#489). Includes user-side helper functions like `tar_resources()` and `tar_resources_aws()` to build the required data structures.
+* Log skipped targets in `_targets/meta/progress` and display then in `tar_progress()`, `tar_poll()`, `tar_watch()`, `tar_progress_branches()`, `tar_progress_summary()`, and `tar_visnetwork()` (#514). Instead of writing each skip line separately to `_targets/meta/progress`, accumulate skip lines in a queue and then write them all out in bulk when something interesting happens. This avoids a lot of overhead in certain cases.
+* Add a `shortcut` argument to `tar_make()`, `tar_make_clustermq()`, `tar_make_future()`, `tar_outdated()`, and `tar_sitrep()` to more efficiently skip parts of the pipeline (#522, #523, @jennysjaarda, @MilesMcBain, @kendonB).
+* Support `names` and `shortcut` in graph data frames and graph visuals (#529).
+* Move `allow` and `exclude` to the network behind the graph visuals rather than the visuals themselves (#529).
+* Add a new "progress" display to the `tar_watch()` app to show verbose progress info and metadata.
+* Add a new `workspace_on_error` argument of `tar_option_set()` to supersede `error = "workspace"`. Helps control workspace behavior independently of the `error` argument of `tar_target()` (#405, #533, #534, @mattwarkentin, @xinstein).
+* Implement `error = "abridge"` in `tar_target()` and related functions. If a target errors out with this option, the target itself stops, any currently running targets keeps, and no new targets launch after that (#533, #534, @xinstein).
+* Add a menu prompt to `tar_destroy()` which can be suppressed with `TAR_ASK = "false"` (#542, @gofford).
+* Support functions `tar_older()` and `tar_newer()` to help users identify and invalidate targets at regular times or intervals.
+
+## Deprecations
+
+* In Target Markdown, deprecate the `targets` chunk option in favor of `tar_globals` (#469).
+* Deprecate `error = "workspace"` in `tar_target()` and related functions. Use `tar_option_set(workspace_on_error = TRUE)` instead (#405, #533, @mattwarkentin, @xinstein).
+
+## Performance
+
+* Reset the backoff upper bound when concluding a target or shutting down a `clustermq` worker (@rich-payne).
+* Set more aggressive default backoff bound of 0.1 seconds (previous: 5 seconds) and set a more aggressive minimum of 0.001 seconds (previous: 0.01 seconds) (@rich-payne).
+* Speed up the summary and forecast reporters by only printing to the console every quarter second.
+* Avoid superfluous calls to `store_sync_file_meta.default()` on small files.
+* In `tar_watch()`, take several measures to avoid long computation times rendering the graph:
+    * Expose arguments `display` and `displays` to `tar_watch()` so the user can select which display shows first.
+    * Make `"summary"` the default display instead of `"graph"`.
+    * Set `outdated` to `FALSE` by default.
+
+## Enhancements
+
+* Simplify the Target Markdown example.
+* Warn about unnamed chunks in Target Markdown.
+* Redesign option system to be more object-oriented and rigorous. Also export most options to HPC workers (#475).
+* Simplify config system to let API function arguments take control (#483).
+* In `tar_read()` for targets with `format = "aws_file"`, download the file back to the path the user originally saved it when the target ran.
+* Replace the `TAR_MAKE_REPORTER` environment variable with `targets::tar_config_get("reporter_make")`.
+* Use `eval(parse(text = readLines("_targets.R")), envir = some_envir)` and related techniques instead of the less controllable `source()`. Expose an `envir` argument to many functions for further control over evaluation if `callr_function` is `NULL`.
+* Drop `out.attrs` when hashing groups of data frames to extend #507 to `expand.grid()` (#508).
+* Increase the number of characters in errors and warnings up to 2048.
+* Refactor assertions to automatically generate better messages.
+* Export assertions, conditions, and language utilities in packages that build on top of `targets`.
+* Change `GITHUBPAT` to `GITHUB_TOKEN` in the `tar_github_actions()` YAML file (#554, @eveyp).
+* Support the `eval` chunk option in Target Markdown (#552, @fkohrt).
+* Record time stamps in the metadata `time` column for all builder targets, regardless of storage format.
+
+# targets 0.5.0
+
+## Bug fixes
+
+* Export in-memory config settings from `_targets.yaml` to parallel workers.
+
+## New features
+
+* Add a limited-scope `exclude` argument to `tar_watch()` and `tar_watch_server()` (#458, @gorkang).
+* Write a `.gitignore` file to ignore everything in `_targets/meta/` except `.gitignore` and `_targets/meta/meta`.
+* Target Markdown: add `knitr` engines for pipeline construction and prototyping from within literate programming documents (#469, @cderv, @nviets, @emilyriederer, @ijlyttle, @GShotwell, @gadenbuie, @tomsing1). Huge thanks to @cderv on this one for answering my deluge of questions, helping me figure out what was and was not possible in `knitr`, and ultimately circling me back to a successful approach.
+* Add an RStudio R Markdown template for Target Markdown (#469).
+* Implement `use_targets()`, which writes the Target Markdown template to the project root (#469).
+* Implement `tar_unscript()` to clean up scripts written by Target Markdown.
+
+## Enhancements
+
+* Enable priorities in `tar_make()` and `tar_manifest()`.
+* Show the priority in the print method of stem and pattern targets.
+* Throw informative errors if the secondary arguments to `pattern = slice()` or `pattern = sample()` are invalid.
+* In `tar_target_raw()`, assert that commands have length 1 when converted to expressions.
+* Handle errors and post failure artifacts in the Github Actions YAML file.
+* Rewrite the documentation on invalidation rules in `tar_cue()` (@maelle).
+* Drop `dplyr` groups and `"grouped_df"` class in `tar_group()` (`tarchetypes` discussion #53, @kendonB).
+* Assign branch names to dynamic branching return values produced by `tar_read()` and `tar_read_raw()`.
+
 # targets 0.4.2
 
 ## Bug fixes

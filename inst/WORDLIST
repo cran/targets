@@ -92,6 +92,7 @@ else's
 eng
 envir
 errored
+Español
 et
 ETag
 eval
@@ -226,9 +227,11 @@ prework
 programmatically
 Programmatically
 PSOCK
+qs
 quasiquotation
 quickstart
 Quickstart
+quosure
 Rbuildignore
 RDS
 README
@@ -243,6 +246,7 @@ reproducibly
 rerender
 RL
 rmarkdown
+rmedicine
 Rmd
 RMSPE
 roadmap
@@ -264,6 +268,8 @@ skippable
 SLURM
 SSP
 Stallman
+Stan
+stan
 Stawitz
 storr
 Storr

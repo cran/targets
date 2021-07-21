@@ -9,7 +9,8 @@ tar_traceback(
   envir = NULL,
   packages = NULL,
   source = NULL,
-  characters = getOption("width")
+  characters = getOption("width"),
+  store = targets::tar_config_get("store")
 )
 }
 \arguments{
@@ -20,29 +21,40 @@ tar_traceback(
 \item{packages}{Logical, whether to load the required packages
 of the target.}
 
-\item{source}{Logical, whether to run \verb{_targets.R} to load user-defined
+\item{source}{Logical, whether to run the target script file
+(default: \verb{_targets.R}) to load user-defined
 global object dependencies into \code{envir}. If \code{TRUE}, then \code{envir}
 should either be the global environment or inherit from the
 global environment.}
 
 \item{characters}{Positive integer. Each line of the traceback
 is shortened to this number of characters.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 Character vector, the traceback of a failed target
 if it exists.
 }
 \description{
-If a target ran with \code{error = "workspace"} and errored out,
-\code{tar_traceback()} returns its traceback. The workspace file must
-exist. For more information, see \code{\link[=tar_workspace]{tar_workspace()}}.
+Return the saved traceback of a target.
+Assumes the target errored out in a previous run of the pipeline
+with workspaces enabled for that target.
+See \code{\link[=tar_workspace]{tar_workspace()}} for details.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tmp <- sample(1)
 tar_script({
-  tar_option_set(error = "workspace")
+  tar_option_set(workspace_on_error = TRUE)
   list(
     tar_target(x, "loaded"),
     tar_target(y, stop(x))
@@ -55,6 +67,7 @@ tar_traceback(y, characters = 60)
 }
 \seealso{
 Other debug: 
+\code{\link{tar_load_globals}()},
 \code{\link{tar_workspaces}()},
 \code{\link{tar_workspace}()}
 }

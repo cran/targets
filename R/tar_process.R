@@ -14,14 +14,15 @@
 #' @return A data frame with metadata on the most recent main R process
 #'   to orchestrate the targets of the current project.
 #'   The output includes the `pid` of the main process.
+#' @inheritParams tar_validate
 #' @param names Optional, names of the data points to return.
 #'    If supplied, `tar_process()`
 #'   returns only the rows of the names you select.
-#'   You can supply symbols, a character vector,
-#'   or `tidyselect` helpers like [starts_with()].
+#'   You can supply symbols
+#'   or `tidyselect` helpers like [all_of()] and [starts_with()].
 #'   If `NULL`, all names are selected.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -34,12 +35,14 @@
 #' tar_process(pid)
 #' })
 #' }
-tar_process <- function(names = NULL) {
-  assert_store()
-  assert_path(path_process())
-  out <- tibble::as_tibble(process_init()$read_process())
+tar_process <- function(
+  names = NULL,
+  store = targets::tar_config_get("store")
+) {
+  tar_assert_path(path_process(path_store = store))
+  out <- tibble::as_tibble(process_init(path_store = store)$read_process())
   names_quosure <- rlang::enquo(names)
-  names <- eval_tidyselect(names_quosure, out$name)
+  names <- tar_tidyselect_eval(names_quosure, out$name)
   if (!is.null(names)) {
     out <- out[match(names, out$name),, drop = FALSE] # nolint
   }

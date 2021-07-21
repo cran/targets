@@ -4,43 +4,78 @@
 \alias{tar_config_set}
 \title{Write configuration settings to _targets.yaml.}
 \usage{
-tar_config_set(store = NULL)
+tar_config_set(
+  config = "_targets.yaml",
+  reporter_make = NULL,
+  reporter_outdated = NULL,
+  store = NULL,
+  shortcut = NULL,
+  script = NULL,
+  workers = NULL
+)
 }
 \arguments{
+\item{config}{Character of length 1, path to the YAML file with
+all the configuration settings (default: \verb{_targets.yaml}).}
+
+\item{reporter_make}{Character of length 1, \code{reporter} argument to
+\code{\link[=tar_make]{tar_make()}} and related functions that run the pipeline.}
+
+\item{reporter_outdated}{Character of length 1, \code{reporter} argument to
+\code{\link[=tar_outdated]{tar_outdated()}} and related functions that do not run the pipeline.}
+
 \item{store}{Character of length 1, path to the data store of the pipeline.
-If \code{NULL}, the \code{store} setting is left unchanged in \verb{_targets.yaml}.
+If \code{NULL}, the \code{store} setting is left unchanged in the
+YAML configuration file (default: \verb{_targets.yaml}).
 Usually, the data store lives at \verb{_targets}.
 Set \code{store} to a custom directory
-to specify a path other than \verb{_targets}. The path need not exist
+to specify a path other than \verb{_targets/}. The path need not exist
 before the pipeline begins, and it need not end with "_targets",
 but it must be writeable.
 For optimal performance, choose a storage location
 with fast read/write access.}
+
+\item{shortcut}{logical of length 1, default \code{shortcut} argument
+to \code{\link[=tar_make]{tar_make()}} and related functions.}
+
+\item{script}{Character of length 1, path to the target script file
+that defines the pipeline (\verb{_targets.R} by default).
+This path should be either
+an absolute path or a path relative to the project root where you will
+call \code{\link[=tar_make]{tar_make()}} and other functions. When \code{\link[=tar_make]{tar_make()}} and friends
+run the script from the current working directory.}
+
+\item{workers}{Positive numeric of length 1, \code{workers} argument of
+\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and related functions that run the pipeline
+with parallel computing among targets.}
 }
 \value{
 \code{NULL} (invisibly)
 }
 \description{
 \code{tar_config_set()} writes special custom settings
-to an optional \verb{_targets.yaml} configuration file at the
-current project. Do not invoke while the pipeline is running.
+to an optional project-level
+YAML configuration file (default: \verb{_targets.yaml}).
+Most of these settings are default arguments shared across
+multiple functions called outside \verb{_targets.R}.
 }
 \details{
-\verb{_targets.yaml} is an optional YAML configuration file
-with settings specific to a given project. You can write it
-by hand or modify it with \code{tar_config_set()}.
-In order to work properly, \verb{_targets.yaml} must live at the
-root of the project (next to \verb{_targets.R}).
+Each project can have an optional YAML configuration file
+(default: \verb{_targets.yaml} at the project root)
+with settings specific to a given project. You can either write it
+by hand or modify it with \code{tar_config_set()}, but \code{tar_config_set()}
+is recommended because it has guardrails to validate user input.
 The currently supported configuration settings are
 documented as the arguments of \code{tar_config_set()}.
 
-\code{tar_config_set()} always writes a \verb{_targets.yaml} file
+\code{tar_config_set()} always writes a YAML file
 with a full set of configuration settings even when no
 arguments are supplied. To reset options completely,
-simply remove \verb{_targets.yaml}.
+simply call \code{tar_config_set(config = "_targets.yaml")}
+and remove \verb{_targets.yaml} if it exists.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script(list(tar_target(x, 1 + 1)))
 tar_config_get("store") # NULL (data store defaults to "_targets/")

@@ -8,26 +8,28 @@ tar_meta(
   names = NULL,
   fields = NULL,
   targets_only = FALSE,
-  complete_only = FALSE
+  complete_only = FALSE,
+  store = targets::tar_config_get("store")
 )
 }
 \arguments{
 \item{names}{Optional, names of the targets. If supplied, \code{tar_meta()}
 only returns metadata on these targets.
-You can supply symbols, a character vector,
-or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.
+You can supply symbols
+or \code{tidyselect} helpers like \code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.
 If \code{NULL}, all names are selected.}
 
 \item{fields}{Optional, names of columns/fields to select. If supplied,
 \code{tar_meta()} only returns the selected metadata columns.
 If \code{NULL}, all fields are selected.
-You can supply symbols, a character vector, or \code{tidyselect} helpers
-like \code{\link[=starts_with]{starts_with()}}. The \code{name} column is always included first
+You can supply symbols or \code{tidyselect} helpers
+like \code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.
+The \code{name} column is always included first
 no matter what you select. Choices:
 \itemize{
 \item \code{name}: name of the target or global object.
 \item \code{type}: type of the object: either \code{"function"} or \code{"object"}
-for imported global objects, and \code{"stem"}, \code{"branch"},
+for global objects, and \code{"stem"}, \code{"branch"},
 \code{"map"}, or \code{"cross"} for targets.
 \item \code{data}: hash of the output data.
 \item \code{command}: hash of the target's deparsed command.
@@ -46,16 +48,13 @@ on the result to locally recreate the target's initial RNG state.
 is a single path, but there could be multiple paths per target
 for dynamic files (i.e. \code{tar_target(format = "file")}).
 \item \code{time}: \code{POSIXct} object with the time the target's data in storage
-was last modified. Displayed in the current time zone of the system.
+was last modified. If the target stores no local file,
+then the time stamp corresponds to the time the target last
+ran successfully. Only targets that run commands have time stamps:
+just non-branching targets and individual dynamic branches.
+Displayed in the current time zone of the system.
 If there are multiple outputs for that target, as with file targets,
-then the maximum time is shown. Only time stamps of actual
-targets are recorded (not functions or other global objects).
-No time stamp is recorded for URL targets because not all URLs
-have a "last-modified" time, and the ones that do have times
-do not necessarily adhere to a standardized format that \code{targets}
-can interpret. For the latest time stamp of a URL,
-use \code{\link[=tar_timestamp]{tar_timestamp()}} and specify the POSIX
-format and time zone that the website uses.
+then the maximum time is shown.
 \item \code{size}: hash of the sum of all the bytes of the files at \code{path}.
 \item \code{bytes}: total file size in bytes of all files in \code{path}.
 \item \code{format}: character, one of the admissible data storage formats.
@@ -77,6 +76,15 @@ or also return metadata on functions and other global objects.}
 
 \item{complete_only}{Logical, whether to return only complete rows
 (no \code{NA} values).}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 A data frame with one row per target/object and the selected fields.
@@ -91,7 +99,7 @@ That is why the number of branches may disagree between \code{\link[=tar_meta]{t
 and \code{\link[=tar_progress]{tar_progress()}} for actively running pipelines.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(
@@ -101,7 +109,7 @@ tar_script({
 }, ask = FALSE)
 tar_make()
 tar_meta()
-tar_meta(starts_with("y_"))
+tar_meta(starts_with("y_")) # see also all_of()
 })
 }
 }

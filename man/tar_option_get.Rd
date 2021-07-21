@@ -4,11 +4,13 @@
 \alias{tar_option_get}
 \title{Get a target option.}
 \usage{
-tar_option_get(option)
+tar_option_get(name = NULL, option = NULL)
 }
 \arguments{
-\item{option}{Character of length 1, name of an option to get.
+\item{name}{Character of length 1, name of an option to get.
 Must be one of the argument names of \code{\link[=tar_option_set]{tar_option_set()}}.}
+
+\item{option}{Deprecated, use the \code{name} argument instead.}
 }
 \value{
 Value of a target option.
@@ -33,7 +35,7 @@ tar_option_get("format")
 tar_target(x, 1)$settings$format
 tar_option_reset() # reset the format
 tar_target(x, 1)$settings$format
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   tar_option_set(cue = tar_cue(mode = "always")) # All targets always run.

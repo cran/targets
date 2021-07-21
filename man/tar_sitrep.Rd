@@ -7,21 +7,26 @@
 tar_sitrep(
   names = NULL,
   fields = NULL,
-  reporter = "silent",
+  shortcut = targets::tar_config_get("shortcut"),
+  reporter = targets::tar_config_get("reporter_outdated"),
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function, reporter)
+  callr_arguments = targets::callr_args_default(callr_function, reporter),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script"),
+  store = targets::tar_config_get("store")
 )
 }
 \arguments{
 \item{names}{Optional, names of the targets. If supplied, \code{tar_sitrep()}
 only returns metadata on these targets.
-You can supply symbols, a character vector,
+You can supply symbols
 or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
 
 \item{fields}{Optional, names of columns/fields to select. If supplied,
 \code{tar_sitrep()} only returns the selected metadata columns.
-You can supply symbols, a character vector, or \code{tidyselect} helpers
-like \code{\link[=starts_with]{starts_with()}}. The \code{name} column is always included first
+You can supply symbols or \code{tidyselect} helpers
+like \code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.
+The \code{name} column is always included first
 no matter what you select. Choices:
 \itemize{
 \item \code{name}: name of the target or global object.
@@ -60,6 +65,16 @@ Always \code{NA} if the \code{record} cue is activated.
 Otherwise, always \code{FALSE} if the \code{file} cue is suppressed.
 }}
 
+\item{shortcut}{Logical of length 1, how to interpret the \code{names} argument.
+If \code{shortcut} is \code{FALSE} (default) then the function checks
+all targets upstream of \code{names} as far back as the dependency graph goes.
+If \code{TRUE}, then the function only checks the targets in \code{names}
+and uses stored metadata for information about upstream dependencies
+as needed. \code{shortcut = TRUE} increases speed if there are a lot of
+up-to-date targets, but it assumes all the dependencies
+are up to date, so please use with caution.
+Use with caution. \code{shortcut = TRUE} only works if you set \code{names}.}
+
 \item{reporter}{Character of length 1, name of the reporter to user.
 Controls how messages are printed as targets are checked. Choices:
 \itemize{
@@ -78,6 +93,42 @@ However, \code{callr_function} should not be \code{NULL} for serious
 reproducible work.}
 
 \item{callr_arguments}{A list of arguments to \code{callr_function}.}
+
+\item{envir}{An environment, where to run the target R script
+(default: \verb{_targets.R}) if \code{callr_function} is \code{NULL}.
+Ignored if \code{callr_function} is anything other than \code{NULL}.
+\code{callr_function} should only be \code{NULL} for debugging and
+testing purposes, not for serious runs of a pipeline, etc.
+
+The \code{envir} argument of \code{\link[=tar_make]{tar_make()}} and related
+functions always overrides
+the current value of \code{tar_option_get("envir")} in the current R session
+just before running the target script file,
+so whenever you need to set an alternative \code{envir}, you should always set
+it with \code{tar_option_set()} from within the target script file.
+In other words, if you call \code{tar_option_set(envir = envir1)} in an
+interactive session and then
+\code{tar_make(envir = envir2, callr_function = NULL)},
+then \code{envir2} will be used.}
+
+\item{script}{Character of length 1, path to the
+target script file. Defaults to \code{tar_config_get("script")},
+which in turn defaults to \verb{_targets.R}. When you set
+this argument, the value of \code{tar_config_get("script")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_script]{tar_script()}},
+\code{\link[=tar_config_get]{tar_config_get()}}, and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about the target script file and how to set it
+persistently for a project.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 A data frame with one row per target/object and one column
@@ -104,7 +155,7 @@ and it makes no attempt to propagate invalidation downstream.
 }
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(
@@ -114,7 +165,7 @@ tar_script({
 }, ask = FALSE)
 tar_make()
 tar_sitrep()
-tar_meta(starts_with("y_"))
+tar_meta(starts_with("y_")) # see also all_of()
 })
 }
 }

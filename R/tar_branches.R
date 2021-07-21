@@ -16,9 +16,10 @@
 #' @return A `tibble` with one row per branch and one column for each target
 #'   (including the branched-over targets and the target with the pattern.)
 #' @inheritParams tar_target
+#' @inheritParams tar_validate
 #' @param name Symbol, name of the target.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -32,18 +33,22 @@
 #' tar_branches(dynamic, pattern = cross(z, map(x, y)))
 #' })
 #' }
-tar_branches <- function(name, pattern) {
-  name <- deparse_language(substitute(name))
-  assert_chr(name, "name arg of tar_target() must be a symbol")
-  assert_store()
-  assert_path(file.path(path_meta()))
+tar_branches <- function(
+  name,
+  pattern,
+  store = targets::tar_config_get("store")
+) {
+  name <- tar_deparse_language(substitute(name))
+  tar_assert_chr(name)
+  tar_assert_path(file.path(path_meta(path_store = store)))
   pattern <- as.expression(substitute(pattern))
   deps <- all.vars(pattern, functions = FALSE, unique = TRUE)
   vars <- c(name, deps)
-  meta <- tibble::as_tibble(meta_init()$database$read_condensed_data())
+  meta <- meta_init(path_store = store)
+  meta <- tibble::as_tibble(meta$database$read_condensed_data())
   diffs <- setdiff(vars, meta$name)
   msg <- paste("targets not in metadata:", paste(diffs, collapse = ", "))
-  assert_in(vars, choices = meta$name, msg = msg)
+  tar_assert_in(vars, choices = meta$name, msg = msg)
   niblings <- set_names(map(deps, ~tar_branches_nibling(.x, meta)), deps)
   seed <- as.integer(meta[meta$name == name, "seed"])
   methods <- dynamic_init()
@@ -55,7 +60,7 @@ tar_branches <- function(name, pattern) {
   )
   children <- data_frame(x = meta[meta$name == name, "children"][[1]])
   colnames(children) <- name
-  assert_identical(
+  tar_assert_identical(
     nrow(out),
     nrow(children),
     paste0(
@@ -72,8 +77,8 @@ tar_branches <- function(name, pattern) {
 
 tar_branches_nibling <- function(x, meta) {
   children <- unname(unlist(meta[meta$name == x, "children"]))
-  assert_nonempty(children, paste(x, "has no children."))
-  assert_none_na(children, paste(x, "has no children."))
+  tar_assert_nonempty(children, paste(x, "has no children."))
+  tar_assert_none_na(children, paste(x, "has no children."))
   out <- data_frame(x = children)
   colnames(out) <- x
   out

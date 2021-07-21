@@ -6,11 +6,13 @@
 #'   value lives in a file in `_targets/objects/`. For dynamic files
 #'   (i.e. `format = "file"`) the paths loaded in place of the values.
 #' @return Nothing.
+#' @inheritSection tar_read Limited scope
 #' @inheritParams tar_load_raw
 #' @param names Names of the targets to load. You can supply
-#'   symbols, a character vector, or `tidyselect` helpers like [starts_with()].
+#'   symbols, a character vector, or `tidyselect` helpers like
+#'    [all_of()] and [starts_with()].
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -20,16 +22,24 @@
 #'   )
 #' }, ask = FALSE)
 #' tar_make()
-#' tar_load(starts_with("y"))
+#' tar_load(starts_with("y")) # see also all_of()
 #' })
 #' }
 tar_load <- function(
   names,
   branches = NULL,
-  meta = tar_meta(targets_only = TRUE),
-  envir = parent.frame()
+  meta = tar_meta(targets_only = TRUE, store = store),
+  envir = parent.frame(),
+  store = targets::tar_config_get("store")
 ) {
+  force(meta)
   force(envir)
-  names <- eval_tidyselect(rlang::enquo(names), meta$name)
-  tar_load_raw(names = names, branches = branches, meta = meta, envir = envir)
+  names <- tar_tidyselect_eval(rlang::enquo(names), meta$name)
+  tar_load_raw(
+    names = names,
+    branches = branches,
+    meta = meta,
+    envir = envir,
+    store = store
+  )
 }

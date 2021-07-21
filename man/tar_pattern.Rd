@@ -59,7 +59,8 @@ slice or branch of \code{x}.
 \examples{
 # To use dynamic map for real in a pipeline,
 # call map() in a target's pattern.
-# The following code goes at the bottom of _targets.R.
+# The following code goes at the bottom of
+# your target script file (default: `_targets.R`).
 list(
   tar_target(x, seq_len(2)),
   tar_target(y, head(letters, 2)),
@@ -93,6 +94,9 @@ tar_pattern(
 }
 \seealso{
 Other branching: 
+\code{\link{tar_branch_index}()},
+\code{\link{tar_branch_names_raw}()},
+\code{\link{tar_branch_names}()},
 \code{\link{tar_branches}()}
 }
 \concept{branching}

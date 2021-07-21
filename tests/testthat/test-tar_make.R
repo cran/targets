@@ -91,3 +91,82 @@ tar_test("tar_make() handles callr errors", {
   )
   expect_null(NULL)
 })
+
+tar_test("priorities apply to tar_make() (#437)", {
+  skip_on_cran()
+  tar_script(
+    list(
+      tar_target(x1, 1, priority = 0),
+      tar_target(y1, 1, priority = 0.5),
+      tar_target(z1, 1, priority = 1),
+      tar_target(x2, x1, priority = 0),
+      tar_target(y2, y1, priority = 0.5),
+      tar_target(z2, z1, priority = 1)
+    )
+  )
+  tar_make(callr_function = NULL)
+  out <- tar_progress()$name
+  exp <- c("z1", "z2", "y1", "y2", "x1", "x2")
+  expect_equal(out, exp)
+})
+
+tar_test("custom script and store args", {
+  expect_equal(tar_config_get("script"), path_script_default())
+  expect_equal(tar_config_get("store"), path_store_default())
+  tar_script(
+    tar_target(x, TRUE),
+    script = "example/script.R"
+  )
+  tar_make(
+    script = "example/script.R",
+    store = "example/store",
+    callr_function = NULL
+  )
+  expect_false(file.exists("_targets.yaml"))
+  expect_equal(tar_config_get("script"), path_script_default())
+  expect_equal(tar_config_get("store"), path_store_default())
+  expect_false(file.exists(path_script_default()))
+  expect_false(file.exists(path_store_default()))
+  expect_true(file.exists("example/script.R"))
+  expect_true(file.exists("example/store"))
+  expect_true(file.exists("example/store/meta/meta"))
+  expect_true(file.exists("example/store/objects/x"))
+  expect_equal(readRDS("example/store/objects/x"), TRUE)
+  tar_config_set(script = "x")
+  expect_equal(tar_config_get("script"), "x")
+  expect_true(file.exists("_targets.yaml"))
+})
+
+tar_test("custom script and store args with callr function", {
+  skip_on_cran()
+  expect_equal(tar_config_get("script"), path_script_default())
+  expect_equal(tar_config_get("store"), path_store_default())
+  tar_script(
+    tar_target(x, TRUE),
+    script = "example/script.R"
+  )
+  tar_make(
+    script = "example/script.R",
+    store = "example/store",
+    reporter = "silent"
+  )
+  expect_false(file.exists("_targets.yaml"))
+  expect_equal(tar_config_get("script"), path_script_default())
+  expect_equal(tar_config_get("store"), path_store_default())
+  expect_false(file.exists(path_script_default()))
+  expect_false(file.exists(path_store_default()))
+  expect_true(file.exists("example/script.R"))
+  expect_true(file.exists("example/store"))
+  expect_true(file.exists("example/store/meta/meta"))
+  expect_true(file.exists("example/store/objects/x"))
+  expect_equal(readRDS("example/store/objects/x"), TRUE)
+  tar_config_set(script = "x")
+  expect_equal(tar_config_get("script"), "x")
+  expect_true(file.exists("_targets.yaml"))
+})
+
+tar_test("null environment", {
+  tar_script(tar_target(x, "x"))
+  tar_make(callr_function = NULL, envir = NULL)
+  expect_equal(tar_read(x), "x")
+})

@@ -11,16 +11,16 @@ tar_test("empty timestamp", {
 tar_test("empty file", {
   tar_script(tar_target(y, 1))
   tar_make(callr_function = NULL)
-  unlink(path_objects("y"))
+  unlink(path_objects(path_store_default(), "y"))
   out <- tar_timestamp(y)
   expect_true(inherits(out, "POSIXct"))
-  expect_identical(as.numeric(out), as.numeric(file_time_reference))
+  expect_true(as.numeric(out) > as.numeric(file_time_reference))
 })
 
 tar_test("empty meta", {
   tar_script(tar_target(y, 1))
   tar_make(callr_function = NULL)
-  unlink(path_meta())
+  unlink(path_meta(path_store_default()))
   out <- tar_timestamp(y)
   expect_true(inherits(out, "POSIXct"))
   expect_identical(as.numeric(out), as.numeric(file_time_reference))
@@ -73,4 +73,41 @@ tar_test("use timestamp in a target", {
   tar_make(callr_function = NULL)
   progress <- tar_progress()
   expect_equal(progress$progress[progress$name == "y"], "canceled")
+})
+
+tar_test("custom script and store args", {
+  skip_on_cran()
+  expect_equal(tar_config_get("script"), path_script_default())
+  expect_equal(tar_config_get("store"), path_store_default())
+  tar_script({
+    list(
+      tar_target(w, letters)
+    )
+  }, script = "example/script.R")
+  tar_make(
+    callr_function = NULL,
+    script = "example/script.R",
+    store = "example/store"
+  )
+  out <- tar_timestamp(w, store = "example/store")
+  expect_true(inherits(out, "POSIXct"))
+  expect_false(file.exists("_targets.yaml"))
+  expect_equal(tar_config_get("script"), path_script_default())
+  expect_equal(tar_config_get("store"), path_store_default())
+  expect_false(file.exists(path_script_default()))
+  expect_false(file.exists(path_store_default()))
+  expect_true(file.exists("example/script.R"))
+  expect_true(file.exists("example/store"))
+  expect_true(file.exists("example/store/meta/meta"))
+  expect_true(file.exists("example/store/objects/w"))
+  tar_config_set(script = "x")
+  expect_equal(tar_config_get("script"), "x")
+  expect_true(file.exists("_targets.yaml"))
+})
+
+tar_test("deprecated arguments", {
+  x <- "tar_condition_deprecate"
+  expect_warning(tar_timestamp(x, format = "123"), class = x)
+  expect_warning(tar_timestamp(x, tz = "UTC"), class = x)
+  expect_warning(tar_timestamp(x, parse = TRUE), class = x)
 })

@@ -120,9 +120,13 @@ record_row_path <- function(record) {
   store_row_path(store)
 }
 
-record_from_row <- function(row) {
+record_from_row <- function(row, path_store) {
   record <- do.call(record_init, lapply(row, unlist))
-  record$path <- store_path_from_record(store_init(record$format), record)
+  record$path <- store_path_from_record(
+    store = store_init(record$format),
+    record = record,
+    path_store = path_store
+  )
   record
 }
 
@@ -138,36 +142,42 @@ record_encode_field <- function(field) {
   field
 }
 
+record_bootstrap_store <- function(record) {
+  store <- store_init(format = record$format)
+  store$file$path <- record$path
+  store
+}
+
 record_validate <- function(record) {
-  assert_correct_fields(record, record_new)
-  assert_chr_no_delim(record$name)
-  assert_chr_no_delim(record$parent)
-  assert_chr_no_delim(record$type)
-  assert_chr_no_delim(record$command)
-  assert_int(record$seed)
-  assert_chr_no_delim(record$depend)
-  assert_chr_no_delim(record$path)
-  assert_chr_no_delim(record$path)
-  assert_chr_no_delim(record$data)
-  assert_chr(record$time)
-  assert_chr(record$size)
-  assert_dbl(record$bytes)
-  assert_chr_no_delim(record$format)
-  assert_chr_no_delim(record$iteration)
-  assert_chr_no_delim(record$children)
-  assert_dbl(record$seconds)
-  assert_chr_no_delim(record$warnings)
-  assert_chr_no_delim(record$error)
-  assert_scalar(record$name)
-  assert_scalar(record$parent)
-  assert_scalar(record$type)
-  assert_scalar(record$command)
-  assert_scalar(record$seed)
-  assert_scalar(record$depend)
-  assert_scalar(record$data)
-  assert_scalar(record$time)
-  assert_scalar(record$size)
-  assert_scalar(record$bytes)
-  assert_scalar(record$format)
-  assert_scalar(record$iteration)
+  tar_assert_correct_fields(record, record_new)
+  tar_assert_chr_no_delim(record$name)
+  tar_assert_chr_no_delim(record$parent)
+  tar_assert_chr_no_delim(record$type)
+  tar_assert_chr_no_delim(record$command)
+  tar_assert_int(record$seed)
+  tar_assert_chr_no_delim(record$depend)
+  tar_assert_chr_no_delim(record$path)
+  tar_assert_chr_no_delim(record$path)
+  tar_assert_chr_no_delim(record$data)
+  tar_assert_chr(record$time)
+  tar_assert_chr(record$size)
+  tar_assert_dbl(record$bytes)
+  tar_assert_chr_no_delim(record$format)
+  tar_assert_chr_no_delim(record$iteration)
+  tar_assert_chr_no_delim(record$children)
+  tar_assert_dbl(record$seconds)
+  tar_assert_chr_no_delim(record$warnings)
+  tar_assert_chr_no_delim(record$error)
+  tar_assert_scalar(record$name)
+  tar_assert_scalar(record$parent)
+  tar_assert_scalar(record$type)
+  tar_assert_scalar(record$command)
+  tar_assert_scalar(record$seed)
+  tar_assert_scalar(record$depend)
+  tar_assert_scalar(record$data)
+  tar_assert_scalar(record$time)
+  tar_assert_scalar(record$size)
+  tar_assert_scalar(record$bytes)
+  tar_assert_scalar(record$format)
+  tar_assert_scalar(record$iteration)
 }

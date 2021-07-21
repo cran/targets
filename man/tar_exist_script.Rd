@@ -2,16 +2,29 @@
 % Please edit documentation in R/tar_exist_script.R
 \name{tar_exist_script}
 \alias{tar_exist_script}
-\title{Check if the target script exists.}
+\title{Check if the target script file exists.}
 \usage{
-tar_exist_script()
+tar_exist_script(script = targets::tar_config_get("script"))
+}
+\arguments{
+\item{script}{Character of length 1, path to the
+target script file. Defaults to \code{tar_config_get("script")},
+which in turn defaults to \verb{_targets.R}. When you set
+this argument, the value of \code{tar_config_get("script")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_script]{tar_script()}},
+\code{\link[=tar_config_get]{tar_config_get()}}, and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about the target script file and how to set it
+persistently for a project.}
 }
 \value{
 Logical of length 1, whether the current project's metadata exists.
 }
 \description{
-Check if the \verb{_targets.R} file of the current project exists.
-exists for the current project.
+Check if the target script file exists for the
+current project. The target script is \verb{_targets.R} by default,
+but the path can be configured for the current project
+using \code{\link[=tar_config_set]{tar_config_set()}}.
 }
 \examples{
 tar_exist_script()

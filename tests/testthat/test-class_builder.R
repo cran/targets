@@ -11,8 +11,9 @@ tar_test("builder$metrics", {
 })
 
 tar_test("target_run() on a good builder", {
+  tar_option_set(envir = tmpenv(a = "x"))
   x <- target_init(name = "abc", expr = quote(a))
-  target_run(x, envir = tmpenv(a = "x"))
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_silent(metrics_validate(x$metrics))
   expect_silent(value_validate(x$value))
   expect_equal(x$value$object, "x")
@@ -21,9 +22,10 @@ tar_test("target_run() on a good builder", {
 })
 
 tar_test("target_run() on a errored builder", {
+  tar_option_set(envir = tmpenv())
   local_init(pipeline_init())$start()
   x <- target_init(name = "abc", expr = quote(identity(identity(stop(123)))))
-  target_run(x, tmpenv())
+  target_run(x, tar_option_get("envir"), path_store_default())
   meta <- meta_init()
   target_update_depend(x, pipeline_init(), meta)
   expect_error(
@@ -37,7 +39,12 @@ tar_test("target_run() on a errored builder", {
 tar_test("target_run_worker()", {
   local_init(pipeline_init())$start()
   x <- target_init(name = "abc", expr = quote(identity(identity(stop(123)))))
-  y <- target_run_worker(x, tmpenv())
+  y <- target_run_worker(
+    x,
+    tmpenv(),
+    path_store_default(),
+    tar_options$export()
+  )
   expect_true(inherits(y, "tar_builder"))
   expect_silent(target_validate(y))
 })
@@ -104,6 +111,17 @@ tar_test("error = \"continue\" means continue on error", {
   expect_equal(y$store$file$path, character(0))
 })
 
+tar_test("error = \"abridge\" means do not schedule new targets", {
+  x <- target_init("x", expr = quote(stop(123)), error = "abridge")
+  y <- target_init("y", expr = quote(x))
+  pipeline <- pipeline_init(list(x, y))
+  suppressWarnings(suppressMessages(local_init(pipeline)$run()))
+  progress <- tar_progress()
+  expect_equal(nrow(progress), 1L)
+  expect_equal(progress$name, "x")
+  expect_equal(progress$progress, "errored")
+})
+
 tar_test("errored targets are not up to date", {
   x <- target_init("x", expr = quote(123))
   pipeline <- pipeline_init(list(x))
@@ -134,11 +152,12 @@ tar_test("same if we continue on error", {
 })
 
 tar_test("builder writing from main", {
+  tar_option_set(envir = tmpenv(a = "123"))
   local_init(pipeline_init())$start()
   x <- target_init("abc", expr = quote(a), format = "rds", storage = "main")
   pipeline <- pipeline_init(list(x))
-  scheduler <- pipeline_produce_scheduler(pipeline)
-  target_run(x, tmpenv(a = "123"))
+  scheduler <- scheduler_init(pipeline, meta_init())
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_false(file.exists(x$store$file$path))
   expect_true(is.na(x$store$file$hash))
   meta <- meta_init()
@@ -153,6 +172,7 @@ tar_test("builder writing from main", {
 })
 
 tar_test("builder writing from worker", {
+  tar_option_set(envir = tmpenv(a = "123"))
   local_init(pipeline_init())$start()
   x <- target_init(
     "abc",
@@ -162,14 +182,14 @@ tar_test("builder writing from worker", {
     retrieval = "main",
     deployment = "worker"
   )
-  target_run(x, tmpenv(a = "123"))
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_true(file.exists(x$store$file$path))
   expect_false(is.na(x$store$file$hash))
   path <- file.path("_targets", "objects", "abc")
   expect_equal(readRDS(path), "123")
   expect_equal(target_read_value(x)$object, "123")
   pipeline <- pipeline_init(list(x))
-  scheduler <- pipeline_produce_scheduler(pipeline)
+  scheduler <- scheduler_init(pipeline, meta_init())
   meta <- meta_init()
   memory_set_object(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
@@ -178,6 +198,7 @@ tar_test("builder writing from worker", {
 tar_test("dynamic file writing from main", {
   local_init(pipeline_init())$start()
   envir <- new.env(parent = environment())
+  tar_option_set(envir = envir)
   x <- target_init(
     name = "abc",
     expr = quote(f()),
@@ -189,11 +210,11 @@ tar_test("dynamic file writing from main", {
     writeLines("lines", con = file)
     file
   }
-  target_run(x, envir)
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_true(file.exists(x$store$file$path))
   expect_false(is.na(x$store$file$hash))
   pipeline <- pipeline_init(list(x))
-  scheduler <- pipeline_produce_scheduler(pipeline)
+  scheduler <- scheduler_init(pipeline, meta_init())
   meta <- meta_init()
   memory_set_object(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
@@ -243,6 +264,7 @@ tar_test("dynamic file is missing at path", {
 tar_test("dynamic file writing from worker", {
   local_init(pipeline_init())$start()
   envir <- new.env(parent = environment())
+  tar_option_set(envir = envir)
   x <- target_init(
     name = "abc",
     expr = quote(f()),
@@ -255,13 +277,13 @@ tar_test("dynamic file writing from worker", {
     writeLines("lines", con = file)
     file
   }
-  target_run(x, envir)
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_null(x$value)
   expect_true(file.exists(x$store$file$path))
   expect_false(is.na(x$store$file$hash))
   pipeline <- pipeline_init(list(x))
-  scheduler <- pipeline_produce_scheduler(pipeline)
   meta <- meta_init()
+  scheduler <- scheduler_init(pipeline, meta = meta)
   memory_set_object(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
 })
@@ -269,6 +291,7 @@ tar_test("dynamic file writing from worker", {
 tar_test("value kept if storage is local", {
   local_init(pipeline_init())$start()
   envir <- new.env(parent = environment())
+  tar_option_set(envir = envir)
   x <- target_init(
     name = "abc",
     expr = quote(f()),
@@ -281,7 +304,7 @@ tar_test("value kept if storage is local", {
     writeLines("lines", con = file)
     file
   }
-  target_run(x, envir)
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_equal(readLines(x$value$object), "lines")
 })
 
@@ -354,6 +377,49 @@ tar_test("target_needs_worker(builder)", {
   expect_true(target_needs_worker(x))
   x <- tar_target(y, rep(x, 2), deployment = "main")
   expect_false(target_needs_worker(x))
+})
+
+tar_test("bootstrap builder for shortcut", {
+  tar_script({
+    list(
+      tar_target(w, 1L),
+      tar_target(x, w),
+      tar_target(y, 1L),
+      tar_target(z, x + y)
+    )
+  })
+  tar_make(callr_function = NULL)
+  expect_equal(tar_read(z), 2L)
+  tar_script({
+    list(
+      tar_target(w, 1L),
+      tar_target(x, w),
+      tar_target(y, 1L),
+      tar_target(z, x + y + 1L)
+    )
+  })
+  tar_make(names = "z", shortcut = TRUE, callr_function = NULL)
+  expect_equal(tar_read(z), 3L)
+  progress <- tar_progress()
+  expect_equal(nrow(progress), 1L)
+  expect_equal(progress$name, "z")
+  expect_equal(progress$progress, "built")
+})
+
+tar_test("informative error when bootstrap fails", {
+  skip_on_cran()
+  tar_script({
+    list(
+      tar_target(w, 1L),
+      tar_target(x, w),
+      tar_target(y, 1L),
+      tar_target(z, x + y)
+    )
+  })
+  expect_error(
+    tar_make(names = "z", shortcut = TRUE, callr_function = NULL),
+    class = "tar_condition_validate"
+  )
 })
 
 tar_test("validate with nonmissing file and value", {

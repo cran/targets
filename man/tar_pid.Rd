@@ -4,7 +4,17 @@
 \alias{tar_pid}
 \title{Get main process ID.}
 \usage{
-tar_pid()
+tar_pid(store = targets::tar_config_get("store"))
+}
+\arguments{
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 Integer with the process ID (PID) of the most recent
@@ -25,7 +35,7 @@ before running another call to \code{\link[=tar_make]{tar_make()}}
 for the same project.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(

@@ -19,7 +19,7 @@
 #' @examples
 #' tar_envir()
 #' tar_envir(default = new.env(parent = emptyenv()))
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(tar_target(x, tar_envir(default = parent.frame())))
 #' tar_make(x)
@@ -27,10 +27,10 @@
 #' })
 #' }
 tar_envir <- function(default = parent.frame()) {
-  assert_envir(default)
+  tar_assert_envir(default)
   if_any(
-    exists(x = "frames", envir = tar_envir_run, inherits = FALSE),
-    frames_get_envir(get(x = "frames", envir = tar_envir_run)),
+    tar_runtime$exists_frames(),
+    frames_get_envir(tar_runtime$get_frames()),
     default
   )
 }

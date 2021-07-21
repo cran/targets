@@ -23,7 +23,8 @@
 #'   The `TAR_ASK` environment variable accepts values `"true"` and `"false"`.
 #'   If `TAR_ASK` is not set, or if it is set to `"true"`,
 #'   then `targets` asks permission in a menu
-#'   before overwriting certain files, such as `_targets.R` in [tar_script()].
+#'   before overwriting certain files, such as the target script file
+#'   (default: `_targets.R`) in [tar_script()].
 #'   If `TAR_ASK` is `"false"`, then `targets` overwrites the old files
 #'   with the new ones without asking. Once you are comfortable with
 #'   [tar_script()], [tar_github_actions()], and similar functions,
@@ -40,8 +41,8 @@
 #'   issues with your pipeline, so please do not set `TAR_WARN`
 #'   unless your use case absolutely requires it.
 tar_envvars <- function(unset = "") {
-  assert_chr(unset, "unset must be a character.")
-  assert_scalar(unset, "unset must have length 1.")
+  tar_assert_chr(unset, "unset must be a character.")
+  tar_assert_scalar(unset, "unset must have length 1.")
   names <- c(
     "TAR_ASK",
     "TAR_WARN"

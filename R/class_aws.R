@@ -1,16 +1,27 @@
 #' @export
-store_produce_path.tar_aws <- function(store, name, object) {
-  bucket <- store$resources$bucket
-  assert_nonempty(bucket, "S3 bucket name cannot be empty.")
-  assert_chr(bucket, "S3 bucket name must be character.")
-  assert_scalar(bucket, "invalid S3 bucket name.")
-  assert_nzchar(bucket, "invalid S3 bucket name.")
-  prefix <- store$resources$prefix %|||% path_objects_dir_cloud()
-  assert_nonempty(prefix, "S3 object prefix cannot be empty.")
-  assert_chr(prefix, "invalid S3 prefix.")
-  assert_scalar(prefix, "invalid S3 prefix.")
+store_produce_path.tar_aws <- function(store, name, object, path_store) {
+  store_produce_aws_path(
+    store = store,
+    name = name,
+    object = object,
+    path_store = path_store
+  )
+}
+
+store_produce_aws_path <- function(store, name, object, path_store) {
+  bucket <- store$resources$aws$bucket %|||% store$resources$bucket
+  tar_assert_nonempty(bucket)
+  tar_assert_chr(bucket)
+  tar_assert_scalar(bucket)
+  tar_assert_nzchar(bucket)
+  prefix <- store$resources$aws$prefix %|||%
+    store$resources$prefix %|||%
+    path_objects_dir_cloud()
+  tar_assert_nonempty(prefix)
+  tar_assert_chr(prefix)
+  tar_assert_scalar(prefix)
   object <- file.path(prefix, name)
-  assert_nzchar(object, "invalid S3 object key.")
+  tar_assert_nzchar(object)
   c(bucket, object)
 }
 
@@ -112,21 +123,6 @@ store_ensure_correct_hash.tar_aws <- function(store, storage, deployment) {
 
 #' @export
 store_sync_file_meta.tar_aws <- function(store, target, meta) {
-}
-
-#' @export
-store_get_timestamp.tar_aws <- function(store) {
-  key <- store_aws_key(store$file$path)
-  bucket <- store_aws_bucket(store$file$path)
-  if (!store_aws_exists(key = key, bucket = bucket)) {
-    return(file_time_reference)
-  }
-  head <- aws.s3::head_object(
-    object = key,
-    bucket = bucket,
-    check_region = TRUE
-  )
-  attr(head, "last-modified")
 }
 # nocov end
 

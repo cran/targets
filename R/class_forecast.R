@@ -9,16 +9,25 @@ forecast_class <- R6::R6Class(
   portable = FALSE,
   cloneable = FALSE,
   public = list(
+    time = NULL,
     report_start = function() {
-      cli_df_header(outdated_init()$cli_data())
+      self$time <- proc.time()["elapsed"]
     },
     report_skipped = function(target, progress) {
     },
     report_outdated = function(outdated) {
-      cli_df_body(outdated$cli_data())
+      time <- proc.time()["elapsed"]
+      # nocov start
+      # Covered in tests/interactive/test-reporter.R.
+      if (time - self$time > 0.25) {
+        cli_df_body_oneline(outdated$cli_data())
+        self$time <- time
+      }
+      # nocov end
     },
     report_end = function(progress = NULL) {
-      message("")
+      msg <- paste(c("\r", rep(" ", getOption("width") - 1L)), collapse = "")
+      message(msg)
     }
   )
 )

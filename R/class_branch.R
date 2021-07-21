@@ -70,7 +70,7 @@ target_produce_record.tar_branch <- function(target, pipeline, meta) {
     depend = meta$get_depend(target_get_name(target)),
     path = file$path,
     data = file$hash,
-    time = file$time,
+    time = file$time %||nf% file_time_now(),
     size = file$size,
     bytes = file$bytes,
     format = target$settings$format,
@@ -91,7 +91,7 @@ target_restore_buds.tar_branch <- function(target, pipeline, scheduler, meta) {
 
 #' @export
 target_validate.tar_branch <- function(target) {
-  assert_correct_fields(target, branch_new)
+  tar_assert_correct_fields(target, branch_new)
   pedigree_validate(target$pedigree)
   NextMethod()
 }

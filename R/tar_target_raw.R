@@ -8,7 +8,8 @@
 #'   instead of [tar_target()] if you are creating entire batches
 #'   of targets programmatically (metaprogramming, static branching).
 #' @return A target object. Users should not modify these directly,
-#'   just feed them to [list()] in your `_targets.R` file.
+#'   just feed them to [list()] in your target script file
+#'   (default: `_targets.R`).
 #' @inheritParams tar_target
 #' @inheritParams tar_option_set
 #' @param name Character of length 1, name of the target. Subsequent targets
@@ -54,7 +55,7 @@
 #'   })
 #'   print(target_list[[1]])
 #'   print(target_list[[2]])
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script(tar_target_raw("x", quote(1 + 1)), ask = FALSE)
 #' tar_make()
@@ -81,32 +82,40 @@ tar_target_raw <- function(
   retrieval = targets::tar_option_get("retrieval"),
   cue = targets::tar_option_get("cue")
 ) {
-  assert_nonmissing(name, "every target must have a name.")
-  assert_chr(name, "name arg of tar_target_raw() must be character")
-  assert_nzchar(name, "target name must be nonempty.")
-  assert_nonmissing(command, paste("target", name, "has no command."))
-  assert_chr(packages, "packages in tar_target_raw() must be character.")
-  assert_chr(
+  tar_assert_nonmissing(name)
+  tar_assert_chr(name)
+  tar_assert_nzchar(name)
+  tar_assert_nonmissing(command, paste("target", name, "has no command."))
+  if (is.expression(command)) {
+    tar_assert_nonmissing(
+      command[[1]],
+      paste("target", name, "has no command.")
+    )
+  }
+  tar_assert_scalar(
+    as.expression(command),
+    paste("the command of target", name, "must have length 1.")
+  )
+  tar_assert_chr(packages)
+  tar_assert_chr(
     library %|||% character(0),
     "library in tar_target_raw() must be NULL or character."
   )
-  assert_format(format)
-  assert_flag(iteration, c("vector", "list", "group"))
-  assert_flag(error, c("stop", "continue", "workspace"))
-  assert_flag(memory, c("persistent", "transient"))
-  assert_lgl(garbage_collection, "garbage_collection must be logical.")
-  assert_scalar(garbage_collection, "garbage_collection must be a scalar.")
-  assert_flag(deployment, c("worker", "main"))
-  assert_dbl(priority)
-  assert_scalar(priority)
-  assert_ge(priority, 0)
-  assert_le(priority, 1)
-  assert_list(
-    resources,
-    "resources in tar_target_raw() must be a named list."
-  )
-  assert_flag(storage, c("main", "worker"))
-  assert_flag(retrieval, c("main", "worker"))
+  tar_assert_format(format)
+  tar_assert_flag(iteration, c("vector", "list", "group"))
+  tar_assert_flag(error, c("stop", "continue", "abridge", "workspace"))
+  deprecate_error_workspace(error)
+  tar_assert_flag(memory, c("persistent", "transient"))
+  tar_assert_lgl(garbage_collection)
+  tar_assert_scalar(garbage_collection)
+  tar_assert_flag(deployment, c("worker", "main"))
+  tar_assert_dbl(priority)
+  tar_assert_scalar(priority)
+  tar_assert_ge(priority, 0)
+  tar_assert_le(priority, 1)
+  tar_assert_resources(resources)
+  tar_assert_flag(storage, c("main", "worker"))
+  tar_assert_flag(retrieval, c("main", "worker"))
   if (!is.null(cue)) {
     cue_validate(cue)
   }

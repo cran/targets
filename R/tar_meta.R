@@ -7,20 +7,22 @@
 #'   That is why the number of branches may disagree between [tar_meta()]
 #'   and [tar_progress()] for actively running pipelines.
 #' @return A data frame with one row per target/object and the selected fields.
+#' @inheritParams tar_validate
 #' @param names Optional, names of the targets. If supplied, `tar_meta()`
 #'   only returns metadata on these targets.
-#'   You can supply symbols, a character vector,
-#'   or `tidyselect` helpers like [starts_with()].
+#'   You can supply symbols
+#'   or `tidyselect` helpers like [all_of()] and [starts_with()].
 #'   If `NULL`, all names are selected.
 #' @param fields Optional, names of columns/fields to select. If supplied,
 #'   `tar_meta()` only returns the selected metadata columns.
 #'   If `NULL`, all fields are selected.
-#'   You can supply symbols, a character vector, or `tidyselect` helpers
-#'   like [starts_with()]. The `name` column is always included first
+#'   You can supply symbols or `tidyselect` helpers
+#'   like [all_of()] and [starts_with()].
+#'   The `name` column is always included first
 #'   no matter what you select. Choices:
 #'   * `name`: name of the target or global object.
 #'   * `type`: type of the object: either `"function"` or `"object"`
-#'     for imported global objects, and `"stem"`, `"branch"`,
+#'     for global objects, and `"stem"`, `"branch"`,
 #'     `"map"`, or `"cross"` for targets.
 #'   * `data`: hash of the output data.
 #'   * `command`: hash of the target's deparsed command.
@@ -39,16 +41,13 @@
 #'     is a single path, but there could be multiple paths per target
 #'     for dynamic files (i.e. `tar_target(format = "file")`).
 #'   * `time`: `POSIXct` object with the time the target's data in storage
-#'     was last modified. Displayed in the current time zone of the system.
+#'     was last modified. If the target stores no local file,
+#'     then the time stamp corresponds to the time the target last
+#'     ran successfully. Only targets that run commands have time stamps:
+#'     just non-branching targets and individual dynamic branches.
+#'     Displayed in the current time zone of the system.
 #'     If there are multiple outputs for that target, as with file targets,
-#'     then the maximum time is shown. Only time stamps of actual
-#'     targets are recorded (not functions or other global objects).
-#'     No time stamp is recorded for URL targets because not all URLs
-#'     have a "last-modified" time, and the ones that do have times
-#'     do not necessarily adhere to a standardized format that `targets`
-#'     can interpret. For the latest time stamp of a URL,
-#'     use [tar_timestamp()] and specify the POSIX
-#'     format and time zone that the website uses.
+#'     then the maximum time is shown.
 #'   * `size`: hash of the sum of all the bytes of the files at `path`.
 #'   * `bytes`: total file size in bytes of all files in `path`.
 #'   * `format`: character, one of the admissible data storage formats.
@@ -68,7 +67,7 @@
 #' @param complete_only Logical, whether to return only complete rows
 #'   (no `NA` values).
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -78,22 +77,24 @@
 #' }, ask = FALSE)
 #' tar_make()
 #' tar_meta()
-#' tar_meta(starts_with("y_"))
+#' tar_meta(starts_with("y_")) # see also all_of()
 #' })
 #' }
 tar_meta <- function(
   names = NULL,
   fields = NULL,
   targets_only = FALSE,
-  complete_only = FALSE
+  complete_only = FALSE,
+  store = targets::tar_config_get("store")
 ) {
-  assert_store()
-  assert_path(path_meta())
-  out <- tibble::as_tibble(meta_init()$database$read_condensed_data())
+  tar_assert_path(path_meta(path_store = store))
+  meta <- meta_init(path_store = store)
+  out <- tibble::as_tibble(meta$database$read_condensed_data())
   names_quosure <- rlang::enquo(names)
   fields_quosure <- rlang::enquo(fields)
-  names <- eval_tidyselect(names_quosure, out$name)
-  fields <- eval_tidyselect(fields_quosure, colnames(out)) %|||% colnames(out)
+  names <- tar_tidyselect_eval(names_quosure, out$name)
+  fields <- tar_tidyselect_eval(fields_quosure, colnames(out)) %|||%
+    colnames(out)
   if (!is.null(names)) {
     out <- out[match(names, out$name),, drop = FALSE] # nolint
   }

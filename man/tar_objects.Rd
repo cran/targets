@@ -4,12 +4,22 @@
 \alias{tar_objects}
 \title{List saved targets}
 \usage{
-tar_objects(names = NULL)
+tar_objects(names = NULL, store = targets::tar_config_get("store"))
 }
 \arguments{
-\item{names}{Optional \code{tidyselect} selector to return
+\item{names}{Optional \code{tidyselect} selector such as
+\code{\link[=all_of]{all_of()}} or \code{\link[=starts_with]{starts_with()}} to return
 a tactical subset of target names.
 If \code{NULL}, all names are selected.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 Character vector of targets saved to \verb{_targets/objects/}.
@@ -19,15 +29,14 @@ List targets currently saved to \verb{_targets/objects/}.
 Does not include dynamic files or cloud storage.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
-  tar_option_set(workspace = "x")
   list(tar_target(x, "value"))
 }, ask = FALSE)
 tar_make()
 tar_objects()
-tar_objects(starts_with("x"))
+tar_objects(starts_with("x")) # see also all_of()
 })
 }
 }

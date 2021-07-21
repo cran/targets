@@ -21,12 +21,22 @@
 #' @inheritParams tar_outdated
 #' @param names Optional, names of the targets. If supplied, `tar_sitrep()`
 #'   only returns metadata on these targets.
-#'   You can supply symbols, a character vector,
+#'   You can supply symbols
 #'   or `tidyselect` helpers like [starts_with()].
+#' @param shortcut Logical of length 1, how to interpret the `names` argument.
+#'   If `shortcut` is `FALSE` (default) then the function checks
+#'   all targets upstream of `names` as far back as the dependency graph goes.
+#'   If `TRUE`, then the function only checks the targets in `names`
+#'   and uses stored metadata for information about upstream dependencies
+#'   as needed. `shortcut = TRUE` increases speed if there are a lot of
+#'   up-to-date targets, but it assumes all the dependencies
+#'   are up to date, so please use with caution.
+#'   Use with caution. `shortcut = TRUE` only works if you set `names`.
 #' @param fields Optional, names of columns/fields to select. If supplied,
 #'   `tar_sitrep()` only returns the selected metadata columns.
-#'   You can supply symbols, a character vector, or `tidyselect` helpers
-#'   like [starts_with()]. The `name` column is always included first
+#'   You can supply symbols or `tidyselect` helpers
+#'   like [all_of()] and [starts_with()].
+#'   The `name` column is always included first
 #'   no matter what you select. Choices:
 #'   * `name`: name of the target or global object.
 #'   * `record`: Whether the `record` cue is activated:
@@ -63,7 +73,7 @@
 #'     Always `NA` if the `record` cue is activated.
 #'     Otherwise, always `FALSE` if the `file` cue is suppressed.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -73,29 +83,32 @@
 #' }, ask = FALSE)
 #' tar_make()
 #' tar_sitrep()
-#' tar_meta(starts_with("y_"))
+#' tar_meta(starts_with("y_")) # see also all_of()
 #' })
 #' }
 tar_sitrep <- function(
   names = NULL,
   fields = NULL,
-  reporter = "silent",
+  shortcut = targets::tar_config_get("shortcut"),
+  reporter = targets::tar_config_get("reporter_outdated"),
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function, reporter)
+  callr_arguments = targets::callr_args_default(callr_function, reporter),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script"),
+  store = targets::tar_config_get("store")
 ) {
-  assert_script()
+  force(envir)
   names_quosure <- rlang::enquo(names)
   fields_quosure <- rlang::enquo(fields)
-  assert_scalar(reporter, "reporter arg of tar_outdated() must have length 1.")
-  assert_in(
-    reporter,
-    c("forecast", "silent"),
-    "reporter arg of tar_outdated() must either be \"silent\" or \"forecast\""
-  )
-  assert_callr_function(callr_function)
-  assert_list(callr_arguments, "callr_arguments mut be a list.")
+  tar_assert_scalar(shortcut)
+  tar_assert_lgl(shortcut)
+  tar_assert_flag(reporter, tar_outdated_reporters())
+  tar_assert_callr_function(callr_function)
+  tar_assert_list(callr_arguments)
   targets_arguments <- list(
+    path_store = store,
     names_quosure = rlang::enquo(names),
+    shortcut = shortcut,
     fields_quosure = rlang::enquo(fields),
     reporter = reporter
   )
@@ -103,22 +116,27 @@ tar_sitrep <- function(
     targets_function = tar_sitrep_inner,
     targets_arguments = targets_arguments,
     callr_function = callr_function,
-    callr_arguments = callr_arguments
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script
   )
 }
 
 tar_sitrep_inner <- function(
   pipeline,
+  path_store,
   names_quosure,
+  shortcut,
   fields_quosure,
   reporter
 ) {
   names_all <- pipeline_get_names(pipeline)
-  names <- eval_tidyselect(names_quosure, names_all)
-  meta <- meta_init()
+  names <- tar_tidyselect_eval(names_quosure, names_all)
   sitrep <- sitrep_init(
     pipeline = pipeline,
+    meta = meta_init(path_store = path_store),
     names = names,
+    shortcut = shortcut,
     queue = "sequential",
     reporter = reporter
   )
@@ -127,6 +145,7 @@ tar_sitrep_inner <- function(
   if (!is.null(names)) {
     out <- out[match(names, out$name),, drop = FALSE] # nolint
   }
-  fields <- eval_tidyselect(fields_quosure, colnames(out)) %|||% colnames(out)
+  fields <- tar_tidyselect_eval(fields_quosure, colnames(out)) %|||%
+    colnames(out)
   out[, base::union("name", fields), drop = FALSE]
 }

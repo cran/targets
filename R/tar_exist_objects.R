@@ -8,10 +8,14 @@
 #' @return Logical of length `length(names)`, whether
 #'   each given target has an existing file in `_targets/objects/`
 #'   for the current project.
+#' @inheritParams tar_validate
 #' @param names Character vector of target names.
 #' @examples
 #' tar_exist_objects(c("target1", "target2"))
-tar_exist_objects <- function(names) {
-  assert_chr(names, "names must be a character vector.")
-  file.exists(path_objects(names))
+tar_exist_objects <- function(
+  names,
+  store = targets::tar_config_get("store")
+) {
+  tar_assert_chr(names, "names must be a character vector.")
+  file.exists(path_objects(path_store = store, name = names))
 }

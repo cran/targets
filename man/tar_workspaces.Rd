@@ -4,12 +4,21 @@
 \alias{tar_workspaces}
 \title{List saved target workspaces.}
 \usage{
-tar_workspaces(names = NULL)
+tar_workspaces(names = NULL, store = targets::tar_config_get("store"))
 }
 \arguments{
 \item{names}{Optional \code{tidyselect} selector to return
 a tactical subset of workspace names.
 If \code{NULL}, all names are selected.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 Character vector of available workspaces to load with
@@ -20,10 +29,10 @@ List target workspaces currently saved to
 \verb{_targets/workspaces/}. See \code{\link[=tar_workspace]{tar_workspace()}} for more information.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
-  tar_option_set(error = "workspace")
+  tar_option_set(workspace_on_error = TRUE)
   list(
     tar_target(x, "value"),
     tar_target(y, x)
@@ -37,6 +46,7 @@ tar_workspaces(contains("x"))
 }
 \seealso{
 Other debug: 
+\code{\link{tar_load_globals}()},
 \code{\link{tar_traceback}()},
 \code{\link{tar_workspace}()}
 }

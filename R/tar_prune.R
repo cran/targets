@@ -12,7 +12,7 @@
 #'   the value is invisibly returned.
 #' @inheritParams tar_validate
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -30,25 +30,30 @@
 #' }
 tar_prune <- function(
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function)
+  callr_arguments = targets::callr_args_default(callr_function),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script"),
+  store = targets::tar_config_get("store")
 ) {
-  assert_script()
-  assert_store()
-  assert_callr_function(callr_function)
-  assert_list(callr_arguments, "callr_arguments mut be a list.")
-  path_scratch_del()
+  force(envir)
+  tar_assert_callr_function(callr_function)
+  tar_assert_list(callr_arguments)
+  path_scratch_del(store)
   out <- callr_outer(
     targets_function = tar_prune_inner,
-    targets_arguments = list(),
+    targets_arguments = list(path_store = store),
     callr_function = callr_function,
-    callr_arguments = callr_arguments
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script
   )
   invisible(out)
 }
 
-tar_prune_inner <- function(pipeline) {
+tar_prune_inner <- function(pipeline, path_store) {
+  tar_assert_store(path_store)
   names <- pipeline_get_names(pipeline)
-  meta <- meta_init()
+  meta <- meta_init(path_store = path_store)
   data <- meta$database$read_condensed_data()
   imports <- data$name[data$type %in% c("function", "object")]
   children <- unlist(data$children[data$name %in% names])
@@ -59,6 +64,6 @@ tar_prune_inner <- function(pipeline) {
   discard <- setdiff(discard, dynamic_files)
   data <- as_data_frame(data)[data$name %in% keep, ]
   meta$database$overwrite_storage(data)
-  unlink(file.path(path_objects_dir(), discard), recursive = TRUE)
+  unlink(file.path(path_objects_dir(path_store), discard), recursive = TRUE)
   invisible()
 }

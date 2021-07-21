@@ -4,7 +4,14 @@
 \alias{tar_workspace}
 \title{Load a saved workspace and seed for debugging.}
 \usage{
-tar_workspace(name, envir = parent.frame(), packages = TRUE, source = TRUE)
+tar_workspace(
+  name,
+  envir = parent.frame(),
+  packages = TRUE,
+  source = TRUE,
+  script = targets::tar_config_get("script"),
+  store = targets::tar_config_get("store")
+)
 }
 \arguments{
 \item{name}{Symbol, name of the target whose workspace to read.}
@@ -18,6 +25,25 @@ of the target.}
 global object dependencies into \code{envir}. If \code{TRUE}, then \code{envir}
 should either be the global environment or inherit from the
 global environment.}
+
+\item{script}{Character of length 1, path to the
+target script file. Defaults to \code{tar_config_get("script")},
+which in turn defaults to \verb{_targets.R}. When you set
+this argument, the value of \code{tar_config_get("script")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_script]{tar_script()}},
+\code{\link[=tar_config_get]{tar_config_get()}}, and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about the target script file and how to set it
+persistently for a project.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 This function returns \code{NULL}, but it does load
@@ -26,19 +52,17 @@ into the environment (\code{envir} argument) in order to replicate the
 workspace where the error happened. These objects include
 the global objects at the time \code{\link[=tar_make]{tar_make()}} was called and the
 dependency targets. The random number generator seed for the
-target is also assigned with \code{set.seed()}
+target is also assigned with \code{set.seed()}.
 }
 \description{
 Load the packages, workspace, and random number generator seed
 of target attempted with a workspace file.
 }
 \details{
-If you set \code{error = "workspace"} in \code{\link[=tar_option_set]{tar_option_set()}}
-or \code{\link[=tar_target]{tar_target()}}, then if that target throws an error
-in \code{\link[=tar_make]{tar_make()}}, it will save its workspace to an RDS file
-in \verb{_targets/workspaces/}. Workspaces also get saved for targets
-supplied to the \code{workspace} argument of \code{\link[=tar_option_set]{tar_option_set()}},
-even individual branches. The workspace is a compact reference
+If you activate workspaces through the \code{workspaces} argument
+of \code{\link[=tar_option_set]{tar_option_set()}}, then under the circumstances you specify,
+\code{targets} will save a special workspace file to a location in
+in \verb{_targets/workspaces/}. The workspace file is a compact reference
 that allows \code{tar_workspace()} to load the target's dependencies
 and random number generator seed as long as the data objects
 are still in the data store (usually files in \verb{_targets/objects/}).
@@ -46,11 +70,11 @@ When you are done debugging, you can remove the workspace files
 using \code{tar_destroy(destroy = "workspaces")}.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tmp <- sample(1)
 tar_script({
-  tar_option_set(error = "workspace")
+  tar_option_set(workspace_on_error = TRUE)
   list(
     tar_target(x, "loaded"),
     tar_target(y, stop(x))
@@ -70,6 +94,7 @@ tail(.Random.seed)
 }
 \seealso{
 Other debug: 
+\code{\link{tar_load_globals}()},
 \code{\link{tar_traceback}()},
 \code{\link{tar_workspaces}()}
 }

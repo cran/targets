@@ -27,7 +27,7 @@ store_assert_format_setting <- function(class) {
 
 #' @export
 store_assert_format_setting.default <- function(class) {
-  throw_validate("unsupported format")
+  tar_throw_validate("unsupported format")
 }
 
 store_read_object <- function(store) {
@@ -67,17 +67,17 @@ store_upload_object <- function(store) {
 store_upload_object.default <- function(store) {
 }
 
-store_update_path <- function(store, name, object) {
-  store$file$path <- store_produce_path(store, name, object)
+store_update_path <- function(store, name, object, path_store) {
+  store$file$path <- store_produce_path(store, name, object, path_store)
 }
 
-store_produce_path <- function(store, name, object) {
+store_produce_path <- function(store, name, object, path_store) {
   UseMethod("store_produce_path")
 }
 
 #' @export
-store_produce_path.default <- function(store, name, object) {
-  path_objects(name)
+store_produce_path.default <- function(store, name, object, path_store) {
+  path_objects(path_store = path_store, name = name)
 }
 
 store_row_path <- function(store) {
@@ -89,26 +89,31 @@ store_row_path.default <- function(store) {
   NA_character_
 }
 
-store_path_from_record <- function(store, record) {
+store_path_from_record <- function(store, record, path_store) {
   UseMethod("store_path_from_record")
 }
 
 #' @export
-store_path_from_record.default <- function(store, record) {
-  path_objects(record$name)
+store_path_from_record.default <- function(store, record, path_store) {
+  path_objects(path_store = path_store, name = record$name)
 }
 
-store_update_stage <- function(store, name, object) {
-  store$file$stage <- store_produce_stage(store, name, object)
+store_update_stage <- function(store, name, object, path_store) {
+  store$file$stage <- store_produce_stage(
+    store = store,
+    name = name,
+    object = object,
+    path_store = path_store
+  )
 }
 
-store_produce_stage <- function(store, name, object) {
+store_produce_stage <- function(store, name, object, path_store) {
   UseMethod("store_produce_stage")
 }
 
 #' @export
-store_produce_stage.default <- function(store, name, object) {
-  path_scratch(pattern = name)
+store_produce_stage.default <- function(store, name, object, path_store) {
+  path_scratch(path_store = path_store, pattern = name)
 }
 
 store_cast_object <- function(store, object) {
@@ -174,7 +179,7 @@ store_wait_correct_hash <- function(store, sleep = 0.01, timeout = 60) {
     "does not exist or has incorrect hash.",
     "File sync timed out."
   )
-  throw_file(msg)
+  tar_throw_file(msg)
 }
 
 store_has_correct_hash <- function(store) {
@@ -208,16 +213,10 @@ store_sync_file_meta.default <- function(store, target, meta) {
   time <- file_time(info)
   bytes <- file_bytes(info)
   size <- file_size(bytes)
-  sync <- file_should_rehash(
-    file = file,
-    time = time,
-    size = size,
-    bytes = bytes
-  )
   # Fully automated tests do no use big files.
   # Tested in tests/interactive/test-file.R. # nolint
   # nocov start
-  if (sync) {
+  if (!identical(time, file$time) || !identical(size, file$size)) {
     record$time <- time
     record$size <- size
     record$bytes <- bytes
@@ -268,23 +267,14 @@ store_unserialize_value <- function(store, target) {
 store_unserialize_value.default <- function(store, target) {
 }
 
-store_get_timestamp <- function(store) {
-  UseMethod("store_get_timestamp")
-}
-
-#' @export
-store_get_timestamp.default <- function(store) {
-  file_info(store$file$path)$mtime
-}
-
 store_validate <- function(store) {
-  assert_correct_fields(store, store_new_default)
+  tar_assert_correct_fields(store, store_new_default)
   store_validate_packages(store)
-  assert_list(store$resources)
+  tar_assert_list(store$resources)
 }
 
 store_validate_packages <- function(store) {
-  assert_package(store_get_packages(store))
+  tar_assert_package(store_get_packages(store))
 }
 
 store_get_packages <- function(store) {

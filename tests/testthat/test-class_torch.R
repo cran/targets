@@ -39,7 +39,9 @@ tar_test("torch in-memory serialization of deps", {
       tar_target(array, as.array(tensor))
     )
   })
-  capture.output(tar_make_clustermq(reporter = "silent"))
+  capture.output(
+    tar_make_clustermq(reporter = "silent", callr_function = NULL)
+  )
   tar_load(tensor)
   expect_true(inherits(tensor, "torch_tensor"))
   expect_equal(length(tensor), 10)
@@ -75,5 +77,8 @@ tar_test("store_row_path()", {
 tar_test("store_path_from_record()", {
   store <- tar_target(x, "x_value", format = "torch")$store
   record <- record_init(name = "x", path = "path", format = "torch")
-  expect_equal(store_path_from_record(store, record), path_objects("x"))
+  expect_equal(
+    store_path_from_record(store, record, path_store_default()),
+    path_objects(path_store_default(), "x")
+  )
 })

@@ -4,7 +4,12 @@
 \alias{tar_read_raw}
 \title{Read a target's value from storage (raw version)}
 \usage{
-tar_read_raw(name, branches = NULL, meta = tar_meta())
+tar_read_raw(
+  name,
+  branches = NULL,
+  meta = tar_meta(store = store),
+  store = targets::tar_config_get("store")
+)
 }
 \arguments{
 \item{name}{Character, name of the target to read.}
@@ -17,6 +22,15 @@ if the target is a pattern.}
 pipelines because all the metadata is stored in a single file.
 However, if you call \code{\link[=tar_meta]{tar_meta()}} beforehand and supply it to the \code{meta}
 argument, then successive calls to \code{tar_read()} may run much faster.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 The target's return value from its file in
@@ -28,8 +42,19 @@ Like \code{\link[=tar_read]{tar_read()}} except \code{name} is a character strin
 Do not use in \code{knitr} or R Markdown reports with \code{tarchetypes::tar_knit()}
 or \code{tarchetypes::tar_render()}.
 }
+\section{Limited scope}{
+
+\code{tar_read()} and \code{tar_load()}
+are only for exploratory analysis and literate programming,
+and \code{tar_read_raw()} and \code{tar_load_raw()} are only
+for exploratory analysis. \code{targets} automatically
+loads the correct dependencies into memory when the pipeline
+is running, so invoking these functions
+from inside a target is rarely advisable.
+}
+
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script(list(tar_target(x, 1 + 1)), ask = FALSE)
 tar_make()

@@ -2,6 +2,11 @@ inspection_init <- function(
   pipeline,
   meta = meta_init(),
   progress = progress_init(),
+  targets_only = FALSE,
+  names = NULL,
+  shortcut = FALSE,
+  allow = NULL,
+  exclude = NULL,
   outdated = TRUE,
   reporter = "silent"
 ) {
@@ -9,6 +14,11 @@ inspection_init <- function(
     pipeline = pipeline,
     meta = meta,
     progress = progress,
+    targets_only = targets_only,
+    names = names,
+    shortcut = shortcut,
+    allow = allow,
+    exclude = exclude,
     outdated = outdated,
     reporter = reporter
   )
@@ -18,6 +28,11 @@ inspection_new <- function(
   pipeline = NULL,
   meta = NULL,
   progress = NULL,
+  targets_only = NULL,
+  names = NULL,
+  shortcut = NULL,
+  allow = NULL,
+  exclude = NULL,
   outdated = NULL,
   reporter = NULL,
   vertices = NULL,
@@ -31,6 +46,11 @@ inspection_new <- function(
     pipeline = pipeline,
     meta = meta,
     progress = progress,
+    targets_only = targets_only,
+    names = names,
+    shortcut = shortcut,
+    allow = allow,
+    exclude = exclude,
     outdated = outdated,
     reporter = reporter,
     vertices = vertices,
@@ -49,21 +69,17 @@ inspection_class <- R6::R6Class(
   portable = FALSE,
   cloneable = FALSE,
   public = list(
-    pipeline = NULL,
-    meta = NULL,
-    progress = NULL,
     outdated = NULL,
     reporter = NULL,
-    vertices = NULL,
-    edges = NULL,
-    vertices_imports = NULL,
-    edges_imports = NULL,
-    vertices_targets = NULL,
-    edges_targets = NULL,
     initialize = function(
       pipeline = NULL,
       meta = NULL,
       progress = NULL,
+      targets_only = NULL,
+      names = NULL,
+      shortcut = NULL,
+      allow = NULL,
+      exclude = NULL,
       outdated = NULL,
       reporter = NULL,
       vertices = NULL,
@@ -77,6 +93,11 @@ inspection_class <- R6::R6Class(
         pipeline = pipeline,
         meta = meta,
         progress = progress,
+        targets_only = targets_only,
+        names = names,
+        shortcut = shortcut,
+        allow = allow,
+        exclude = exclude,
         vertices = vertices,
         edges = edges,
         vertices_imports = vertices_imports,
@@ -99,6 +120,8 @@ inspection_class <- R6::R6Class(
         pipeline = self$pipeline,
         queue = "sequential",
         meta = self$meta,
+        names = self$names,
+        shortcut = self$shortcut,
         reporter = self$reporter
       )
       outdated$run()
@@ -107,26 +130,21 @@ inspection_class <- R6::R6Class(
       ifelse(is_outdated, "outdated", "uptodate")
     },
     resolve_import_status = function(vertices) {
-      self$meta$database$ensure_preprocessed(write = FALSE)
-      names <- fltr(vertices$name, ~self$meta$exists_record(.x))
-      data <- map_chr(names, ~self$meta$get_record(.x)$data)
-      meta <- data_frame(name = names, old = data)
-      out <- merge(vertices, meta, all.x = TRUE)
-      out$old[is.na(out$old)] <- ""
-      out$status <- ifelse(out$new == out$old, "uptodate", "outdated")
-      out$status <- as.character(out$status)
-      out$status[is.na(out$status)] <- "dormant"
-      out$seconds <- rep(NA_real_, nrow(out))
-      out$bytes <- rep(NA_real_, nrow(out))
-      out$branches <- rep(NA_integer_, nrow(out))
-      out[, c("name", "type", "status", "seconds", "bytes", "branches")]
+      out <- tar_outdated_globals(pipeline = self$pipeline, meta = self$meta)
+      vertices$status <- ifelse(vertices$name %in% out, "outdated", "uptodate")
+      vertices$status <- as.character(vertices$status)
+      vertices$status[is.na(vertices$status)] <- "queued"
+      vertices$seconds <- rep(NA_real_, nrow(vertices))
+      vertices$bytes <- rep(NA_real_, nrow(vertices))
+      vertices$branches <- rep(NA_integer_, nrow(vertices))
+      vertices[, c("name", "type", "status", "seconds", "bytes", "branches")]
     },
     resolve_target_status = function(vertices) {
       vertices <- vertices[order(vertices$name),, drop = FALSE] # nolint
       status <- if_any(
         self$outdated,
         self$produce_outdated(vertices),
-        rep("dormant", nrow(vertices))
+        rep("queued", nrow(vertices))
       )
       pipeline <- self$pipeline
       type <- map_chr(vertices$name, function(name) {
@@ -136,14 +154,15 @@ inspection_class <- R6::R6Class(
       # Keep this line for legacy reasons:
       progress$progress <- gsub("running", "started", x = progress$progress)
       if (self$outdated) {
-        progress <- progress[progress$progress != "built",, drop = FALSE] # nolint
+        index <- !(progress$progress %in% c("skipped", "built"))
+        progress <- progress[index,, drop = FALSE] # nolint
       }
       out <- merge(vertices, progress, all.x = TRUE, sort = FALSE)
       out <- out[order(out$name),, drop = FALSE] # nolint
-      levels <- c("started", "built", "canceled", "errored")
+      levels <- c("skipped", "started", "built", "canceled", "errored")
       in_levels <- !is.na(out$progress) & out$progress %in% levels
       status <- ifelse(in_levels, out$progress, status)
-      status[is.na(status)] <- "dormant"
+      status[is.na(status)] <- "queued"
       data_frame(name = vertices$name, type = type, status = status)
     },
     resolve_target_meta = function(vertices) {
@@ -196,7 +215,7 @@ inspection_class <- R6::R6Class(
     },
     validate = function() {
       super$validate()
-      assert_lgl(self$outdated)
+      tar_assert_lgl(self$outdated)
     }
   )
 )

@@ -1,6 +1,6 @@
 # Exponential backoff algorithm
 # similar to https://en.wikipedia.org/wiki/Exponential_backoff
-backoff_init <- function(min = 0.01, max = 5, rate = 1.5) {
+backoff_init <- function(min = 0.001, max = 5, rate = 1.5) {
   backoff_new(
     min = max(sqrt(.Machine$double.eps), min),
     max = max,
@@ -61,18 +61,18 @@ backoff_class <- R6::R6Class(
       self$increment()
     },
     validate = function() {
-      assert_scalar(self$min)
-      assert_scalar(self$max)
-      assert_scalar(self$rate)
-      assert_scalar(self$index)
-      assert_dbl(self$min)
-      assert_dbl(self$max)
-      assert_dbl(self$rate)
-      assert_int(self$index)
-      assert_ge(self$min, sqrt(.Machine$double.eps))
-      assert_ge(self$max, self$min)
-      assert_ge(self$rate, 1)
-      assert_ge(self$index, 0L)
+      tar_assert_scalar(self$min)
+      tar_assert_scalar(self$max)
+      tar_assert_scalar(self$rate)
+      tar_assert_scalar(self$index)
+      tar_assert_dbl(self$min)
+      tar_assert_dbl(self$max)
+      tar_assert_dbl(self$rate)
+      tar_assert_int(self$index)
+      tar_assert_ge(self$min, sqrt(.Machine$double.eps))
+      tar_assert_ge(self$max, self$min)
+      tar_assert_ge(self$rate, 1)
+      tar_assert_ge(self$index, 0L)
     }
   )
 )

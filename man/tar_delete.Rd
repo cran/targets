@@ -4,12 +4,21 @@
 \alias{tar_delete}
 \title{Delete locally stored target return values.}
 \usage{
-tar_delete(names)
+tar_delete(names, store = targets::tar_config_get("store"))
 }
 \arguments{
 \item{names}{Names of the targets to remove from \verb{_targets/objects/}.
-You can supply symbols, a character vector,
-or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
+You can supply symbols
+or \code{tidyselect} helpers like \code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \description{
 Delete the return values of targets in \verb{_targets/objects/}.
@@ -23,7 +32,7 @@ will be deleted. For patterns no longer in the metadata,
 branches are left alone.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(

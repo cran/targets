@@ -75,7 +75,7 @@ tar_test("target_downstream_branching()", {
   z <- target_init("z", quote(x), pattern = quote(map(x)))
   w <- target_init("w", quote(x), pattern = quote(map(y)))
   pipeline <- pipeline_init(list(x, y, z, w))
-  scheduler <- pipeline_produce_scheduler(pipeline)
+  scheduler <- scheduler_init(pipeline, meta = meta_init())
   expect_equal(target_downstream_branching(x, pipeline, scheduler), "z")
 })
 
@@ -85,7 +85,7 @@ tar_test("target_downstream_nonbranching()", {
   z <- target_init("z", quote(x), pattern = quote(map(x)))
   w <- target_init("w", quote(x), pattern = quote(map(y)))
   pipeline <- pipeline_init(list(x, y, z, w))
-  scheduler <- pipeline_produce_scheduler(pipeline)
+  scheduler <- scheduler_init(pipeline, meta = meta_init())
   out <- target_downstream_nonbranching(x, pipeline, scheduler)
   expect_equal(sort(out), sort(c("w", "y")))
 })
@@ -365,7 +365,7 @@ tar_test("invalidation: change a nested function", {
   expect_equal(tar_read(x), 2L)
   # Should be up to date.
   tar_make(callr_function = NULL)
-  expect_equal(nrow(tar_progress()), 0L)
+  expect_equal(tar_progress()$progress, "skipped")
   out <- tar_outdated(callr_function = NULL, targets_only = FALSE)
   expect_equal(out, character(0))
   # Change the inner function.
@@ -385,6 +385,6 @@ tar_test("invalidation: change a nested function", {
   out <- tar_outdated(callr_function = NULL, targets_only = FALSE)
   expect_true(all(c("f", "g", "x") %in% out))
   tar_make(callr_function = NULL)
-  expect_equal(tar_progress()$name, "x")
+  expect_equal(tar_progress()$progress, "built")
   expect_equal(tar_read(x), 3L)
 })

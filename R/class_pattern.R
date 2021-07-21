@@ -37,11 +37,22 @@ target_produce_record.tar_pattern <- function(target, pipeline, meta) {
 }
 
 #' @export
-target_skip.tar_pattern <- function(target, pipeline, scheduler, meta) {
+target_should_run.tar_pattern <- function(target, meta) {
+  TRUE
+}
+
+#' @export
+target_skip.tar_pattern <- function(
+  target,
+  pipeline,
+  scheduler,
+  meta,
+  active
+) {
   if_any(
     is.null(target$junction),
-    pattern_skip_initial(target, pipeline, scheduler, meta),
-    pattern_skip_final(target, pipeline, scheduler, meta)
+    pattern_begin_initial(target, pipeline, scheduler, meta),
+    pattern_begin_final(target, pipeline, scheduler, meta)
   )
 }
 
@@ -90,7 +101,7 @@ target_is_branchable.tar_pattern <- function(target) {
 #' @export
 target_produce_junction.tar_pattern <- function(target, pipeline) {
   dimensions <- target$settings$dimensions
-  pattern_assert_dimensions(target, dimensions, pipeline)
+  pattern_tar_assert_dimensions(target, dimensions, pipeline)
   siblings <- setdiff(target_deps_shallow(target, pipeline), dimensions)
   niblings <- pattern_children_columns(dimensions, pipeline)
   pattern <- target$settings$pattern
@@ -114,7 +125,7 @@ target_needs_worker.tar_pattern <- function(target) {
 
 #' @export
 target_validate.tar_pattern <- function(target) {
-  assert_correct_fields(target, pattern_new)
+  tar_assert_correct_fields(target, pattern_new)
   if (!is.null(target$junction)) {
     junction_validate(target$junction)
   }
@@ -122,21 +133,37 @@ target_validate.tar_pattern <- function(target) {
 }
 
 #' @export
+target_bootstrap.tar_pattern <- function(target, pipeline, meta) {
+  record <- target_bootstrap_record(target, meta)
+  name <- target$settings$name
+  children <- record$children
+  target$junction <- junction_init(nexus = name, splits = children)
+  branches <- pattern_produce_branches(target, pipeline)
+  lapply(branches, pipeline_set_target, pipeline = pipeline)
+  map(
+    children,
+    ~target_bootstrap(pipeline_get_target(pipeline, .x), pipeline, meta)
+  )
+  invisible()
+}
+
+#' @export
 print.tar_pattern <- function(x, ...) {
   cat(
-    "<pattern target>",
+    "<tar_pattern>",
     "\n  name:", target_get_name(x),
     "\n  command:\n   ",
     produce_lines(string_sub_expression(x$command$string)),
     "\n  pattern:\n   ",
-    produce_lines(string_sub_expression(deparse_safe(x$settings$pattern))),
+    produce_lines(string_sub_expression(tar_deparse_safe(x$settings$pattern))),
     "\n  format:", x$settings$format,
     "\n  iteration method:", x$settings$iteration,
     "\n  error mode:", x$settings$error,
     "\n  memory mode:", x$settings$memory,
     "\n  storage mode:", x$settings$storage,
     "\n  retrieval mode:", x$settings$retrieval,
-    "\n  deploy to:", x$settings$deployment,
+    "\n  deployment mode:", x$settings$deployment,
+    "\n  priority:", x$settings$priority,
     "\n  resources:\n   ",
     produce_lines(paste_list(x$settings$resources)),
     "\n  cue:\n   ",
@@ -172,7 +199,7 @@ pattern_produce_branch <- function(spec, command, settings, cue) {
   )
 }
 
-pattern_produce_branches <- function(target, pipeline, scheduler) {
+pattern_produce_branches <- function(target, pipeline) {
   map(
     junction_transpose(target$junction),
     pattern_produce_branch,
@@ -183,7 +210,7 @@ pattern_produce_branches <- function(target, pipeline, scheduler) {
 }
 
 pattern_insert_branches <- function(target, pipeline, scheduler) {
-  branches <- pattern_produce_branches(target, pipeline, scheduler)
+  branches <- pattern_produce_branches(target, pipeline)
   lapply(branches, pipeline_set_target, pipeline = pipeline)
   pattern_engraph_branches(target, pipeline, scheduler)
   lapply(branches, scheduler$progress$assign_queued)
@@ -223,45 +250,47 @@ pattern_produce_data_hash <- function(target, pipeline, meta) {
 }
 
 pattern_conclude_initial <- function(target, pipeline, scheduler, meta) {
-  pattern_skip_initial(target, pipeline, scheduler, meta)
+  pattern_begin_initial(target, pipeline, scheduler, meta)
   pattern_debug_branches(target)
 }
 
 pattern_conclude_final <- function(target, pipeline, scheduler, meta) {
-  pattern_skip_final(target, pipeline, scheduler, meta)
+  pattern_begin_final(target, pipeline, scheduler, meta)
   pattern_record_meta(target, pipeline, meta)
   patternview_register_final(target$patternview, target, scheduler)
   if (identical(target$patternview$progress, "built")) {
     scheduler$reporter$report_built(target, scheduler$progress)
+  } else if (identical(target$patternview$progress, "skipped")) {
+    scheduler$reporter$report_skipped(target, scheduler$progress)
   }
 }
 
-pattern_skip_initial <- function(target, pipeline, scheduler, meta) {
+pattern_begin_initial <- function(target, pipeline, scheduler, meta) {
   pattern_update_junction(target, pipeline)
   pattern_requeue_downstream_branching(target, pipeline, scheduler)
   pattern_requeue_self(target, scheduler)
   pattern_insert_branches(target, pipeline, scheduler)
 }
 
-pattern_skip_final <- function(target, pipeline, scheduler, meta) {
+pattern_begin_final <- function(target, pipeline, scheduler, meta) {
   scheduler$progress$assign_dequeued(target)
   pattern_requeue_downstream_nonbranching(target, pipeline, scheduler)
 }
 
-pattern_assert_dimensions <- function(target, dimensions, pipeline) {
+pattern_tar_assert_dimensions <- function(target, dimensions, pipeline) {
   for (name in dimensions) {
-    pipeline_assert_dimension(target, pipeline, name)
+    pipeline_tar_assert_dimension(target, pipeline, name)
   }
 }
 
-pipeline_assert_dimension <- function(target, pipeline, name) {
+pipeline_tar_assert_dimension <- function(target, pipeline, name) {
   branchable <- FALSE
   if (pipeline_exists_target(pipeline, name)) {
     dep <- pipeline_get_target(pipeline, name)
     branchable <- target_is_branchable(dep)
   }
   if (!branchable) {
-    throw_validate(
+    tar_throw_validate(
       "Target ", target_get_name(target),
       " tried to branch over ", name, ", which is illegal. ",
       "Patterns must only branch over explicitly ",

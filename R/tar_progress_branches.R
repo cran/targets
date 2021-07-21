@@ -12,14 +12,15 @@
 #'   * `branches`: number of branches in the progress category.
 #'   * `total`: total number of branches planned for the whole pattern.
 #'     Values within the same pattern should all be equal.
+#' @inheritParams tar_validate
 #' @param names Optional, names of the targets. If supplied, `tar_progress()`
 #'   only returns progress information on these targets.
-#'   You can supply symbols, a character vector,
+#'   You can supply symbols
 #'   or `tidyselect` helpers like [starts_with()].
 #' @param fields Optional, names of progress data columns to read.
 #'   Set to `NULL` to read all fields.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -32,15 +33,20 @@
 #' tar_progress_branches()
 #' })
 #' }
-tar_progress_branches <- function(names = NULL, fields = NULL) {
-  assert_store()
-  assert_path(path_progress())
-  out <- tibble::as_tibble(progress_init()$database$read_condensed_data())
+tar_progress_branches <- function(
+  names = NULL,
+  fields = NULL,
+  store = targets::tar_config_get("store")
+) {
+  tar_assert_path(path_progress(path_store = store))
+  progress <- progress_init(path_store = store)
+  out <- tibble::as_tibble(progress$database$read_condensed_data())
   out <- tar_progress_branches_summary(out)
   names_quosure <- rlang::enquo(names)
   fields_quosure <- rlang::enquo(fields)
-  names <- eval_tidyselect(names_quosure, out$name)
-  fields <- eval_tidyselect(fields_quosure, colnames(out)) %|||% colnames(out)
+  names <- tar_tidyselect_eval(names_quosure, out$name)
+  fields <- tar_tidyselect_eval(fields_quosure, colnames(out)) %|||%
+    colnames(out)
   if (!is.null(names)) {
     out <- out[match(names, out$name),, drop = FALSE] # nolint
   }
@@ -58,7 +64,7 @@ tar_progress_branches_summary <- function(progress) {
     progress = gsub(".* ", "", group),
     branches = as.integer(table)
   )
-  levels <- c("started", "built", "errored", "canceled")
+  levels <- c("skipped", "started", "built", "errored", "canceled")
   bins <- map(levels, ~tar_progress_branches_bin(.x, long))
   out <- progress[progress$type == "pattern",, drop = FALSE] # nolint
   out <- tibble::tibble(name = out$name, branches = out$branches)
@@ -80,7 +86,11 @@ tar_progress_branches_bin <- function(level, long) {
 }
 
 # Just for the tar_watch() app. # nolint
-tar_progress_branches_gt <- function() {
-  progress <- tar_progress_branches(names = NULL, fields = NULL)
+tar_progress_branches_gt <- function(path_store) {
+  progress <- tar_progress_branches(
+    names = NULL,
+    fields = NULL,
+    store = path_store
+  )
   tar_progress_display_gt(progress)
 }

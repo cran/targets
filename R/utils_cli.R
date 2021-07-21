@@ -77,7 +77,7 @@ cli_red_x <- function(msg) {
 }
 
 cli_errored <- function(errored) {
-  warn_run(
+  tar_warn_run(
     errored,
     " targets produced errors. ",
     "Run tar_meta(fields = error) for the messages."
@@ -85,7 +85,7 @@ cli_errored <- function(errored) {
 }
 
 cli_warned <- function(warned) {
-  warn_run(
+  tar_warn_run(
     warned,
     " targets produced warnings. ",
     "Run tar_meta(fields = warnings) for the messages."
@@ -98,6 +98,41 @@ cli_port <- function(host, port) {
   cli::cli_li("host: {.path {host}}")
   cli::cli_li("port: {.path {port}}")
   cli::cli_end()
+}
+
+cli_df_header <- function(x) {
+  message(cli_df_text(x)[1L], appendLF = FALSE)
+}
+
+cli_df_body <- function(x) {
+  message(cli_df_text(x)[2L], appendLF = FALSE)
+}
+
+# nocov start
+# Covered in tests/interactive/test-reporter.R.
+cli_df_body_oneline <- function(x) {
+  msg <- paste(paste(colnames(x), x, sep = ": "), collapse = " | ")
+  message(paste0("\r", msg), appendLF = FALSE)
+}
+# nocov end
+
+cli_df_text <- function(x) {
+  cols <- colnames(x)[-ncol(x)]
+  colnames(x)[-ncol(x)] <- paste(cols, "|")
+  for (col in seq_len(ncol(x) - 1L)) {
+    x[[col]] <- paste(x[[col]], "|")
+  }
+  out <- utils::capture.output(print(as.data.frame(x)))
+  substr(out[2L], 0L, 1L) <- " "
+  nchar_start <- nchar(out[1L])
+  out[1L] <- trimws(out[1L], which = "left")
+  n_trimmed <- nchar_start - nchar(out[1L])
+  out[2L] <- substr(out[2L], n_trimmed + 1L, nchar(out[2]))
+  out[2L] <- paste0("\r", out[2L])
+  diff <- max(0L, getOption("width") - nchar(out[2L]))
+  out[1L] <- paste0(out[1L], "\n")
+  out[2L] <- paste(c(out[2L], rep(" ", diff)), collapse = "")
+  out
 }
 
 time_stamp <- function(time = Sys.time()) {

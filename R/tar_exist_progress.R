@@ -6,8 +6,9 @@
 #' @details To learn more about local storage in `targets`, visit
 #'   <https://books.ropensci.org/targets/files.html#internal-files>.
 #' @return Logical of length 1, whether the current project's metadata exists.
+#' @inheritParams tar_validate
 #' @examples
 #' tar_exist_progress()
-tar_exist_progress <- function() {
-  file.exists(path_progress())
+tar_exist_progress <- function(store = targets::tar_config_get("store")) {
+  file.exists(path_progress(path_store = store))
 }

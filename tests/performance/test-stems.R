@@ -12,15 +12,16 @@ large_pipeline <- pipeline_init(targets)
 px <- pprof(local_init(pipeline = large_pipeline)$run())
 tar_destroy()
 
-# With API.
+# With API and priorities
 tar_script({
   x0 <- 1
-  lapply(seq_len(1e3), function(id) {
+  targets <- lapply(seq_len(1e3), function(id) {
     name <- paste0("x", as.character(id))
     dep <- paste0("x", as.character(id - 1L))
     command <- as.expression(rlang::sym(dep))
     tar_target_raw(name, command = command)
   })
+  list(targets, tar_target(y, 1, priority = 0.37))
 })
 px <- pprof(tar_make(reporter = "summary", callr_function = NULL))
 tar_destroy()
@@ -45,9 +46,7 @@ px <- pprof(try(tar_make(reporter = "summary", callr_function = NULL)))
 tar_destroy()
 unlink("_targets.R")
 
-# Same, but with setup overhead due to topo_sort_by_priority().
-# Should see the overhead in the graph since not all
-# priorities are equal.
+# Same, but with unequal priorities.
 tar_script({
   target_x0 <- tar_target(x0, stop(), priority = 1)
   out <- lapply(seq_len(1e3), function(id) {

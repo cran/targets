@@ -2,6 +2,7 @@ sitrep_init <- function(
   pipeline = NULL,
   meta = meta_init(),
   names = NULL,
+  shortcut = FALSE,
   queue = "sequential",
   reporter = "silent"
 ) {
@@ -9,6 +10,7 @@ sitrep_init <- function(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
     reporter = reporter
   )
@@ -18,6 +20,7 @@ sitrep_new <- function(
   pipeline = NULL,
   meta = NULL,
   names = NULL,
+  shortcut = shortcut,
   queue = NULL,
   reporter = NULL
 ) {
@@ -25,6 +28,7 @@ sitrep_new <- function(
     pipeline = pipeline,
     meta = meta,
     names = names,
+    shortcut = shortcut,
     queue = queue,
     reporter = reporter
   )
@@ -43,6 +47,7 @@ sitrep_class <- R6::R6Class(
       pipeline = NULL,
       meta = NULL,
       names = NULL,
+      shortcut = NULL,
       queue = NULL,
       reporter = NULL
     ) {
@@ -50,6 +55,7 @@ sitrep_class <- R6::R6Class(
         pipeline = pipeline,
         meta = meta,
         names = names,
+        shortcut = shortcut,
         queue = queue,
         reporter = reporter
       )
@@ -61,7 +67,13 @@ sitrep_class <- R6::R6Class(
     },
     process_pattern = function(target) {
       if (all(map_lgl(target$settings$dimensions, self$has_children))) {
-        target_skip(target, self$pipeline, self$scheduler, self$meta)
+        target_skip(
+          target = target,
+          pipeline = self$pipeline,
+          scheduler = self$scheduler,
+          meta = self$meta,
+          active = FALSE
+        )
       }
     },
     process_builder = function(target) {
@@ -71,7 +83,13 @@ sitrep_class <- R6::R6Class(
       self$sitrep[[name]] <- builder_sitrep(target, self$meta)
       if_any(
         self$meta$exists_record(target_get_name(target)),
-        target_skip(target, self$pipeline, self$scheduler, self$meta),
+        target_skip(
+          target = target,
+          pipeline = self$pipeline,
+          scheduler = self$scheduler,
+          meta = self$meta,
+          active = FALSE
+        ),
         target_update_queue(target, self$scheduler)
       )
     },

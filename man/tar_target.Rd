@@ -62,35 +62,125 @@ when loading \code{packages}.}
 \item{format}{Optional storage format for the target's return value.
 With the exception of \code{format = "file"}, each target
 gets a file in \verb{_targets/objects}, and each format is a different
-way to save and load this file.
-Possible formats:
+way to save and load this file. See the "Storage formats" section
+for a detailed list of possible data storage formats.}
+
+\item{iteration}{Character of length 1, name of the iteration mode
+of the target. Choices:
+\itemize{
+\item \code{"vector"}: branching happens with \code{vctrs::vec_slice()} and
+aggregation happens with \code{vctrs::vec_c()}.
+\item \code{"list"}, branching happens with \verb{[[]]} and aggregation happens with
+\code{list()}.
+\item \code{"group"}: \code{dplyr::group_by()}-like functionality to branch over
+subsets of a data frame. The target's return value must be a data
+frame with a special \code{tar_group} column of consecutive integers
+from 1 through the number of groups. Each integer designates a group,
+and a branch is created for each collection of rows in a group.
+See the \code{\link[=tar_group]{tar_group()}} function to see how you can
+create the special \code{tar_group} column with \code{dplyr::group_by()}.
+}}
+
+\item{error}{Character of length 1, what to do if the target
+stops and throws an error. Options:
+\itemize{
+\item \code{"stop"}: the whole pipeline stops and throws an error.
+\item \code{"continue"}: the whole pipeline keeps going.
+\item \code{"abridge"}: any currently running targets keep running,
+but no new targets launch after that.
+(Visit \url{https://books.ropensci.org/targets/debugging.html}
+to learn how to debug targets using saved workspaces.)
+}}
+
+\item{memory}{Character of length 1, memory strategy.
+If \code{"persistent"}, the target stays in memory
+until the end of the pipeline (unless \code{storage} is \code{"worker"},
+in which case \code{targets} unloads the value from memory
+right after storing it in order to avoid sending
+copious data over a network).
+If \code{"transient"}, the target gets unloaded
+after every new target completes.
+Either way, the target gets automatically loaded into memory
+whenever another target needs the value.
+For cloud-based dynamic files such as \code{format = "aws_file"},
+this memory strategy applies to
+temporary local copies of the file in \verb{_targets/scratch/"}:
+\code{"persistent"} means they remain until the end of the pipeline,
+and \code{"transient"} means they get deleted from the file system
+as soon as possible. The former conserves bandwidth,
+and the latter conserves local storage.}
+
+\item{garbage_collection}{Logical, whether to run \code{base::gc()}
+just before the target runs.}
+
+\item{deployment}{Character of length 1, only relevant to
+\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and \code{\link[=tar_make_future]{tar_make_future()}}. If \code{"worker"},
+the target builds on a parallel worker. If \code{"main"},
+the target builds on the host machine / process managing the pipeline.}
+
+\item{priority}{Numeric of length 1 between 0 and 1. Controls which
+targets get deployed first when multiple competing targets are ready
+simultaneously. Targets with priorities closer to 1 get built earlier
+(and polled earlier in \code{\link[=tar_make_future]{tar_make_future()}}).}
+
+\item{resources}{Object returned by \code{tar_resources()}
+with optional settings for high-performance computing
+functionality, alternative data storage formats,
+and other optional capabilities of \code{targets}.
+See \code{tar_resources()} for details.}
+
+\item{storage}{Character of length 1, only relevant to
+\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and \code{\link[=tar_make_future]{tar_make_future()}}.
+If \code{"main"}, the target's return value is sent back to the
+host machine and saved locally. If \code{"worker"}, the worker
+saves the value.}
+
+\item{retrieval}{Character of length 1, only relevant to
+\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and \code{\link[=tar_make_future]{tar_make_future()}}.
+If \code{"main"}, the target's dependencies are loaded on the host machine
+and sent to the worker before the target builds.
+If \code{"worker"}, the worker loads the targets dependencies.}
+
+\item{cue}{An optional object from \code{tar_cue()} to customize the
+rules that decide whether the target is up to date.}
+}
+\value{
+A target object. Users should not modify these directly,
+just feed them to \code{\link[=list]{list()}} in your target script file
+(default: \verb{_targets.R}).
+}
+\description{
+A target is a single step of computation in a pipeline.
+It runs an R command and returns a value.
+This value gets treated as an R object that can be used
+by the commands of targets downstream. Targets that
+are already up to date are skipped. See the user manual
+for more details.
+}
+\section{Storage formats}{
+
 \itemize{
 \item \code{"rds"}: Default, uses \code{saveRDS()} and \code{readRDS()}. Should work for
 most objects, but slow.
 \item \code{"qs"}: Uses \code{qs::qsave()} and \code{qs::qread()}. Should work for
 most objects, much faster than \code{"rds"}. Optionally set the
-preset for \code{qsave()} through the \code{resources} argument, e.g.
-\code{tar_target(..., resources = list(preset = "archive"))}.
-Requires the \code{qs} package (not installed by default).
+preset for \code{qsave()} through \code{tar_resources()} and \code{tar_resources_qs()}.
 \item \code{"feather"}: Uses \code{arrow::write_feather()} and
 \code{arrow::read_feather()} (version 2.0). Much faster than \code{"rds"},
 but the value must be a data frame. Optionally set
 \code{compression} and \code{compression_level} in \code{arrow::write_feather()}
-through the \code{resources} argument, e.g.
-\code{tar_target(..., resources = list(compression = ...))}.
+through \code{tar_resources()} and \code{tar_resources_feather()}.
 Requires the \code{arrow} package (not installed by default).
 \item \code{"parquet"}: Uses \code{arrow::write_parquet()} and
 \code{arrow::read_parquet()} (version 2.0). Much faster than \code{"rds"},
 but the value must be a data frame. Optionally set
 \code{compression} and \code{compression_level} in \code{arrow::write_parquet()}
-through the \code{resources} argument, e.g.
-\code{tar_target(..., resources = list(compression = ...))}.
+through \code{tar_resources()} and \code{tar_resources_parquet()}.
 Requires the \code{arrow} package (not installed by default).
 \item \code{"fst"}: Uses \code{fst::write_fst()} and \code{fst::read_fst()}.
 Much faster than \code{"rds"}, but the value must be
 a data frame. Optionally set the compression level for
-\code{fst::write_fst()} through the \code{resources} argument, e.g.
-\code{tar_target(..., resources = list(compress = 100))}.
+\code{fst::write_fst()} through \code{tar_resources()} and \code{tar_resources_fst()}.
 Requires the \code{fst} package (not installed by default).
 \item \code{"fst_dt"}: Same as \code{"fst"}, but the value is a \code{data.table}.
 Optionally set the compression level the same way as for \code{"fst"}.
@@ -119,8 +209,8 @@ to arrive over a network file system.)
 \item \code{"url"}: A dynamic input URL. It works like \code{format = "file"}
 except the return value of the target is a URL that already exists
 and serves as input data for downstream targets. Optionally
-supply a custom \code{curl} handle through the \code{resources} argument, e.g.
-\code{tar_target(..., resources = list(handle = curl::new_handle(nobody = TRUE)))}. # nolint
+supply a custom \code{curl} handle through
+\code{tar_resources()} and \code{tar_resources_url()}.
 in \code{new_handle()}, \code{nobody = TRUE} is important because it
 ensures \code{targets} just downloads the metadata instead of
 the entire data file when it checks time stamps and hashes.
@@ -135,7 +225,7 @@ and available by the time the target's command finishes running.
 \code{"aws_fst_tbl"}, \code{"aws_keras"}: AWS-powered versions of the
 respective formats \code{"rds"}, \code{"qs"}, etc. The only difference
 is that the data file is uploaded to the AWS S3 bucket
-you supply to \code{resources}. See the cloud computing chapter
+you supply to \code{tar_resources_aws()}. See the cloud computing chapter
 of the manual for details.
 \item \code{"aws_file"}: arbitrary dynamic files on AWS S3. The target
 should return a path to a temporary local file, then
@@ -149,119 +239,9 @@ download the file to \verb{_targets/scratch/} locally and return the path.
 Requires the same \code{resources} and other configuration details
 as the other AWS-powered formats. See the cloud computing
 chapter of the manual for details.
-}}
-
-\item{iteration}{Character of length 1, name of the iteration mode
-of the target. Choices:
-\itemize{
-\item \code{"vector"}: branching happens with \code{vctrs::vec_slice()} and
-aggregation happens with \code{vctrs::vec_c()}.
-\item \code{"list"}, branching happens with \verb{[[]]} and aggregation happens with
-\code{list()}.
-\item \code{"group"}: \code{dplyr::group_by()}-like functionality to branch over
-subsets of a data frame. The target's return value must be a data
-frame with a special \code{tar_group} column of consecutive integers
-from 1 through the number of groups. Each integer designates a group,
-and a branch is created for each collection of rows in a group.
-See the \code{\link[=tar_group]{tar_group()}} function to see how you can
-create the special \code{tar_group} column with \code{dplyr::group_by()}.
-}}
-
-\item{error}{Character of length 1, what to do if the target
-runs into an error. If \code{"stop"}, the whole pipeline stops
-and throws an error. If \code{"continue"}, the error is recorded,
-but the pipeline keeps going. \code{error = "workspace"} is just like
-\code{error = "stop"} except \code{targets} saves a special workspace file
-to support interactive debugging outside the pipeline.
-(Visit \url{https://books.ropensci.org/targets/debugging.html}
-to learn how to debug targets using saved workspaces.)}
-
-\item{memory}{Character of length 1, memory strategy.
-If \code{"persistent"}, the target stays in memory
-until the end of the pipeline (unless \code{storage} is \code{"worker"},
-in which case \code{targets} unloads the value from memory
-right after storing it in order to avoid sending
-copious data over a network).
-If \code{"transient"}, the target gets unloaded
-after every new target completes.
-Either way, the target gets automatically loaded into memory
-whenever another target needs the value.
-For cloud-based dynamic files such as \code{format = "aws_file"},
-this memory policy applies to
-temporary local copies of the file in \verb{_targets/scratch/"}:
-\code{"persistent"} means they remain until the end of the pipeline,
-and \code{"transient"} means they get deleted from the file system
-as soon as possible. The former conserves bandwidth,
-and the latter conserves local storage.}
-
-\item{garbage_collection}{Logical, whether to run \code{base::gc()}
-just before the target runs.}
-
-\item{deployment}{Character of length 1, only relevant to
-\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and \code{\link[=tar_make_future]{tar_make_future()}}. If \code{"worker"},
-the target builds on a parallel worker. If \code{"main"},
-the target builds on the host machine / process managing the pipeline.}
-
-\item{priority}{Numeric of length 1 between 0 and 1. Controls which
-targets get deployed first when multiple competing targets are ready
-simultaneously. Targets with priorities closer to 1 get built earlier
-(and polled earlier in \code{\link[=tar_make_future]{tar_make_future()}}).
-Only applies to \code{\link[=tar_make_future]{tar_make_future()}} and \code{\link[=tar_make_clustermq]{tar_make_clustermq()}}
-(not \code{\link[=tar_make]{tar_make()}}). \code{\link[=tar_make_future]{tar_make_future()}} with no extra settings is
-a drop-in replacement for \code{\link[=tar_make]{tar_make()}} in this case.}
-
-\item{resources}{A named list of computing resources. Uses:
-\itemize{
-\item Template file wildcards for \code{future::future()} in \code{\link[=tar_make_future]{tar_make_future()}}.
-\item Template file wildcards \code{clustermq::workers()} in \code{\link[=tar_make_clustermq]{tar_make_clustermq()}}.
-\item Custom target-level \code{future::plan()}, e.g.
-\code{resources = list(plan = future.callr::callr)}.
-\item Custom \code{curl} handle if \code{format = "url"},
-e.g. \code{resources = list(handle = curl::new_handle(nobody = TRUE))}.
-In custom handles, most users should manually set \code{nobody = TRUE}
-so \code{targets} does not download the entire file when it
-only needs to check the time stamp and ETag.
-\item Custom preset for \code{qs::qsave()} if \code{format = "qs"}, e.g.
-\code{resources = list(handle = "archive")}.
-\item Arguments \code{compression} and \code{compression_level} to
-\code{arrow::write_feather()} and \code{arrow:write_parquet()} if \code{format} is
-\code{"feather"}, \code{"parquet"}, \code{"aws_feather"}, or \code{"aws_parquet"}.
-\item Custom compression level for \code{fst::write_fst()} if
-\code{format} is \code{"fst"}, \code{"fst_dt"}, or \code{"fst_tbl"}, e.g.
-\code{resources = list(compress = 100)}.
-\item AWS bucket and prefix for the \code{"aws_"} formats, e.g.
-\code{resources = list(bucket = "your-bucket", prefix = "folder/name")}.
-\code{bucket} is required for AWS formats. See the cloud computing chapter
-of the manual for details.
-}}
-
-\item{storage}{Character of length 1, only relevant to
-\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and \code{\link[=tar_make_future]{tar_make_future()}}.
-If \code{"main"}, the target's return value is sent back to the
-host machine and saved locally. If \code{"worker"}, the worker
-saves the value.}
-
-\item{retrieval}{Character of length 1, only relevant to
-\code{\link[=tar_make_clustermq]{tar_make_clustermq()}} and \code{\link[=tar_make_future]{tar_make_future()}}.
-If \code{"main"}, the target's dependencies are loaded on the host machine
-and sent to the worker before the target builds.
-If \code{"worker"}, the worker loads the targets dependencies.}
-
-\item{cue}{An optional object from \code{tar_cue()} to customize the
-rules that decide whether the target is up to date.}
 }
-\value{
-A target object. Users should not modify these directly,
-just feed them to \code{\link[=list]{list()}} in your \verb{_targets.R} file.
 }
-\description{
-A target is a single step of computation in a pipeline.
-It runs an R command and returns a value.
-This value gets treated as an R object that can be used
-by the commands of targets downstream. Targets that
-are already up to date are skipped. See the user manual
-for more details.
-}
+
 \examples{
 # Defining targets does not run them.
 data <- tar_target(target_name, get_data(), packages = "tidyverse")
@@ -278,7 +258,7 @@ data <- tar_target(target_name, get_data(!!n_rows), tidy_eval = FALSE)
 print(data)
 tar_option_reset()
 # In a pipeline:
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script(tar_target(x, 1 + 1), ask = FALSE)
 tar_make()

@@ -18,7 +18,8 @@ tar_test("target_load_value()", {
 
 tar_test("stem$update_junction() on a good stem", {
   x <- target_init(name = "abc", expr = quote(seq_len(10)), iteration = "list")
-  target_run(x, baseenv())
+  tar_option_set(envir = baseenv())
+  target_run(x, tar_option_get("envir"), path_store_default())
   expect_null(x$junction)
   pipeline <- pipeline_init(list(x))
   stem_update_junction(x, pipeline)
@@ -30,7 +31,8 @@ tar_test("stem$update_junction() on a good stem", {
 
 tar_test("stem_produce_buds()", {
   x <- target_init(name = "abc", expr = quote(letters))
-  target_run(x, baseenv())
+  tar_option_set(envir = baseenv())
+  target_run(x, tar_option_get("envir"), path_store_default())
   pipeline <- pipeline_init(list(x))
   stem_update_junction(x, pipeline)
   children <- stem_produce_buds(x)
@@ -59,7 +61,7 @@ tar_test("stem$ensure_children()", {
 
 tar_test("target_update_queue() updates queue correctly", {
   pipeline <- pipeline_order()
-  scheduler <- pipeline_produce_scheduler(pipeline)
+  scheduler <- scheduler_init(pipeline, meta = meta_init())
   target <- pipeline_get_target(pipeline, "min2")
   target_update_queue(target, scheduler)
   out <- scheduler$queue$data
@@ -210,7 +212,7 @@ tar_test("stem$produce_record() of a errored stem", {
   expect_equal(record$path, NA_character_)
   expect_equal(record$data, NA_character_)
   expect_equal(record$bytes, 0)
-  expect_equal(record$time, NA_character_)
+  expect_true(is.character(record$time))
   expect_equal(record$format, "rds")
   expect_equal(record$iteration, "vector")
   expect_equal(record$children, NA_character_)
@@ -243,10 +245,13 @@ tar_test("stem validate with junction", {
 })
 
 tar_test("stem print", {
+  resources <- tar_resources(
+    future = tar_resources_future(resources = list(cpu = 1, mem = 2))
+  )
   x <- tar_target(x, {
     a <- 1
     b
-  }, resources = list(cpu = 1, mem = 2))
+  }, resources = resources)
   out <- utils::capture.output(print(x))
   expect_true(any(grepl("stem", out)))
 })
@@ -303,7 +308,7 @@ tar_test("branches can use old buds if continuing on error", {
   buds <- tar_meta(y, children)$children[[1]]
   expect_equal(length(unique(buds)), 3L)
   expect_true(all(grepl("y_", buds)))
-  expect_equal(tar_read(y), seq_len(3))
+  expect_equal(unname(tar_read(y)), seq_len(3))
 })
 
 tar_test("branches can use old buds if stem is canceled", {
@@ -325,7 +330,7 @@ tar_test("branches can use old buds if stem is canceled", {
   buds <- tar_meta(y, children)$children[[1]]
   expect_equal(length(unique(buds)), 3L)
   expect_true(all(grepl("y_", buds)))
-  expect_equal(tar_read(y), seq_len(3))
+  expect_equal(unname(tar_read(y)), seq_len(3))
 })
 
 tar_test("branches can use old buds if stem is canceled (worker storage)", {
@@ -347,7 +352,7 @@ tar_test("branches can use old buds if stem is canceled (worker storage)", {
   buds <- tar_meta(y, children)$children[[1]]
   expect_equal(length(unique(buds)), 3L)
   expect_true(all(grepl("y_", buds)))
-  expect_equal(tar_read(y), seq_len(3))
+  expect_equal(unname(tar_read(y)), seq_len(3))
 })
 
 tar_test("packages load errors are recorded (#228)", {
@@ -361,4 +366,34 @@ tar_test("packages load errors are recorded (#228)", {
   meta <- tar_meta(x, error)
   expect_false(anyNA(meta$error))
   expect_true(all(nzchar(meta$error)))
+})
+
+tar_test("bootstrap a budding and a non-budding stem for shortcut", {
+  tar_script({
+    list(
+      tar_target(x, 1L),
+      tar_target(y, seq_len(2L)),
+      tar_target(z, x + y, pattern = map(y))
+    )
+  })
+  tar_make(callr_function = NULL)
+  expect_equal(unname(tar_read(z)), c(2L, 3L))
+  tar_make(names = "z", shortcut = TRUE, callr_function = NULL)
+  p <- tar_progress()
+  expect_equal(nrow(p), 3L)
+  expect_equal(p$progress[grepl("^z_", p$name)], rep("skipped", 2L))
+  expect_equal(p$progress[p$name == "z"], "skipped")
+  tar_script({
+    list(
+      tar_target(x, 1L),
+      tar_target(y, seq_len(2L)),
+      tar_target(z, x + y + 1L, pattern = map(y))
+    )
+  })
+  tar_make(names = "z", shortcut = TRUE, callr_function = NULL)
+  expect_equal(unname(tar_read(z)), c(3L, 4L))
+  p <- tar_progress()
+  expect_equal(nrow(p), 3L)
+  expect_equal(p$progress[grepl("^z_", p$name)], rep("built", 2L))
+  expect_equal(p$progress[p$name == "z"], "built")
 })

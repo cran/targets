@@ -8,13 +8,16 @@ tar_manifest(
   names = NULL,
   fields = c("name", "command", "pattern"),
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function)
+  callr_arguments = targets::callr_args_default(callr_function),
+  envir = parent.frame(),
+  script = targets::tar_config_get("script")
 )
 }
 \arguments{
 \item{names}{Names of the targets to show. Set to \code{NULL} to
 show all the targets (default). Otherwise, you can supply
-symbols, a character vector, or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
+symbols, a character vector, or \code{tidyselect} helpers like
+\code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.}
 
 \item{fields}{Names of the fields, or columns, to show. Set to \code{NULL} to
 show all the fields (default). Otherwise, you can supply
@@ -36,6 +39,10 @@ Possible fields are below. All of them can be set in \code{\link[=tar_target]{ta
 \item \code{retrieval}: Retrieval mode for high-performance computing scenarios.
 \item \code{deployment}: Where/whether to deploy the target in high-performance
 computing scenarios.
+\item \code{priority}: Numeric of length 1 between 0 and 1. Controls which
+targets get deployed first when multiple competing targets are ready
+simultaneously. Targets with priorities closer to 1 get built earlier
+(and polled earlier in \code{\link[=tar_make_future]{tar_make_future()}}).
 \item \code{resources}: A list of target-specific resource requirements for
 \code{\link[=tar_make_future]{tar_make_future()}}.
 \item \code{cue_mode}: Cue mode from \code{\link[=tar_cue]{tar_cue()}}.
@@ -58,6 +65,33 @@ However, \code{callr_function} should not be \code{NULL} for serious
 reproducible work.}
 
 \item{callr_arguments}{A list of arguments to \code{callr_function}.}
+
+\item{envir}{An environment, where to run the target R script
+(default: \verb{_targets.R}) if \code{callr_function} is \code{NULL}.
+Ignored if \code{callr_function} is anything other than \code{NULL}.
+\code{callr_function} should only be \code{NULL} for debugging and
+testing purposes, not for serious runs of a pipeline, etc.
+
+The \code{envir} argument of \code{\link[=tar_make]{tar_make()}} and related
+functions always overrides
+the current value of \code{tar_option_get("envir")} in the current R session
+just before running the target script file,
+so whenever you need to set an alternative \code{envir}, you should always set
+it with \code{tar_option_set()} from within the target script file.
+In other words, if you call \code{tar_option_set(envir = envir1)} in an
+interactive session and then
+\code{tar_make(envir = envir2, callr_function = NULL)},
+then \code{envir2} will be used.}
+
+\item{script}{Character of length 1, path to the
+target script file. Defaults to \code{tar_config_get("script")},
+which in turn defaults to \verb{_targets.R}. When you set
+this argument, the value of \code{tar_config_get("script")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_script]{tar_script()}},
+\code{\link[=tar_config_get]{tar_config_get()}}, and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about the target script file and how to set it
+persistently for a project.}
 }
 \value{
 A data frame of information about the targets in the pipeline.
@@ -69,7 +103,7 @@ Along with \code{\link[=tar_visnetwork]{tar_visnetwork()}} and \code{\link[=tar_
 \code{tar_manifest()} helps check that you constructed your pipeline correctly.
 }
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   tar_option_set()

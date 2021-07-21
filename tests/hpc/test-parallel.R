@@ -18,7 +18,7 @@ tar_script({
 tar_make_clustermq(workers = 3L, reporter = "timestamp")
 tar_destroy()
 
-# All but 1 worker should quit while the last x4 branch is running.
+# All but 1 worker should quit while x4 is running.
 # Run in a basic terminal, monitor with htop -d 1, and filter on R.home().
 library(targets)
 tar_script({
@@ -50,7 +50,7 @@ tar_script({
   )
 })
 tar_make_clustermq(workers = 4L, reporter = "timestamp", callr_function = NULL)
-expect_equal(tar_read(x4), c(0, 0, 0, 5))
+expect_equal(unname(tar_read(x4)), c(0, 0, 0, 5))
 expect_equal(tar_progress_branches()$built, c(4, 4, 4))
 tar_destroy()
 
@@ -87,3 +87,36 @@ tar_script({
   )
 })
 tar_make_clustermq()
+tar_destroy()
+unlink("_targets.R")
+
+# error = "abridge" should keep current targets going.
+# Workers should clean up.
+tar_script({
+  options(clustermq.scheduler = "multiprocess")
+  error_middle <- function() {
+    Sys.sleep(4)
+    stop("time up")
+  }
+  just_sleep_short <- function() {
+    Sys.sleep(8)
+  }
+  just_sleep_long <- function() {
+    Sys.sleep(12)
+  }
+  list(
+    tar_target(w, error_middle(), error = "abridge"),
+    tar_target(x, just_sleep_short()),
+    tar_target(y, just_sleep_long()),
+    tar_target(z, list(w, x, y))
+  )
+})
+tar_make_clustermq(workers = 3)
+out <- tar_progress()
+expect_equal(nrow(out), 3L)
+expect_equal(out$progress[out$name == "w"], "errored")
+expect_equal(out$progress[out$name == "x"], "built")
+expect_equal(out$progress[out$name == "y"], "built")
+expect_false("z" %in% out$name)
+tar_destroy()
+unlink("_targets.R")

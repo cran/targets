@@ -12,10 +12,14 @@ tar_watch_ui(
   seconds_max = 60,
   seconds_step = 1,
   targets_only = FALSE,
-  outdated = TRUE,
+  outdated = FALSE,
   label_tar_visnetwork = NULL,
   level_separation = 150,
-  height = "650px"
+  degree_from = 1L,
+  degree_to = 1L,
+  height = "650px",
+  display = "summary",
+  displays = c("summary", "branches", "progress", "graph", "about")
 )
 }
 \arguments{
@@ -38,7 +42,7 @@ in the app controls.}
 in the app controls.}
 
 \item{targets_only}{Logical, whether to restrict the output to just targets
-(\code{FALSE}) or to also include imported global functions and objects.}
+(\code{FALSE}) or to also include global functions and objects.}
 
 \item{outdated}{Logical, whether to show colors to distinguish outdated
 targets from up-to-date targets. (Global functions and objects
@@ -58,8 +62,22 @@ is far from 1. If \code{level_separation} is \code{NULL},
 the \code{levelSeparation} argument of \code{visHierarchicalLayout()}
 defaults to \code{150}.}
 
+\item{degree_from}{Integer of length 1. When you click on a node,
+the graph highlights a neighborhood of that node. \code{degree_from}
+controls the number of edges the neighborhood extends upstream.}
+
+\item{degree_to}{Integer of length 1. When you click on a node,
+the graph highlights a neighborhood of that node. \code{degree_to}
+controls the number of edges the neighborhood extends downstream.}
+
 \item{height}{Character of length 1,
 height of the \code{visNetwork} widget and branches table.}
+
+\item{display}{Character of length 1, which display to show first.}
+
+\item{displays}{Character vector of choices for the display.
+Elements can be any of
+\code{"graph"}, \code{"summary"}, \code{"branches"}, or \code{"about"}.}
 }
 \value{
 A Shiny module UI.

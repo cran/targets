@@ -2,13 +2,30 @@
 % Please edit documentation in R/tar_edit.R
 \name{tar_edit}
 \alias{tar_edit}
-\title{Open _targets.R for editing.}
+\title{Open the target script file for editing.}
 \usage{
-tar_edit()
+tar_edit(script = targets::tar_config_get("script"))
+}
+\arguments{
+\item{script}{Character of length 1, path to the
+target script file. Defaults to \code{tar_config_get("script")},
+which in turn defaults to \verb{_targets.R}. When you set
+this argument, the value of \code{tar_config_get("script")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_script]{tar_script()}},
+\code{\link[=tar_config_get]{tar_config_get()}}, and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about the target script file and how to set it
+persistently for a project.}
 }
 \description{
-Looks for _targets.R in the current working directory.
+Open the target script file for editing.
 Requires the \code{usethis} package.
+}
+\details{
+The target script file is an R code file
+that defines the pipeline. The default path is \verb{_targets.R},
+but the default for the current project
+can be configured with \code{\link[=tar_config_set]{tar_config_set()}}.
 }
 \seealso{
 Other scripts: 

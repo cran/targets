@@ -11,13 +11,15 @@ database_new <- function(
   memory = NULL,
   path = NULL,
   header = NULL,
-  list_columns = NULL
+  list_columns = NULL,
+  queue = NULL
 ) {
   database_class$new(
     memory = memory,
     path = path,
     header = header,
-    list_columns = list_columns
+    list_columns = list_columns,
+    queue = queue
   )
 }
 
@@ -31,17 +33,20 @@ database_class <- R6::R6Class(
       memory = NULL,
       path = NULL,
       header = NULL,
-      list_columns = NULL
+      list_columns = NULL,
+      queue = NULL
     ) {
       self$memory <- memory
       self$path <- path
       self$header <- header
       self$list_columns <- list_columns
+      self$queue <- queue
     },
     memory = NULL,
     path = NULL,
     header = NULL,
     list_columns = NULL,
+    queue = NULL,
     get_row = function(name) {
       memory_get_object(self$memory, name)
     },
@@ -97,21 +102,31 @@ database_class <- R6::R6Class(
       }
       as.list(data)[self$header]
     },
+    enqueue_row = function(row) {
+      line <- self$produce_line(self$select_cols(row))
+      self$queue <- c(self$queue, line)
+    },
+    dequeue_rows = function() {
+      if (length(self$queue)) {
+        on.exit(self$queue <- NULL)
+        self$append_lines(self$queue)
+      }
+    },
     write_row = function(row) {
       line <- self$produce_line(self$select_cols(row))
-      self$append_line(line)
+      self$append_lines(line)
     },
-    append_line = function(line, max_attempts = 500) {
+    append_lines = function(lines, max_attempts = 500) {
       attempt <- 0L
       # Tested in tests/interactive/test-database.R
       # nocov start
-      while (!is.null(try(self$try_append_line(line)))) {
-        msg <- paste("Reattempting to append line to", self$path)
+      while (!is.null(try(self$try_append_lines(lines)))) {
+        msg <- paste("Reattempting to append lines to", self$path)
         cli::cli_alert_info(msg)
         Sys.sleep(stats::runif(1, 0.2, 0.25))
         attempt <- attempt + 1L
         if (attempt > max_attempts) {
-          throw_run(
+          tar_throw_run(
             "timed out after ",
             max_attempts,
             " attempts trying to append to ",
@@ -121,8 +136,8 @@ database_class <- R6::R6Class(
       }
       # nocov end
     },
-    try_append_line = function(line) {
-      write(line, self$path, ncolumns = 1L, append = TRUE, sep = "")
+    try_append_lines = function(lines) {
+      write(lines, self$path, ncolumns = 1L, append = TRUE, sep = "")
       invisible()
     },
     append_storage = function(data) {
@@ -182,27 +197,7 @@ database_class <- R6::R6Class(
       )
     },
     read_existing_data = function() {
-      # TODO: use sep2 once implemented:
-      # https://github.com/Rdatatable/data.table/issues/1162
-      # We can also delete the list_columns arg then.
-      out <- data.table::fread(
-        file = self$path,
-        sep = database_sep_outer,
-        fill = TRUE,
-        na.strings = ""
-      )
-      out <- as_data_frame(out)
-      if (nrow(out) < 1L) {
-        return(out)
-      }
-      for (id in self$list_columns) {
-        out[[id]] <- strsplit(
-          as.character(out[[id]]),
-          split = database_sep_inner,
-          fixed = TRUE
-        )
-      }
-      out
+      database_read_existing_data(self)
     },
     produce_mock_data = function() {
       out <- as_data_frame(map(self$header, ~character(0)))
@@ -215,43 +210,77 @@ database_class <- R6::R6Class(
       }
     },
     validate_columns = function(header, list_columns) {
-      if (!all(list_columns %in% header)) {
-        throw_validate("all list columns must be in the header")
-      }
-      if (!is.null(header) & !("name" %in% header)) {
-        throw_validate("header must have a column called \"name\"")
-      }
+      database_validate_columns(header, list_columns)
     },
     validate_file = function() {
-      if (!file.exists(self$path)) {
-        return()
-      }
-      line <- readLines(self$path, n = 1L)
-      header <- strsplit(line, split = database_sep_outer, fixed = TRUE)[[1]]
-      if (identical(header, self$header)) {
-        return()
-      }
-      throw_file(
-        "invalid header in ", self$path, "\n",
-        "  found:    ", paste(header, collapse = database_sep_outer), "\n",
-        "  expected: ", paste(self$header, collapse = database_sep_outer),
-        "\nProbably because of a breaking change in the targets package. ",
-        "Before running tar_make() again, ",
-        "either delete the data store with tar_destroy() ",
-        "or downgrade the targets package to an earlier version."
-      )
+      database_validate_file(self)
     },
     validate = function() {
       memory_validate(self$memory)
       self$validate_columns(self$header, self$list_columns)
       self$validate_file()
-      assert_chr(self$path)
-      assert_scalar(self$path)
-      assert_chr(self$header)
-      assert_chr(self$list_columns)
+      tar_assert_chr(self$path)
+      tar_assert_scalar(self$path)
+      tar_assert_chr(self$header)
+      tar_assert_chr(self$list_columns)
     }
   )
 )
+
+# TODO: move these functions inline in the class again
+# after https://github.com/jimhester/lintr/issues/804 is solved.
+database_read_existing_data <- function(database) {
+  # TODO: use sep2 once implemented:
+  # https://github.com/Rdatatable/data.table/issues/1162
+  # We can also delete the list_columns arg then.
+  out <- data.table::fread(
+    file = database$path,
+    sep = database_sep_outer,
+    fill = TRUE,
+    na.strings = ""
+  )
+  out <- as_data_frame(out)
+  if (nrow(out) < 1L) {
+    return(out)
+  }
+  for (id in database$list_columns) {
+    out[[id]] <- strsplit(
+      as.character(out[[id]]),
+      split = database_sep_inner,
+      fixed = TRUE
+    )
+  }
+  out
+}
+
+database_validate_columns <- function(header, list_columns) {
+  if (!all(list_columns %in% header)) {
+    tar_throw_validate("all list columns must be in the header")
+  }
+  if (!is.null(header) & !("name" %in% header)) {
+    tar_throw_validate("header must have a column called \"name\"")
+  }
+}
+
+database_validate_file <- function(database) {
+  if (!file.exists(database$path)) {
+    return()
+  }
+  line <- readLines(database$path, n = 1L)
+  header <- strsplit(line, split = database_sep_outer, fixed = TRUE)[[1]]
+  if (identical(header, database$header)) {
+    return()
+  }
+  tar_throw_file(
+    "invalid header in ", database$path, "\n",
+    "  found:    ", paste(header, collapse = database_sep_outer), "\n",
+    "  expected: ", paste(database$header, collapse = database_sep_outer),
+    "\nProbably because of a breaking change in the targets package. ",
+    "Before running tar_make() again, ",
+    "either delete the data store with tar_destroy() ",
+    "or downgrade the targets package to an earlier version."
+  )
+}
 
 database_sep_outer <- "|"
 database_sep_inner <- "*"

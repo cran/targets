@@ -12,10 +12,11 @@
 #'   * `since`: how long ago progress last changed (`Sys.time() - time`).
 #'   * `time`: the time when the progress last changed
 #'     (modification timestamp of the `_targets/meta/progress` file).
+#' @inheritParams tar_validate
 #' @param fields Optional, names of progress data columns to read.
 #'   Set to `NULL` to read all fields.
 #' @examples
-#' if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
 #' tar_script({
 #'   list(
@@ -29,14 +30,16 @@
 #' })
 #' }
 tar_progress_summary <- function(
-  fields = c("started", "built", "errored", "canceled", "since")
+  fields = c("skipped", "started", "built", "errored", "canceled", "since"),
+  store = targets::tar_config_get("store")
 ) {
-  assert_store()
-  assert_path(path_progress())
-  time <- file.mtime(path_progress())
-  progress <- tibble::as_tibble(progress_init()$database$read_condensed_data())
+  tar_assert_path(path_progress(path_store = store))
+  time <- file.mtime(path_progress(path_store = store))
+  progress <- progress_init(path_store = store)
+  progress <- tibble::as_tibble(progress$database$read_condensed_data())
   progress <- progress[progress$type != "pattern",, drop = FALSE] # nolint
   out <- tibble::tibble(
+    skipped = sum(progress$progress == "skipped"),
     started = sum(progress$progress == "started"),
     built = sum(progress$progress == "built"),
     errored = sum(progress$progress == "errored"),
@@ -45,13 +48,14 @@ tar_progress_summary <- function(
     time = time_stamp(time)
   )
   fields_quosure <- rlang::enquo(fields)
-  fields <- eval_tidyselect(fields_quosure, colnames(out)) %|||% colnames(out)
+  fields <- tar_tidyselect_eval(fields_quosure, colnames(out)) %|||%
+    colnames(out)
   out[, fields, drop = FALSE]
 }
 
 # Just for the tar_watch() app. # nolint
-tar_progress_summary_gt <- function() {
-  progress <- tar_progress_summary(fields = NULL)
+tar_progress_summary_gt <- function(path_store) {
+  progress <- tar_progress_summary(fields = NULL, store = path_store)
   tar_progress_display_gt(progress)
 }
 
@@ -63,9 +67,9 @@ tar_progress_display_gt <- function(progress) {
     locations = gt::cells_column_labels(everything())
   )
   colors <- data_frame(
-    progress = c("started", "built", "canceled", "errored"),
-    fill = c("#DC863B", "#E1BD6D", "#FAD510", "#C93312"),
-    color = c("black", "black", "black", "white")
+    progress = c("skipped", "started", "built", "canceled", "errored"),
+    fill = c("#3e236e", "#DC863B", "#E1BD6D", "#FAD510", "#C93312"),
+    color = c("white", "black", "black", "black", "white")
   )
   for (index in seq_len(nrow(colors))) {
     out <- gt::tab_style(

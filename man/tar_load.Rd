@@ -7,13 +7,15 @@
 tar_load(
   names,
   branches = NULL,
-  meta = tar_meta(targets_only = TRUE),
-  envir = parent.frame()
+  meta = tar_meta(targets_only = TRUE, store = store),
+  envir = parent.frame(),
+  store = targets::tar_config_get("store")
 )
 }
 \arguments{
 \item{names}{Names of the targets to load. You can supply
-symbols, a character vector, or \code{tidyselect} helpers like \code{\link[=starts_with]{starts_with()}}.}
+symbols, a character vector, or \code{tidyselect} helpers like
+\code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.}
 
 \item{branches}{Integer of indices of the branches to load
 for any targets that are patterns.}
@@ -25,6 +27,15 @@ However, if you call \code{\link[=tar_meta]{tar_meta()}} beforehand and supply i
 argument, then successive calls to \code{tar_read()} may run much faster.}
 
 \item{envir}{Environment to put the loaded targets.}
+
+\item{store}{Character of length 1, path to the
+\code{targets} data store. Defaults to \code{tar_config_get("store")},
+which in turn defaults to \verb{_targets/}.
+When you set this argument, the value of \code{tar_config_get("store")}
+is temporarily changed for the current function call.
+See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
+about how to set the data store path persistently
+for a project.}
 }
 \value{
 Nothing.
@@ -35,8 +46,19 @@ Load the return values of targets into the current environment
 value lives in a file in \verb{_targets/objects/}. For dynamic files
 (i.e. \code{format = "file"}) the paths loaded in place of the values.
 }
+\section{Limited scope}{
+
+\code{tar_read()} and \code{tar_load()}
+are only for exploratory analysis and literate programming,
+and \code{tar_read_raw()} and \code{tar_load_raw()} are only
+for exploratory analysis. \code{targets} automatically
+loads the correct dependencies into memory when the pipeline
+is running, so invoking these functions
+from inside a target is rarely advisable.
+}
+
 \examples{
-if (identical(Sys.getenv("TAR_LONG_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
 tar_script({
   list(
@@ -46,7 +68,7 @@ tar_script({
   )
 }, ask = FALSE)
 tar_make()
-tar_load(starts_with("y"))
+tar_load(starts_with("y")) # see also all_of()
 })
 }
 }

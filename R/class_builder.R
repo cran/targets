@@ -28,6 +28,13 @@ target_update_depend.tar_builder <- function(target, pipeline, meta) {
 }
 
 #' @export
+target_bootstrap.tar_builder <- function(target, pipeline, meta) {
+  record <- target_bootstrap_record(target, meta)
+  target$store <- record_bootstrap_store(record)
+  invisible()
+}
+
+#' @export
 target_read_value.tar_builder <- function(target, pipeline = NULL) {
   object <- store_read_object(target$store)
   iteration <- target$settings$iteration
@@ -44,6 +51,8 @@ target_prepare.tar_builder <- function(target, pipeline, scheduler) {
   builder_serialize_subpipeline(target)
 }
 
+# Willing to ignore high cyclomatic complexity score.
+# nolint start
 #' @export
 target_should_run.tar_builder <- function(target, meta) {
   cue <- target$cue
@@ -57,6 +66,7 @@ target_should_run.tar_builder <- function(target, meta) {
   if (cue_file(cue, target, meta)) return(TRUE)
   FALSE
 }
+# nolint end
 
 #' @export
 target_should_run_worker.tar_builder <- function(target) {
@@ -69,37 +79,57 @@ target_needs_worker.tar_builder <- function(target) {
 }
 
 #' @export
-target_run.tar_builder <- function(target, envir) {
+target_run.tar_builder <- function(target, envir, path_store) {
   on.exit({
-    builder_unset_tar_envir_run()
+    builder_unset_tar_runtime()
     target$subpipeline <- NULL
   })
-  envir <- if_any(identical(envir, "globalenv"), globalenv(), envir)
   builder_unserialize_subpipeline(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
-  builder_set_tar_envir_run(target, frames)
+  builder_set_tar_runtime(target, frames)
   builder_update_build(target, frames_get_envir(frames))
-  builder_update_paths(target)
+  builder_update_paths(target, path_store)
   builder_ensure_object(target, "worker")
   target
 }
 
 #' @export
-target_run_worker.tar_builder <- function(target, envir) {
+target_run_worker.tar_builder <- function(target, envir, path_store, options) {
+  tar_options$import(options)
+  envir <- if_any(identical(envir, "globalenv"), globalenv(), envir)
+  tar_option_set(envir = envir)
   target_gc(target)
-  target_run(target, envir)
+  target_run(target, envir, path_store)
   builder_serialize_value(target)
   target
 }
 
 #' @export
-target_skip.tar_builder <- function(target, pipeline, scheduler, meta) {
+target_skip.tar_builder <- function(
+  target,
+  pipeline,
+  scheduler,
+  meta,
+  active
+) {
   target_update_queue(target, scheduler)
   path <- meta$get_record(target_get_name(target))$path
   file <- target$store$file
   file$path <- path
-  scheduler$progress$assign_skipped(target)
+  if (active) {
+    builder_ensure_workspace(
+      target = target,
+      pipeline = pipeline,
+      scheduler = scheduler,
+      meta = meta
+    )
+  }
+  if_any(
+    active,
+    scheduler$progress$register_skipped(target),
+    scheduler$progress$assign_skipped(target)
+  )
   scheduler$reporter$report_skipped(target, scheduler$progress)
 }
 
@@ -107,6 +137,12 @@ target_skip.tar_builder <- function(target, pipeline, scheduler, meta) {
 target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
   target_update_queue(target, scheduler)
   builder_handle_warnings(target, scheduler)
+  builder_ensure_workspace(
+    target = target,
+    pipeline = pipeline,
+    scheduler = scheduler,
+    meta = meta
+  )
   switch(
     metrics_outcome(target$metrics),
     cancel = builder_cancel(target, pipeline, scheduler, meta),
@@ -216,13 +252,12 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
   scheduler$progress$register_errored(target)
   scheduler$reporter$report_errored(target, scheduler$progress)
   target_patternview_errored(target, pipeline, scheduler)
-  if (identical(target$settings$error, "workspace")) {
-    builder_save_workspace(target, pipeline, scheduler)
-  }
-  if_any(
-    identical(target$settings$error, "continue"),
-    scheduler$reporter$report_error(target$metrics$error),
-    builder_exit(target, pipeline, scheduler, meta)
+  switch(
+    target$settings$error,
+    continue = scheduler$reporter$report_error(target$metrics$error),
+    abridge = scheduler$abridge(target),
+    stop = builder_exit(target, pipeline, scheduler, meta),
+    workspace = builder_exit(target, pipeline, scheduler, meta)
   )
 }
 
@@ -235,18 +270,31 @@ builder_exit <- function(target, pipeline, scheduler, meta) {
     pipeline$targets <- NULL
   }
   # Keep this:
-  throw_run(target$metrics$error)
+  tar_throw_run(target$metrics$error)
 }
 
-builder_ensure_workspace <- function(target, pipeline, scheduler) {
-  if (target$settings$name %in% tar_option_get("workspaces")) {
-    builder_save_workspace(target, pipeline, scheduler)
+builder_ensure_workspace <- function(target, pipeline, scheduler, meta) {
+  if (builder_should_save_workspace(target)) {
+    builder_save_workspace(target, pipeline, scheduler, meta)
   }
 }
 
-builder_save_workspace <- function(target, pipeline, scheduler) {
+builder_should_save_workspace <- function(target) {
+  names <- c(target_get_name(target), target_get_parent(target))
+  because_named <- any(names %in% tar_option_get("workspaces"))
+  has_error <- metrics_has_error(target$metrics)
+  if_error <- tar_option_get("workspace_on_error") ||
+    identical(target$settings$error, "workspace")
+  because_error <- if_error && has_error
+  because_named || because_error
+}
+
+builder_save_workspace <- function(target, pipeline, scheduler, meta) {
   scheduler$reporter$report_workspace(target)
-  workspace_save(workspace_init(target, pipeline))
+  workspace_save(
+    workspace = workspace_init(target, pipeline),
+    path_store = meta$get_path_store()
+  )
 }
 
 builder_record_error_meta <- function(target, pipeline, meta) {
@@ -267,13 +315,13 @@ builder_update_build <- function(target, envir) {
   invisible()
 }
 
-builder_update_paths <- function(target) {
+builder_update_paths <- function(target, path_store) {
   if (metrics_terminated_early(target$metrics)) {
     return()
   }
   name <- target_get_name(target)
-  store_update_path(target$store, name, target$value$object)
-  store_update_stage(target$store, name, target$value$object)
+  store_update_path(target$store, name, target$value$object, path_store)
+  store_update_stage(target$store, name, target$value$object, path_store)
   store_early_hash(target$store)
 }
 
@@ -309,14 +357,14 @@ builder_wait_correct_hash <- function(target) {
   store_ensure_correct_hash(target$store, storage, deployment)
 }
 
-builder_set_tar_envir_run <- function(target, frames) {
-  assign(x = "target", value = target, envir = tar_envir_run)
-  assign(x = "frames", value = frames, envir = tar_envir_run)
+builder_set_tar_runtime <- function(target, frames) {
+  tar_runtime$set_target(target)
+  tar_runtime$set_frames(frames)
 }
 
-builder_unset_tar_envir_run <- function() {
-  list <- c("target", "frames")
-  remove(list = list, envir = tar_envir_run, inherits = FALSE)
+builder_unset_tar_runtime <- function() {
+  tar_runtime$unset_target()
+  tar_runtime$unset_frames()
 }
 
 builder_serialize_value <- function(target) {
@@ -346,5 +394,3 @@ builder_sitrep <- function(target, meta) {
     file = if_any(record, NA, cue_file(cue, target, meta))
   )
 }
-
-tar_envir_run <- new.env(parent = emptyenv())
