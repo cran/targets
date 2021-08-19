@@ -25,7 +25,10 @@ tar_watch(
   host = getOption("shiny.host", "127.0.0.1"),
   port = getOption("shiny.port", targets::tar_random_port()),
   verbose = TRUE,
-  supervise = TRUE
+  supervise = TRUE,
+  poll_connection = TRUE,
+  stdout = "|",
+  stderr = "|"
 )
 }
 \arguments{
@@ -102,6 +105,25 @@ Only relevant if \code{background} is \code{TRUE}.}
 \item{supervise}{Whether to register the process with a supervisor. If \code{TRUE},
 the supervisor will ensure that the process is killed when the R process
 exits.}
+
+\item{poll_connection}{Whether to have a control connection to
+the process. This is used to transmit messages from the subprocess
+to the main process.}
+
+\item{stdout}{The name of the file the standard output of
+the child R process will be written to.
+If the child process runs with the \code{--slave} option (the default),
+then the commands are not echoed and will not be shown
+in the standard output. Also note that you need to call \code{print()}
+explicitly to show the output of the command(s).}
+
+\item{stderr}{The name of the file the standard error of
+the child R process will be written to.
+In particular \code{message()} sends output to the standard
+error. If nothing was sent to the standard error, then this file
+will be empty. This argument can be the same file as \code{stdout},
+in which case they will be correctly interleaved. If this is the
+string \code{"2>&1"}, then standard error is redirected to standard output.}
 }
 \value{
 A handle to \code{callr::r_bg()} background process running the app.
@@ -140,10 +162,15 @@ tar_make()
 }
 \seealso{
 Other progress: 
+\code{\link{tar_built}()},
+\code{\link{tar_canceled}()},
+\code{\link{tar_errored}()},
 \code{\link{tar_poll}()},
 \code{\link{tar_progress_branches}()},
 \code{\link{tar_progress_summary}()},
 \code{\link{tar_progress}()},
+\code{\link{tar_skipped}()},
+\code{\link{tar_started}()},
 \code{\link{tar_watch_server}()},
 \code{\link{tar_watch_ui}()}
 }

@@ -89,7 +89,7 @@ target_run.tar_builder <- function(target, envir, path_store) {
   frames <- frames_produce(envir, target, target$subpipeline)
   builder_set_tar_runtime(target, frames)
   builder_update_build(target, frames_get_envir(frames))
-  builder_update_paths(target, path_store)
+  builder_ensure_paths(target, path_store)
   builder_ensure_object(target, "worker")
   target
 }
@@ -143,6 +143,7 @@ target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
     scheduler = scheduler,
     meta = meta
   )
+  builder_ensure_object(target, "main")
   switch(
     metrics_outcome(target$metrics),
     cancel = builder_cancel(target, pipeline, scheduler, meta),
@@ -153,7 +154,6 @@ target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
 }
 
 builder_conclude <- function(target, pipeline, scheduler, meta) {
-  builder_ensure_object(target, "main")
   builder_wait_correct_hash(target)
   target_ensure_buds(target, pipeline, scheduler)
   meta$insert_record(target_produce_record(target, pipeline, meta))
@@ -214,9 +214,22 @@ target_validate.tar_builder <- function(target) {
 }
 
 builder_ensure_deps <- function(target, pipeline, retrieval) {
-  if (identical(target$settings$retrieval, retrieval)) {
-    target_ensure_deps(target, pipeline)
+  if (!identical(target$settings$retrieval, retrieval)) {
+    return()
   }
+  tryCatch(
+    target_ensure_deps(target, pipeline),
+    error = function(error) {
+      message <- paste0(
+        "could not load dependencies of target ",
+        target_get_name(target),
+        ". ",
+        conditionMessage(error)
+      )
+      expr <- as.expression(as.call(list(quote(stop), message)))
+      target$command$expr <- expr
+    }
+  )
 }
 
 builder_update_subpipeline <- function(target, pipeline) {
@@ -254,14 +267,19 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
   target_patternview_errored(target, pipeline, scheduler)
   switch(
     target$settings$error,
-    continue = scheduler$reporter$report_error(target$metrics$error),
+    continue = builder_error_continue(target, scheduler),
     abridge = scheduler$abridge(target),
-    stop = builder_exit(target, pipeline, scheduler, meta),
-    workspace = builder_exit(target, pipeline, scheduler, meta)
+    stop = builder_error_exit(target, pipeline, scheduler, meta),
+    workspace = builder_error_exit(target, pipeline, scheduler, meta)
   )
 }
 
-builder_exit <- function(target, pipeline, scheduler, meta) {
+builder_error_continue <- function(target, scheduler) {
+  target$value <- NULL
+  scheduler$reporter$report_error(target$metrics$error)
+}
+
+builder_error_exit <- function(target, pipeline, scheduler, meta) {
   # TODO: remove this hack that compensates for
   # https://github.com/r-lib/callr/issues/185.
   # No longer necessary in callr >= 3.7.0.
@@ -305,20 +323,34 @@ builder_record_error_meta <- function(target, pipeline, meta) {
 
 builder_update_build <- function(target, envir) {
   build <- command_produce_build(target$command, envir)
-  object <- build$object
-  if (is.null(build$metrics$error)) {
-    store_assert_format(target$store, build$object, target_get_name(target))
-    object <- store_cast_object(target$store, object)
-  }
-  target$value <- value_init(object, target$settings$iteration)
   target$metrics <- build$metrics
+  object <- build$object
+  object <- tryCatch(
+    builder_resolve_object(target, build),
+    error = function(error) builder_error_internal(target, error, "_build_")
+  )
+  target$value <- value_init(object, target$settings$iteration)
   invisible()
 }
 
-builder_update_paths <- function(target, path_store) {
+builder_resolve_object <- function(target, build) {
   if (metrics_terminated_early(target$metrics)) {
-    return()
+    return(build$object)
   }
+  store_assert_format(target$store, build$object, target_get_name(target))
+  store_cast_object(target$store, build$object)
+}
+
+builder_ensure_paths <- function(target, path_store) {
+  if (!metrics_terminated_early(target$metrics)) {
+    tryCatch(
+      builder_update_paths(target, path_store),
+      error = function(error) builder_error_internal(target, error, "_paths_")
+    )
+  }
+}
+
+builder_update_paths <- function(target, path_store) {
   name <- target_get_name(target)
   store_update_path(target$store, name, target$value$object, path_store)
   store_update_stage(target$store, name, target$value$object, path_store)
@@ -335,9 +367,6 @@ builder_unload_value <- function(target) {
 }
 
 builder_update_object <- function(target) {
-  if (metrics_terminated_early(target$metrics)) {
-    return()
-  }
   file_validate_path(target$store$file$path)
   store_write_object(target$store, target$value$object)
   builder_unload_value(target)
@@ -346,9 +375,23 @@ builder_update_object <- function(target) {
 }
 
 builder_ensure_object <- function(target, storage) {
-  if (identical(target$settings$storage, storage)) {
-    builder_update_object(target)
+  context <- identical(target$settings$storage, storage)
+  completed <- !metrics_terminated_early(target$metrics)
+  if (context && completed) {
+    tryCatch(
+      builder_update_object(target),
+      error = function(error) builder_error_internal(target, error, "_store_")
+    )
   }
+}
+
+builder_error_internal <- function(target, error, prefix) {
+  target$metrics <- metrics_new(
+    seconds = NA_real_,
+    error = build_message(error, prefix),
+    traceback = "No traceback available."
+  )
+  target
 }
 
 builder_wait_correct_hash <- function(target) {

@@ -49,9 +49,14 @@ tar_poll()
 }
 \seealso{
 Other progress: 
+\code{\link{tar_built}()},
+\code{\link{tar_canceled}()},
+\code{\link{tar_errored}()},
 \code{\link{tar_progress_branches}()},
 \code{\link{tar_progress_summary}()},
 \code{\link{tar_progress}()},
+\code{\link{tar_skipped}()},
+\code{\link{tar_started}()},
 \code{\link{tar_watch_server}()},
 \code{\link{tar_watch_ui}()},
 \code{\link{tar_watch}()}

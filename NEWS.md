@@ -1,3 +1,24 @@
+# targets 0.7.0
+
+## Bug fixes
+
+* Ensure `error = "continue"` does not cause errored targets to have `NULL` values.
+* Relay output and messages in Target Markdown interactive mode (using the R/default `knitr` engine).
+
+## New features
+
+* Expose the `poll_connection`, `stdout`, and `stderr` arguments of `callr::r_bg()` in `tar_watch()` (@mpadge).
+* Add new helper functions to list targets in each progress category: `tar_started()`, `tar_skipped()`, `tar_built()`, `tar_canceled()`, and `tar_errored()`.
+* Add new helper functions `tar_interactive()`, `tar_noninteractive()`, and `tar_toggle()` to differentially suppress code in non-interactive and interactive mode in Target Markdown (#607, @33Vito).
+
+## Enhancements
+
+* Handle `future` errors within targets (#570, @stuvet).
+* Handle storage errors within targets (#571, @stuvet).
+* In Target Markdown in non-interactive mode, suppress messages if the `message` `knitr` chunk option is `FALSE` (#574, @jmbuhr).
+* In Target Markdown, if `tar_interactive` is not set, choose interactive vs non-interactive mode based on `isTRUE(getOption("knitr.in.progress"))` instead of `interactive()`.
+* Convert errors loading dependencies into errors running targets (@stuvet).
+
 # targets 0.6.0
 
 ## Bug fixes

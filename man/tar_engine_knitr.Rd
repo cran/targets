@@ -16,10 +16,39 @@ Character, output generated from \code{knitr::engine_output()}.
 \code{knitr} language engine that runs \code{{targets}}
 code chunks in Target Markdown.
 }
+\section{Target Markdown interactive mode}{
+
+Target Markdown has two modes:
+\enumerate{
+\item Non-interactive mode. This is the default when you
+run \code{knitr::knit()} or \code{rmarkdown::render()}.
+Here, the code in \code{{targets}} code chunks gets written
+to special script files in order to set up a \code{targets}
+pipeline to run later.
+\item Interactive mode: here, no scripts are written to set up
+a pipeline. Rather, the globals or targets in question
+are run in the current environment and the values
+are assigned to that environment.
+}
+
+The mode is interactive if \code{!isTRUE(getOption("knitr.in.progress"))},
+is \code{TRUE}. The \code{knitr.in.progress} option is \code{TRUE}
+when you run \code{knitr::knit()} or \code{rmarkdown::render()}
+and \code{NULL} if you are running one chunk at a time interactively
+in an integrated development environment, e.g. the
+notebook interface in RStudio:
+\url{https://bookdown.org/yihui/rmarkdown/notebook.html}.
+You can choose the mode with the \code{tar_interactive}
+chunk option.
+(In \code{targets} 0.6.0, \code{tar_interactive} defaults to \code{interactive()}
+instead of \code{!isTRUE(getOption("knitr.in.progress"))}.)
+}
+
 \section{Target Markdown chunk options}{
 
 Target Markdown introduces the following \code{knitr} code chunk options.
-Most other standard \code{knitr} code chunk options should just work.
+Most other standard \code{knitr} code chunk options should just work
+in non-interactive mode. In interactive mode, not all
 \itemize{
 \item \code{tar_globals}: Logical of length 1,
 whether to define globals or targets.
@@ -28,7 +57,8 @@ common to all the targets. If \code{FALSE} or \code{NULL} (default),
 then the chunk returns formal targets for the pipeline.
 \item \code{tar_interactive}: Logical of length 1, whether to run in
 interactive mode or non-interactive mode.
-Defaults to the return value of \code{interactive()}.
+See the "Target Markdown interactive mode" section of this
+help file for details.
 \item \code{tar_name}: name to use for writing helper script files
 (e.g. \verb{_targets_r/targets/target_script.R})
 and specifying target names if the \code{tar_simple} chunk option
@@ -76,5 +106,10 @@ if (requireNamespace("knitr", quietly = TRUE)) {
 }
 \seealso{
 \url{https://books.ropensci.org/targets/markdown.html}
+
+Other Target Markdown: 
+\code{\link{tar_interactive}()},
+\code{\link{tar_noninteractive}()},
+\code{\link{tar_toggle}()}
 }
-\concept{engines}
+\concept{Target Markdown}
