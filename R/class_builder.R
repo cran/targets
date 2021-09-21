@@ -88,9 +88,11 @@ target_run.tar_builder <- function(target, envir, path_store) {
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
   builder_set_tar_runtime(target, frames)
+  store_update_stage_early(target$store, target$settings$name, path_store)
   builder_update_build(target, frames_get_envir(frames))
   builder_ensure_paths(target, path_store)
   builder_ensure_object(target, "worker")
+  builder_ensure_object(target, "none")
   target
 }
 
@@ -329,7 +331,9 @@ builder_update_build <- function(target, envir) {
     builder_resolve_object(target, build),
     error = function(error) builder_error_internal(target, error, "_build_")
   )
-  target$value <- value_init(object, target$settings$iteration)
+  if (!identical(target$settings$storage, "none")) {
+    target$value <- value_init(object, target$settings$iteration)
+  }
   invisible()
 }
 
@@ -353,8 +357,8 @@ builder_ensure_paths <- function(target, path_store) {
 builder_update_paths <- function(target, path_store) {
   name <- target_get_name(target)
   store_update_path(target$store, name, target$value$object, path_store)
-  store_update_stage(target$store, name, target$value$object, path_store)
-  store_early_hash(target$store)
+  store_update_stage_late(target$store, name, target$value$object, path_store)
+  store_hash_early(target$store)
 }
 
 builder_unload_value <- function(target) {
@@ -368,9 +372,11 @@ builder_unload_value <- function(target) {
 
 builder_update_object <- function(target) {
   file_validate_path(target$store$file$path)
-  store_write_object(target$store, target$value$object)
+  if (!identical(target$settings$storage, "none")) {
+    store_write_object(target$store, target$value$object)
+  }
   builder_unload_value(target)
-  store_late_hash(target$store)
+  store_hash_late(target$store)
   store_upload_object(target$store)
 }
 

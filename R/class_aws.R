@@ -32,11 +32,15 @@ store_produce_aws_path <- function(store, name, object, path_store) {
 # external contributors from the open source community.
 # nocov start
 store_aws_bucket <- function(path) {
-  path[1]
+  path[1L]
 }
 
 store_aws_key <- function(path) {
-  path[2]
+  path[2L]
+}
+
+store_aws_path <- function(path) {
+  path[-seq_len(2L)]
 }
 
 #' @export
@@ -53,13 +57,6 @@ store_read_object.tar_aws <- function(store) {
     check_region = TRUE
   )
   store_cast_object(store, store_read_path(store, tmp))
-}
-
-#' @export
-store_write_object.tar_aws <- function(store, object) {
-  stage <- store$file$stage
-  dir_create(dirname(stage))
-  store_write_path(store, store_cast_object(store, object), stage)
 }
 
 #' @export
@@ -107,15 +104,6 @@ store_aws_hash <- function(key, bucket) {
 }
 
 #' @export
-store_late_hash.tar_aws <- function(store) {
-  file <- file_init(path = store$file$stage)
-  file_update_hash(file)
-  store$file$hash <- file$hash
-  store$file$bytes <- file$bytes
-  store$file$time <- file$time
-}
-
-#' @export
 store_has_correct_hash.tar_aws <- function(store) {
   bucket <- store_aws_bucket(store$file$path)
   key <- store_aws_key(store$file$path)
@@ -124,15 +112,6 @@ store_has_correct_hash.tar_aws <- function(store) {
     identical(store_aws_hash(key, bucket), store$file$hash),
     FALSE
   )
-}
-
-#' @export
-store_ensure_correct_hash.tar_aws <- function(store, storage, deployment) {
-  store_wait_correct_hash(store)
-}
-
-#' @export
-store_sync_file_meta.tar_aws <- function(store, target, meta) {
 }
 # nocov end
 

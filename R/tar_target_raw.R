@@ -10,6 +10,8 @@
 #' @return A target object. Users should not modify these directly,
 #'   just feed them to [list()] in your target script file
 #'   (default: `_targets.R`).
+#'   See the "Target objects" section for details.
+#' @inheritSection tar_target Target objects
 #' @inheritParams tar_target
 #' @inheritParams tar_option_set
 #' @param name Character of length 1, name of the target. Subsequent targets
@@ -114,8 +116,8 @@ tar_target_raw <- function(
   tar_assert_ge(priority, 0)
   tar_assert_le(priority, 1)
   tar_assert_resources(resources)
-  tar_assert_flag(storage, c("main", "worker"))
-  tar_assert_flag(retrieval, c("main", "worker"))
+  tar_assert_flag(storage, c("main", "worker", "none"))
+  tar_assert_flag(retrieval, c("main", "worker", "none"))
   if (!is.null(cue)) {
     cue_validate(cue)
   }

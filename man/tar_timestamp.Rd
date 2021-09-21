@@ -39,15 +39,19 @@ or cannot be parsed correctly, then
 \code{tar_timestamp()} returns a \code{POSIXct} object at \verb{1970-01-01 UTC}.
 }
 \description{
-Get the time that a target last ran successfully.
-If there are multiple artifacts, as with file or URL targets,
-then multiple time stamps may be returned.
+Get the timestamp associated with a target's
+last successful run.
 }
 \details{
 \code{tar_timestamp()} checks the metadata in \verb{_targets/meta/meta},
-not the actual data. Time stamps are recorded only for targets that
-run commands: just non-branching targets and individual dynamic
-branches.
+not the actual returned data of the target.
+The timestamp depends on the storage format of the target.
+If storage is local, e.g. formats like \code{"rds"} and \code{"file"},
+then the time stamp is the latest modification time
+of the target data files at the time the target
+last successfully ran. For non-local formats like
+\code{"aws_rds"} and \code{"url"}, then \code{targets} chooses instead
+to simply record the time the target last successfully ran.
 }
 \examples{
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {

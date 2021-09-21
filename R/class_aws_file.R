@@ -8,7 +8,14 @@ aws_file_new <- function(file = NULL, resources = NULL) {
   force(resources)
   enclass(
     environment(),
-    c("tar_aws_file", "tar_aws", "tar_external", "tar_store_file", "tar_store")
+    c(
+      "tar_aws_file",
+      "tar_aws",
+      "tar_cloud",
+      "tar_external",
+      "tar_store_file",
+      "tar_store"
+    )
   )
 }
 
@@ -45,6 +52,12 @@ store_produce_stage.tar_aws_file <- function(store, name, object, path_store) {
 
 #' @export
 store_assert_format_setting.aws_file <- function(class) {
+}
+
+#' @export
+store_hash_early.tar_aws_file <- function(store, target) { # nolint
+  tar_assert_path(store_aws_path(store$file$path))
+  file_update_hash(store$file)
 }
 
 #' @export

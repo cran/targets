@@ -7,6 +7,21 @@
 #'   by the commands of targets downstream. Targets that
 #'   are already up to date are skipped. See the user manual
 #'   for more details.
+#' @section Target objects:
+#'   Functions like `tar_target()` produce target objects,
+#'   special objects with specialized sets of S3 classes.
+#'   Target objects represent skippable steps of the analysis pipeline
+#'   as described at <https://books.ropensci.org/targets/>.
+#'   Please read the walkthrough at
+#'   <https://books.ropensci.org/targets/walkthrough.html>
+#'   to understand the role of target objects in analysis pipelines.
+#'
+#'   For developers,
+#'   <https://wlandau.github.io/targetopia/contributing.html#target-factories>
+#'   explains target factories (functions like this one which generate targets)
+#'   and the design specification at
+#'   <https://books.ropensci.org/targets-design/>
+#'   details the structure and composition of target objects.
 #' @section Storage formats:
 #'   * `"rds"`: Default, uses `saveRDS()` and `readRDS()`. Should work for
 #'     most objects, but slow.
@@ -178,14 +193,46 @@
 #'   See `tar_resources()` for details.
 #' @param storage Character of length 1, only relevant to
 #'   [tar_make_clustermq()] and [tar_make_future()].
-#'   If `"main"`, the target's return value is sent back to the
-#'   host machine and saved locally. If `"worker"`, the worker
-#'   saves the value.
+#'   Must be one of the following values:
+#'   * `"main"`: the target's return value is sent back to the
+#'   host machine and saved/uploaded locally.
+#'   * `"worker"`: the worker saves/uploads the value.
+#'   * `"none"`: almost never recommended. It is only for
+#'     niche situations, e.g. the data needs to be loaded
+#'     explicitly from another language. If you do use it,
+#'     then the return value of the target is totally ignored
+#'     when the target ends, but
+#'     each downstream target still attempts to load the data file
+#'     (except when `retrieval = "none"`).
+#'
+#'     If you select `storage = "none"`, then
+#'     the return value of the target's command is ignored,
+#'     and the data is not saved automatically.
+#'     As with dynamic files (`format = "file"` or `"aws_file"`) it is the
+#'     responsibility of the user to write to
+#'     [tar_path()] from inside the target.
+#'     An example target
+#'     could look something like
+#'     tar_target(x,
+#'     {saveRDS("value", tar_path(create_dir = TRUE)); "ignored"},
+#'     storage = "none")`.
+#'
+#'     The distinguishing feature of `storage = "none"`
+#'     (as opposed to `format = "file"` or `"aws_file"`)
+#'     is that in the general case,
+#'     downstream targets will automatically try to load the data
+#'     from the data store as a dependency. As a corollary, `storage = "none"`
+#'     is completely unnecessary if `format` is `"file"` or `"aws_file"`.
 #' @param retrieval Character of length 1, only relevant to
 #'   [tar_make_clustermq()] and [tar_make_future()].
-#'   If `"main"`, the target's dependencies are loaded on the host machine
-#'   and sent to the worker before the target builds.
-#'   If `"worker"`, the worker loads the targets dependencies.
+#'   Must be one of the following values:
+#'   * `"main"`: the target's dependencies are loaded on the host machine
+#'     and sent to the worker before the target builds.
+#'   * `"worker"`: the worker loads the targets dependencies.
+#'   * `"none"`: the dependencies are not loaded at all.
+#'     This choice is almost never recommended. It is only for
+#'     niche situations, e.g. the data needs to be loaded
+#'     explicitly from another language.
 #' @param cue An optional object from `tar_cue()` to customize the
 #'   rules that decide whether the target is up to date.
 #' @examples

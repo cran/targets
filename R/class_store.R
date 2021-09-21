@@ -98,11 +98,43 @@ store_path_from_record.default <- function(store, record, path_store) {
   path_objects(path_store = path_store, name = record$name)
 }
 
-store_update_stage <- function(store, name, object, path_store) {
+store_tar_path <- function(store, target, path_store) {
+  UseMethod("store_tar_path")
+}
+
+#' @export
+store_tar_path.default <- function(store, target, path_store) {
+  path_objects(path_store = path_store, name = target_get_name(target))
+}
+
+store_update_stage_early <- function(store, name, path_store) {
+  UseMethod("store_update_stage_early")
+}
+
+#' @export
+store_update_stage_early.default <- function(store, name, path_store) {
   store$file$stage <- store_produce_stage(
     store = store,
     name = name,
-    object = object,
+    object = NULL,
+    path_store = path_store
+  )
+}
+
+store_update_stage_late <- function(store, name, object, path_store) {
+  UseMethod("store_update_stage_late")
+}
+
+#' @export
+store_update_stage_late.default <- function(store, name, object, path_store) {
+}
+
+#' @export
+store_update_stage_early.default <- function(store, name, path_store) {
+  store$file$stage <- store_produce_stage(
+    store = store,
+    name = name,
+    object = NULL,
     path_store = path_store
   )
 }
@@ -132,20 +164,21 @@ store_assert_format <- function(store, object, name) {
 store_assert_format.default <- function(store, object, name) {
 }
 
-store_early_hash <- function(store) {
-  UseMethod("store_early_hash")
+store_hash_early <- function(store) {
+  UseMethod("store_hash_early")
 }
 
 #' @export
-store_early_hash.default <- function(store) {
+store_hash_early.default <- function(store) {
 }
 
-store_late_hash <- function(store) {
-  UseMethod("store_late_hash")
+store_hash_late <- function(store) {
+  UseMethod("store_hash_late")
 }
 
 #' @export
-store_late_hash.default <- function(store) {
+store_hash_late.default <- function(store) {
+  tar_assert_path(store$file$path)
   file_update_hash(store$file)
 }
 
