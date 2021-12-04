@@ -12,6 +12,12 @@
 #'   of the affected targets during the pipeline.
 #' @param prefix Character of length 1, "directory path"
 #'   in the S3 bucket where the target return values are stored.
+#' @param region Character of length 1, AWS region containing the S3 bucket.
+#'   Set to `NULL` to use the default region.
+#' @param part_size Positive numeric of length 1, number of bytes
+#'   for each part of a multipart upload. (Except the last part,
+#'   which is the remainder.) In a multipart upload, each part
+#'   must be at least 5 MB.
 #' @examples
 #' # Somewhere in you target script file (usually _targets.R):
 #' tar_target(
@@ -25,11 +31,15 @@
 #' )
 tar_resources_aws <- function(
   bucket,
-  prefix = targets::path_objects_dir_cloud()
+  prefix = targets::path_objects_dir_cloud(),
+  region = NULL,
+  part_size = 5 * (2 ^ 20)
 ) {
   out <- resources_aws_init(
     bucket = bucket,
-    prefix = prefix
+    prefix = prefix,
+    region = region,
+    part_size = part_size
   )
   resources_validate(out)
   out

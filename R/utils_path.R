@@ -26,6 +26,10 @@ path_store_default <- function() {
   "_targets"
 }
 
+path_gitignore <- function(path_store) {
+  file.path(path_store, ".gitignore")
+}
+
 path_objects <- function(path_store, name) {
   file.path(path_objects_dir(path_store), name)
 }
@@ -54,10 +58,6 @@ path_meta <- function(path_store) {
   file.path(path_meta_dir(path_store), "meta")
 }
 
-path_gitignore <- function(path_store) {
-  file.path(path_meta_dir(path_store), ".gitignore")
-}
-
 path_progress <- function(path_store) {
   file.path(path_meta_dir(path_store), "progress")
 }
@@ -76,6 +76,10 @@ path_scratch_dir <- function(path_store) {
 
 path_scratch_del <- function(path_store) {
   unlink(path_scratch_dir(path_store), recursive = TRUE)
+}
+
+path_user_dir <- function(path_store) {
+  file.path(path_store, "user")
 }
 
 path_workspace <- function(path_store, name) {

@@ -46,17 +46,24 @@ active_class <- R6::R6Class(
       self$envir <- envir
     },
     ensure_meta = function() {
+      new_store <- !file.exists(self$meta$get_path_store())
       self$meta$validate()
       self$meta$database$preprocess(write = TRUE)
-      self$write_gitignore()
+      if (new_store) {
+        self$write_gitignore()
+        self$write_user()
+      }
       self$meta$record_imports(self$pipeline$imports, self$pipeline)
       self$meta$restrict_records(self$pipeline)
     },
     write_gitignore = function() {
       writeLines(
-        c("*", "!.gitignore", "!meta"),
+        c("*", "!.gitignore", "!meta", "meta/*", "!meta/meta"),
         path_gitignore(self$meta$get_path_store())
       )
+    },
+    write_user = function() {
+      dir_create(path_user_dir(self$meta$get_path_store()))
     },
     ensure_process = function() {
       self$process <- process_init(path_store = self$meta$get_path_store())

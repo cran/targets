@@ -4,7 +4,12 @@
 \alias{tar_resources_aws}
 \title{Target resources: AWS storage formats}
 \usage{
-tar_resources_aws(bucket, prefix = targets::path_objects_dir_cloud())
+tar_resources_aws(
+  bucket,
+  prefix = targets::path_objects_dir_cloud(),
+  region = NULL,
+  part_size = 5 * (2^20)
+)
 }
 \arguments{
 \item{bucket}{Character of length 1, name of an existing
@@ -13,6 +18,14 @@ of the affected targets during the pipeline.}
 
 \item{prefix}{Character of length 1, "directory path"
 in the S3 bucket where the target return values are stored.}
+
+\item{region}{Character of length 1, AWS region containing the S3 bucket.
+Set to \code{NULL} to use the default region.}
+
+\item{part_size}{Positive numeric of length 1, number of bytes
+for each part of a multipart upload. (Except the last part,
+which is the remainder.) In a multipart upload, each part
+must be at least 5 MB.}
 }
 \value{
 Object of class \code{"tar_resources_aws"}, to be supplied

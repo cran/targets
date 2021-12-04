@@ -51,10 +51,31 @@ target_prepare.tar_builder <- function(target, pipeline, scheduler) {
   builder_serialize_subpipeline(target)
 }
 
-# Willing to ignore high cyclomatic complexity score.
-# nolint start
+# nocov start
+# Tested in tests/aws/test-class_aws_qs.R (bucket deleted later).
 #' @export
 target_should_run.tar_builder <- function(target, meta) {
+  tryCatch(
+    builder_should_run(target, meta),
+    error = function(error) {
+      message <- paste0(
+        "could not check target ",
+        target_get_name(target),
+        ". ",
+        conditionMessage(error)
+      )
+      expr <- as.expression(as.call(list(quote(stop), message)))
+      target$command$expr <- expr
+      target$settings$deployment <- "main"
+      TRUE
+    }
+  )
+}
+# nocov end
+
+# Willing to ignore high cyclomatic complexity score.
+# nolint start
+builder_should_run <- function(target, meta) {
   cue <- target$cue
   if (cue_record(cue, target, meta)) return(TRUE)
   if (cue_always(cue, target, meta)) return(TRUE)
@@ -87,7 +108,7 @@ target_run.tar_builder <- function(target, envir, path_store) {
   builder_unserialize_subpipeline(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
-  builder_set_tar_runtime(target, frames)
+  builder_set_tar_runtime(target, frames, path_store)
   store_update_stage_early(target$store, target$settings$name, path_store)
   builder_update_build(target, frames_get_envir(frames))
   builder_ensure_paths(target, path_store)
@@ -230,6 +251,7 @@ builder_ensure_deps <- function(target, pipeline, retrieval) {
       )
       expr <- as.expression(as.call(list(quote(stop), message)))
       target$command$expr <- expr
+      target$settings$deployment <- "main"
     }
   )
 }
@@ -406,14 +428,16 @@ builder_wait_correct_hash <- function(target) {
   store_ensure_correct_hash(target$store, storage, deployment)
 }
 
-builder_set_tar_runtime <- function(target, frames) {
+builder_set_tar_runtime <- function(target, frames, path_store) {
   tar_runtime$set_target(target)
   tar_runtime$set_frames(frames)
+  tar_runtime$set_store(path_store)
 }
 
 builder_unset_tar_runtime <- function() {
   tar_runtime$unset_target()
   tar_runtime$unset_frames()
+  tar_runtime$unset_store()
 }
 
 builder_serialize_value <- function(target) {
