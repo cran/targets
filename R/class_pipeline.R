@@ -179,17 +179,17 @@ pipeline_assign_target_copy <- function(pipeline, name, envir, keep_value) {
   assign(name, copy, envir = envir)
 }
 
-pipeline_serialize_values <- function(pipeline) {
+pipeline_marshal_values <- function(pipeline) {
   map(
     pipeline_get_names(pipeline),
-    ~target_serialize_value(pipeline_get_target(pipeline, .x))
+    ~target_marshal_value(pipeline_get_target(pipeline, .x))
   )
 }
 
-pipeline_unserialize_values <- function(pipeline) {
+pipeline_unmarshal_values <- function(pipeline) {
   map(
     pipeline_get_names(pipeline),
-    ~target_unserialize_value(pipeline_get_target(pipeline, .x))
+    ~target_unmarshal_value(pipeline_get_target(pipeline, .x))
   )
 }
 
@@ -295,7 +295,9 @@ as_pipeline.tar_pipeline <- function(x) {
 #' @export
 #' @keywords internal
 as_pipeline.default <- function(x) {
-  pipeline_init(unlist(list(x), recursive = TRUE))
+  out <- unlist(list(x), recursive = TRUE)
+  out <- fltr(out, ~inherits(x = .x, what = "tar_target"))
+  pipeline_init(out)
 }
 
 #' @export

@@ -1,17 +1,25 @@
 store_init <- function(format = "rds", resources = list()) {
   store_new(
-    class = as_class(format),
+    format = store_format_dispatch(format),
     file = file_init(),
     resources = resources
   )
 }
 
-store_new <- function(class, file = NULL, resources = NULL) {
+store_new <- function(format, file = NULL, resources = NULL) {
   UseMethod("store_new")
 }
 
+# A format should not be a full class like the store
+# because the responsibilities of store and format
+# would overlap too much.
+store_format_dispatch <- function(format) {
+  class <- gsub(pattern = "\\&.*$", replacement = "", x = format)
+  enclass(format, class)
+}
+
 #' @export
-store_new.default <- function(class, file = NULL, resources = NULL) {
+store_new.default <- function(format, file = NULL, resources = NULL) {
   store_new_default(file, resources)
 }
 
@@ -21,13 +29,13 @@ store_new_default <- function(file, resources) {
   enclass(environment(), "tar_store")
 }
 
-store_assert_format_setting <- function(class) {
+store_assert_format_setting <- function(format) {
   UseMethod("store_assert_format_setting")
 }
 
 #' @export
-store_assert_format_setting.default <- function(class) {
-  tar_throw_validate("unsupported format")
+store_assert_format_setting.default <- function(format) {
+  tar_throw_validate(paste("unsupported format:", class(format)[1]))
 }
 
 store_read_object <- function(store) {
@@ -35,7 +43,7 @@ store_read_object <- function(store) {
 }
 
 store_read_object.default <- function(store) {
-  store_cast_object(store, store_read_path(store, store$file$path))
+  store_convert_object(store, store_read_path(store, store$file$path))
 }
 
 store_read_path <- function(store, path) {
@@ -52,7 +60,7 @@ store_write_object.default <- function(store, object) {
   stage <- store$file$stage
   dir_create(dirname(path))
   dir_create(dirname(stage))
-  store_write_path(store, store_cast_object(store, object), stage)
+  store_write_path(store, store_convert_object(store, object), stage)
   file.rename(stage, path)
 }
 
@@ -148,11 +156,11 @@ store_produce_stage.default <- function(store, name, object, path_store) {
   path_scratch(path_store = path_store, pattern = name)
 }
 
-store_cast_object <- function(store, object) {
-  UseMethod("store_cast_object")
+store_convert_object <- function(store, object) {
+  UseMethod("store_convert_object")
 }
 
-store_cast_object.default <- function(store, object) {
+store_convert_object.default <- function(store, object) {
   object
 }
 
@@ -221,7 +229,8 @@ store_has_correct_hash <- function(store) {
 
 #' @export
 store_has_correct_hash.default <- function(store) {
-  all(file.exists(store$file$path)) && file_has_correct_hash(store$file)
+  (sum(!is.na(store$file$path)) < 1L || file_exists_path(store$file)) &&
+    file_has_correct_hash(store$file)
 }
 
 store_sync_file_meta <- function(store, target, meta) {
@@ -266,41 +275,46 @@ store_unload <- function(store, target) {
 store_unload.default <- function(store, target) {
 }
 
-store_serialize_object <- function(store, object) {
-  UseMethod("store_serialize_object")
+store_marshal_object <- function(store, object) {
+  UseMethod("store_marshal_object")
 }
 
 #' @export
-store_serialize_object.default <- function(store, object) {
+store_marshal_object.default <- function(store, object) {
   object
 }
 
-store_unserialize_object <- function(store, object) {
-  UseMethod("store_unserialize_object")
+store_unmarshal_object <- function(store, object) {
+  UseMethod("store_unmarshal_object")
 }
 
 #' @export
-store_unserialize_object.default <- function(store, object) {
+store_unmarshal_object.default <- function(store, object) {
   object
 }
 
-store_serialize_value <- function(store, target) {
-  UseMethod("store_serialize_value")
+store_marshal_value <- function(store, target) {
+  UseMethod("store_marshal_value")
 }
 
 #' @export
-store_serialize_value.default <- function(store, target) {
+store_marshal_value.default <- function(store, target) {
 }
 
-store_unserialize_value <- function(store, target) {
-  UseMethod("store_unserialize_value")
+store_unmarshal_value <- function(store, target) {
+  UseMethod("store_unmarshal_value")
 }
 
 #' @export
-store_unserialize_value.default <- function(store, target) {
+store_unmarshal_value.default <- function(store, target) {
 }
 
 store_validate <- function(store) {
+  UseMethod("store_validate")
+}
+
+#' @export
+store_validate.default <- function(store) {
   tar_assert_correct_fields(store, store_new_default)
   store_validate_packages(store)
   tar_assert_list(store$resources)

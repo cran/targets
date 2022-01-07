@@ -124,7 +124,9 @@ clustermq_class <- R6::R6Class(
             target = target,
             envir = .tar_envir_5048826d,
             path_store = .tar_path_store_5048826d,
-            options = .tar_options_5048826d
+            fun = .tar_fun_5048826d,
+            options = .tar_options_5048826d,
+            envvars = .tar_envvars_5048826d
           )
         ),
         env = list(target = target)
@@ -206,7 +208,7 @@ clustermq_class <- R6::R6Class(
         return()
       }
       pipeline_set_target(self$pipeline, target)
-      self$unserialize_target(target)
+      self$unmarshal_target(target)
       target_conclude(
         target,
         self$pipeline,

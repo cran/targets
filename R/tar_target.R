@@ -69,6 +69,8 @@
 #'     or else `targets` will throw an error. (And if `storage` is `"worker"`,
 #'     `targets` will first stall out trying to wait for the file
 #'     to arrive over a network file system.)
+#'     If the target does not create any files, the return value should be
+#'     `character(0)`.
 #'   * `"url"`: A dynamic input URL. It works like `format = "file"`
 #'     except the return value of the target is a URL that already exists
 #'     and serves as input data for downstream targets. Optionally
@@ -85,9 +87,11 @@
 #'     and available by the time the target's command finishes running.
 #'     `targets` makes no attempt to wait for the web server.
 #'   * `"aws_rds"`, `"aws_qs"`, `"aws_parquet"`, `"aws_fst"`, `"aws_fst_dt"`,
-#'     `"aws_fst_tbl"`, `"aws_keras"`: AWS-powered versions of the
-#'     respective formats `"rds"`, `"qs"`, etc. The only difference
-#'     is that the data file is uploaded to the AWS S3 bucket
+#'     `"aws_fst_tbl"`, `"aws_keras"`: versions of the
+#'     respective formats `"rds"`, `"qs"`, etc. powered by
+#'     Amazon Web Services (AWS) Simple Storage Service (S3).
+#'     The only difference is that the data file is
+#'     uploaded to the AWS S3 bucket
 #'     you supply to `tar_resources_aws()`. See the cloud computing chapter
 #'     of the manual for details.
 #'   * `"aws_file"`: arbitrary dynamic files on AWS S3. The target
@@ -102,6 +106,7 @@
 #'     Requires the same `resources` and other configuration details
 #'     as the other AWS-powered formats. See the cloud computing
 #'     chapter of the manual for details.
+#'   * An entirely custom specification produced by [tar_format()].
 #' @param iteration Character of length 1, name of the iteration mode
 #'   of the target. Choices:
 #'   * `"vector"`: branching happens with `vctrs::vec_slice()` and

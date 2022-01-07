@@ -111,7 +111,9 @@ future_class <- R6::R6Class(
             target = .tar_target_5048826d,
             envir = .tar_envir_5048826d,
             path_store = .tar_path_store_5048826d,
-            options = .tar_options_5048826d
+            fun = .tar_fun_5048826d,
+            options = .tar_options_5048826d,
+            envvars = .tar_envvars_5048826d
           )
         ),
         substitute = TRUE,
@@ -165,7 +167,7 @@ future_class <- R6::R6Class(
     conclude_worker_target = function(value, name) {
       target <- future_value_target(value, name, self$pipeline)
       pipeline_set_target(self$pipeline, target)
-      self$unserialize_target(target)
+      self$unmarshal_target(target)
       target_conclude(
         target,
         self$pipeline,

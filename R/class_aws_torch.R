@@ -1,5 +1,5 @@
 #' @export
-store_new.aws_torch <- function(class, file = NULL, resources = NULL) {
+store_new.aws_torch <- function(format, file = NULL, resources = NULL) {
   aws_torch_new(file = file, resources = resources)
 }
 
@@ -14,11 +14,12 @@ aws_torch_new <- function(file = NULL, resources = NULL) {
       "tar_cloud",
       "tar_external",
       "tar_torch",
+      "tar_nonexportable",
       "tar_store"
     )
   )
 }
 
 #' @export
-store_assert_format_setting.aws_torch <- function(class) {
+store_assert_format_setting.aws_torch <- function(format) {
 }

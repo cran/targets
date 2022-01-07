@@ -48,7 +48,7 @@ target_prepare.tar_builder <- function(target, pipeline, scheduler) {
   scheduler$reporter$report_started(target, scheduler$progress)
   builder_ensure_deps(target, pipeline, "main")
   builder_update_subpipeline(target, pipeline)
-  builder_serialize_subpipeline(target)
+  builder_marshal_subpipeline(target)
 }
 
 # nocov start
@@ -105,7 +105,7 @@ target_run.tar_builder <- function(target, envir, path_store) {
     builder_unset_tar_runtime()
     target$subpipeline <- NULL
   })
-  builder_unserialize_subpipeline(target)
+  builder_unmarshal_subpipeline(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
   builder_set_tar_runtime(target, frames, path_store)
@@ -118,13 +118,23 @@ target_run.tar_builder <- function(target, envir, path_store) {
 }
 
 #' @export
-target_run_worker.tar_builder <- function(target, envir, path_store, options) {
-  tar_options$import(options)
+target_run_worker.tar_builder <- function(
+  target,
+  envir,
+  path_store,
+  fun,
+  options,
+  envvars
+) {
   envir <- if_any(identical(envir, "globalenv"), globalenv(), envir)
   tar_option_set(envir = envir)
+  tar_runtime$set_store(path_store)
+  tar_runtime$set_fun(fun)
+  tar_options$import(options)
+  set_envvars(envvars)
   target_gc(target)
   target_run(target, envir, path_store)
-  builder_serialize_value(target)
+  builder_marshal_value(target)
   target
 }
 
@@ -263,19 +273,19 @@ builder_update_subpipeline <- function(target, pipeline) {
   )
 }
 
-builder_serialize_subpipeline <- function(target) {
+builder_marshal_subpipeline <- function(target) {
   subpipeline <- target$subpipeline
   retrieval <- target$settings$retrieval
   if (!is.null(subpipeline) && identical(retrieval, "main")) {
-    pipeline_serialize_values(subpipeline)
+    pipeline_marshal_values(subpipeline)
   }
 }
 
-builder_unserialize_subpipeline <- function(target) {
+builder_unmarshal_subpipeline <- function(target) {
   subpipeline <- target$subpipeline
   retrieval <- target$settings$retrieval
   if (!is.null(subpipeline) && identical(retrieval, "main")) {
-    pipeline_unserialize_values(target$subpipeline)
+    pipeline_unmarshal_values(target$subpipeline)
   }
 }
 
@@ -364,7 +374,7 @@ builder_resolve_object <- function(target, build) {
     return(build$object)
   }
   store_assert_format(target$store, build$object, target_get_name(target))
-  store_cast_object(target$store, build$object)
+  store_convert_object(target$store, build$object)
 }
 
 builder_ensure_paths <- function(target, path_store) {
@@ -431,24 +441,22 @@ builder_wait_correct_hash <- function(target) {
 builder_set_tar_runtime <- function(target, frames, path_store) {
   tar_runtime$set_target(target)
   tar_runtime$set_frames(frames)
-  tar_runtime$set_store(path_store)
 }
 
 builder_unset_tar_runtime <- function() {
   tar_runtime$unset_target()
   tar_runtime$unset_frames()
-  tar_runtime$unset_store()
 }
 
-builder_serialize_value <- function(target) {
+builder_marshal_value <- function(target) {
   if (identical(target$settings$storage, "main")) {
-    target_serialize_value(target)
+    target_marshal_value(target)
   }
 }
 
-builder_unserialize_value <- function(target) {
+builder_unmarshal_value <- function(target) {
   if (identical(target$settings$storage, "main")) {
-    target_unserialize_value(target)
+    target_unmarshal_value(target)
   }
 }
 

@@ -1,16 +1,16 @@
 #' @export
-store_new.keras <- function(class, file = NULL, resources = NULL) {
+store_new.keras <- function(format, file = NULL, resources = NULL) {
   keras_new(file, resources)
 }
 
 keras_new <- function(file = NULL, resources = NULL) {
   force(file)
   force(resources)
-  enclass(environment(), c("tar_keras", "tar_unexportable", "tar_store"))
+  enclass(environment(), c("tar_keras", "tar_nonexportable", "tar_store"))
 }
 
 #' @export
-store_assert_format_setting.keras <- function(class) {
+store_assert_format_setting.keras <- function(format) {
 }
 
 # It would be too burdensome to depend on Python Keras
@@ -29,12 +29,12 @@ store_write_path.tar_keras <- function(store, object, path) {
 }
 
 #' @export
-store_serialize_object.tar_keras <- function(store, object) {
+store_marshal_object.tar_keras <- function(store, object) {
   keras::serialize_model(object)
 }
 
 #' @export
-store_unserialize_object.tar_keras <- function(store, object) {
+store_unmarshal_object.tar_keras <- function(store, object) {
   keras::unserialize_model(object)
 }
 # nocov end

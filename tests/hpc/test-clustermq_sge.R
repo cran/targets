@@ -1,36 +1,23 @@
 test_that("packages are actually loaded", {
   # Needs sge_clustermq.tmpl (in current directory).
-  unlink("_targets", recursive = TRUE)
-  on.exit(unlink("_targets", recursive = TRUE))
+  skip_on_cran()
   skip_on_os("windows")
   skip_if_not_installed("clustermq")
-  old_schd <- getOption("clustermq.scheduler")
-  old_tmpl <- getOption("clustermq.template")
-  options(
-    clustermq.scheduler = "sge",
-    clustermq.template = "sge_clustermq.tmpl"
-  )
-  on.exit(
+  tar_destroy()
+  on.exit(tar_destroy(), add = TRUE)
+  tar_script({
     options(
-      clustermq.scheduler = old_schd,
-      clustermq.template = old_tmpl
-    ),
-    add = TRUE
-  )
-  old_envir <- tar_option_get("envir")
-  on.exit(tar_option_set(envir = old_envir), add = TRUE)
-  envir <- new.env(parent = globalenv())
-  tar_option_set(envir = envir)
-  x <- tar_target_raw(
-    "x",
-    quote(tibble(x = "x")),
-    packages = "tibble"
-  )
-  pipeline <- pipeline_init(list(x))
-  out <- clustermq_init(pipeline)
-  out$run()
-  exp <- tibble::tibble(x = "x")
-  expect_equal(tar_read(x), exp)
+      clustermq.scheduler = "sge",
+      clustermq.template = "sge_clustermq.tmpl"
+    )
+    tar_target(
+      x,
+      tibble(x = "x"),
+      packages = "tibble"
+    )
+  })
+  tar_make_clustermq()
+  expect_equal(tar_read(x), tibble::tibble(x = "x"))
 })
 
 test_that("nontrivial common data with custom environment", {
@@ -89,8 +76,12 @@ test_that("nontrivial globals with global environment", {
 
 test_that("branching plan on SGE", {
   # Needs sge_clustermq.tmpl (in current directory).
+  skip_on_cran()
+  skip_if_not_installed("clustermq")
+  tar_runtime$set_fun("tar_make_clustermq")
+  on.exit(tar_runtime$unset_fun())
   unlink("_targets", recursive = TRUE)
-  on.exit(on.exit(unlink("_targets", recursive = TRUE)))
+  on.exit(unlink("_targets", recursive = TRUE), add = TRUE)
   skip_on_os("windows")
   skip_if_not_installed("clustermq")
   old_schd <- getOption("clustermq.scheduler")
@@ -149,8 +140,12 @@ test_that("branching plan on SGE", {
 
 test_that("Same with worker-side storage", {
   # Needs sge_clustermq.tmpl (in current directory).
+  skip_on_cran()
+  skip_if_not_installed("clustermq")
+  tar_runtime$set_fun("tar_make_clustermq")
+  on.exit(tar_runtime$unset_fun())
   unlink("_targets", recursive = TRUE)
-  on.exit(unlink("_targets", recursive = TRUE))
+  on.exit(unlink("_targets", recursive = TRUE), add = TRUE)
   skip_on_os("windows")
   skip_if_not_installed("clustermq")
   old_schd <- getOption("clustermq.scheduler")
@@ -205,8 +200,12 @@ test_that("Same with worker-side storage", {
 
 test_that("clustermq with a dynamic file", {
   # Needs sge_clustermq.tmpl (in current directory).
+  skip_on_cran()
+  skip_if_not_installed("clustermq")
+  tar_runtime$set_fun("tar_make_clustermq")
+  on.exit(tar_runtime$unset_fun())
   unlink("_targets", recursive = TRUE)
-  on.exit(unlink(c("saved.out", "_targets"), recursive = TRUE))
+  on.exit(unlink(c("saved.out", "_targets"), recursive = TRUE), add = TRUE)
   skip_on_os("windows")
   skip_if_not_installed("clustermq")
   old_schd <- getOption("clustermq.scheduler")

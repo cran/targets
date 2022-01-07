@@ -73,6 +73,8 @@ tar_read(returns_path)
 }
 \seealso{
 Other utilities: 
+\code{\link{tar_active}()},
+\code{\link{tar_call}()},
 \code{\link{tar_cancel}()},
 \code{\link{tar_definition}()},
 \code{\link{tar_envir}()},

@@ -1,3 +1,29 @@
+# targets 0.10.0
+
+## Bug fixes
+
+* Add class `"tar_nonexportable"` to `format = "aws_keras"` and `format = "aws_torch"` stores.
+* Export S3 methods of generic `tar_make_interactive_load_target()`.
+
+## New features
+
+* Allow entirely custom storage formats through `tar_target(format = tar_format(...))` (#736).
+* Add a new function `tar_call()` to return the `targets` function currently running (from `_targets.R` or a target).
+* Add a new function `tar_active()` to tell whether the pipeline is currently running. Detects if it is called from `tar_make()` or similar function.
+
+## Enhancements
+
+* Add `Sys.getenv("TAR_PROJECT")` to the output of `tar_envvars()`.
+* Set the `store` field of `tar_runtime` prior to sourcing `_targets.R` so `tar_store()` works in target scripts.
+* Explicitly export all the environment variables from `tar_envvars()` to targets run on parallel workers.
+* Allow `format = "file"` targets to return `character(0)` (#728, @programLyrique).
+* Automatically remove non-targets from the target list and improve target list error messages (#731, @billdenney).
+* Link to resources on deploying to RStudio Connect (#745, @ian-flores).
+
+# targets 0.9.1
+
+* Mask pointers in function dependencies (#721, @matthiaskaeding)
+
 # targets 0.9.0
 
 ## Highlights
@@ -376,7 +402,7 @@
 ## Breaking changes
 
 * Make patterns composable (#212, @glep, @djbirke).
-* Allow workspaces to load unexportable objects (#214).
+* Allow workspaces to load nonexportable objects (#214).
 * Make workspace files super light by saving only a reference to the required dependencies (#214).
 * Add a new `workspaces` argument to `tar_option_set()` to specify which targets will save their workspace files during `tar_make()` (#214).
 * Change `error = "save"` to `error = "workspace"` to so it is clearer that saving workspaces no longer duplicates data (#214).
@@ -415,7 +441,7 @@
 * Stop sending target return values over the network when `storage` is `"remote"` (#182, @mattwarkentin).
 * Shorten lengths of warnings and error messages to 128 characters (#186, @gorkang).
 * Restrict in-memory metadata to avoid incorrectly recycling deleted targets (#191).
-* Serialize unexportable dependencies before sending them to workers. Transport data through `target$subpipeline` rather than `target$cache` to make that happen (#209, @mattwarkentin).
+* Marshal nonexportable dependencies before sending them to workers. Transport data through `target$subpipeline` rather than `target$cache` to make that happen (#209, @mattwarkentin).
 
 ## New features
 

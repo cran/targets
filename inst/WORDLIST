@@ -158,6 +158,8 @@ Maëlle
 Makefile
 Makefiles
 makinoi
+marshalled
+marshalling
 Marwick
 mbostock
 mc
@@ -186,6 +188,7 @@ NHDPlus
 Niemi
 Nitta
 nolint
+nonexportable
 nsw
 Ooms
 OOP
@@ -254,6 +257,8 @@ RMSPE
 roadmap
 ropensci
 rOpenSci
+rsc
+rstudio
 RStudio
 Rtools
 Rüeger
@@ -307,14 +312,13 @@ UD
 UI
 un
 unexecutable
-unexportable
 unhandled
+unmarshal
+unmarshalling
 Univa
 unname
 unparsable
 unparsed
-unserialize
-unserialized
 untimed
 untransformed
 validators

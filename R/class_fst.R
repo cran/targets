@@ -1,5 +1,5 @@
 #' @export
-store_new.fst <- function(class, file = NULL, resources = NULL) {
+store_new.fst <- function(format, file = NULL, resources = NULL) {
   fst_new(file, resources)
 }
 
@@ -10,7 +10,7 @@ fst_new <- function(file = NULL, resources = NULL) {
 }
 
 #' @export
-store_assert_format_setting.fst <- function(class) {
+store_assert_format_setting.fst <- function(format) {
 }
 
 #' @export
@@ -29,7 +29,7 @@ store_write_path.tar_fst <- function(store, object, path) {
 }
 
 #' @export
-store_cast_object.tar_fst <- function(store, object) {
+store_convert_object.tar_fst <- function(store, object) {
   as.data.frame(object)
 }
 

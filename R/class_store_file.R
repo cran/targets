@@ -1,5 +1,5 @@
 #' @export
-store_new.file <- function(class, file = NULL, resources = NULL) {
+store_new.file <- function(format, file = NULL, resources = NULL) {
   store_file_new(file, resources)
 }
 
@@ -10,12 +10,12 @@ store_file_new <- function(file = NULL, resources = NULL) {
 }
 
 #' @export
-store_assert_format_setting.file <- function(class) {
+store_assert_format_setting.file <- function(format) {
 }
 
 #' @export
 store_read_path.tar_store_file <- function(store, path) {
-  path
+  path[!is.na(path)]
 }
 
 #' @export
@@ -37,7 +37,7 @@ store_produce_path.tar_store_file <- function( # nolint
 }
 
 #' @export
-store_cast_object.tar_store_file <- function(store, object) { # nolint
+store_convert_object.tar_store_file <- function(store, object) { # nolint
   as.character(object)
 }
 
