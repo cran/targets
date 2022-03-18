@@ -7,10 +7,8 @@ store_new.format_custom <- function(format, file = NULL, resources = NULL) {
     read = store_custom_field(format, "^read="),
     write = store_custom_field(format, "^write="),
     marshal = store_custom_field(format, "^marshal="),
-    unmarshal = store_custom_field(format, "^unmarshal="),
-    repository = keyvalue_field(format, "^repository=")
+    unmarshal = store_custom_field(format, "^unmarshal=")
   )
-  store_custom_enclass_repository(store)
 }
 
 store_custom_new <- function(
@@ -19,8 +17,7 @@ store_custom_new <- function(
   read = NULL,
   write = NULL,
   marshal = NULL,
-  unmarshal = NULL,
-  repository = NULL
+  unmarshal = NULL
 ) {
   force(file)
   force(resources)
@@ -28,7 +25,6 @@ store_custom_new <- function(
   force(write)
   force(marshal)
   force(unmarshal)
-  force(repository)
   enclass(
     environment(),
     c("tar_store_custom", "tar_nonexportable", "tar_store")
@@ -38,17 +34,6 @@ store_custom_new <- function(
 store_custom_field <- function(format, pattern) {
   out <- base64url::base64_urldecode(keyvalue_field(format, pattern))
   out %||% NULL
-}
-
-store_custom_enclass_repository <- function(store) {
-  switch(
-    store$repository,
-    default = store,
-    aws = enclass(
-      store,
-      c("tar_aws_store_custom", "tar_aws", "tar_cloud", "tar_external")
-    )
-  )
 }
 
 #' @export
@@ -103,4 +88,11 @@ store_validate.tar_store_custom <- function(store) {
     tar_assert_scalar(store[[field]])
     tar_assert_nzchar(store[[field]])
   }
+}
+
+store_custom_old_repository <- function(format) {
+  format <- unlist(strsplit(format, split = "&", fixed = TRUE))
+  value <- grep("^repository=", format, value = TRUE)
+  value <- gsub("^repository=", "", value)
+  value %||% "local"
 }

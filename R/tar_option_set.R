@@ -114,6 +114,7 @@ tar_option_set <- function(
   library = NULL,
   envir = NULL,
   format = NULL,
+  repository = NULL,
   iteration = NULL,
   error = NULL,
   memory = NULL,
@@ -136,6 +137,7 @@ tar_option_set <- function(
   if_any(is.null(library), NULL, tar_options$set_library(library))
   if_any(is.null(envir), NULL, tar_options$set_envir(envir))
   if_any(is.null(format), NULL, tar_options$set_format(format))
+  if_any(is.null(repository), NULL, tar_options$set_repository(repository))
   if_any(is.null(iteration), NULL, tar_options$set_iteration(iteration))
   if_any(is.null(error), NULL, tar_options$set_error(error))
   if_any(is.null(memory), NULL, tar_options$set_memory(memory))

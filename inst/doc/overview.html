@@ -291,9 +291,18 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h2>Projects</h2>
 <p>The <a href="https://books.ropensci.org/targets/projects.html">projects chapter</a> explains best practices for working with <code>targets</code>-powered projects: the recommended file structure, recommended third-party tools, multi-project repositories, and interdependent projects.</p>
 </div>
-<div id="external-files-and-literate-programming" class="section level2">
-<h2>External files and literate programming</h2>
-<p><code>targets</code> has special ways to include data files and literate programming reports in a pipeline. This functionality is optional in the general case, but it is necessary if you want a target to rerun in response to a change in a data file, or if you want an R Markdown report to re-render when an upstream target changes. The <a href="https://books.ropensci.org/targets/files.html">files chapter</a> walks through this functionality, from input data to parameterized R Markdown.</p>
+<div id="data-storage-and-memory" class="section level2">
+<h2>Data: storage and memory</h2>
+<p>This chapter describes how the targets package stores data, manages memory, allows you to customize the data processing model. When a target finishes running during <code>tar_make()</code>, it returns an R object. Those return values, along with descriptive metadata, are saved to persistent storage so your pipeline stays up to date even after you exit R. By default, this persistent storage is a special <code>_targets/</code> folder created in your working directory by <code>tar_make()</code>. However, you can also interact with files outside the data store and send target data to the cloud.</p>
+</div>
+<div id="literate-programming" class="section level2">
+<h2>Literate programming</h2>
+<p>Literate programming is the practice of mixing code and descriptive writing in order to execute and explain a data analysis simultaneously in the same document. The targets package supports literate programming through tight integration with R Markdown and knitr.</p>
+<p>There are two kinds of literate programming in targets:</p>
+<ol style="list-style-type: decimal">
+<li>Rendering within a target. Here, you define a special kind of target that runs a lightweight R Markdown report which depends on upstream targets.</li>
+<li>Target Markdown, an overarching system in which one or more R Markdown files write the <code>_targets.R</code> file and encapsulate the pipeline.</li>
+</ol>
 </div>
 <div id="dynamic-branching" class="section level2">
 <h2>Dynamic branching</h2>
@@ -306,10 +315,6 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="high-performance-computing" class="section level2">
 <h2>High-performance computing</h2>
 <p><code>targets</code> is capable of distributing the computation in a pipeline across multiple cores of a laptop or multiple nodes of a computing cluster. Not only does it interface with these technologies using packages <a href="https://github.com/mschubert/clustermq"><code>clustermq</code></a> and <a href="https://github.com/HenrikBengtsson/future"><code>future</code></a>: it automatically deploys ready targets to parallel workers while making sure the other targets wait for their upstream dependencies to finish. Read more about high-performance computing in the <a href="https://books.ropensci.org/targets/hpc.html">HPC chapter</a>.</p>
-</div>
-<div id="cloud-computing" class="section level2">
-<h2>Cloud computing</h2>
-<p>Users with <a href="https://aws.amazon.com/">Amazon Web Services</a> accounts can store their targets on one or more <a href="https://aws.amazon.com/s3/">S3 buckets</a>, and retrieval with <code>tar_read()</code> and <code>tar_load()</code> is seamless. The <a href="https://books.ropensci.org/targets/storage_amazon.html">AWS storage chapter</a> is a step-by-step guide that walks through how to get started with <a href="https://aws.amazon.com/">Amazon Web Services</a> and connect a <code>targets</code> pipeline to <a href="https://aws.amazon.com/s3/">S3</a>.</p>
 </div>
 <div id="what-about-drake" class="section level2">
 <h2>What about drake?</h2>

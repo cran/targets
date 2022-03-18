@@ -6,7 +6,7 @@ tar_test("aws with custom format", {
   s3 <- paws::s3()
   bucket_name <- random_bucket_name()
   s3$create_bucket(Bucket = bucket_name)
-  on.exit(destroy_bucket(bucket_name))
+  on.exit(aws_s3_delete_bucket(bucket_name))
   expr <- quote({
     format <- tar_format(
       read = function(path) {
@@ -25,13 +25,13 @@ tar_test("aws with custom format", {
         con <- rawConnection(object, open = "r")
         on.exit(close(con))
         torch::torch_load(con)
-      },
-      repository = "aws"
+      }
     )
     tar_target(
       a,
       torch::torch_tensor(c(1, 2)),
       format = format,
+      repository = "aws",
       resources = tar_resources(
         aws = tar_resources_aws(bucket = !!bucket_name)
       ),

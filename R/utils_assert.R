@@ -141,7 +141,27 @@ tar_assert_format <- function(format) {
   tar_assert_scalar(format)
   tar_assert_chr(format)
   tar_assert_nzchar(format)
+  format <- gsub("\\&.*$", "", format)
+  if (any(grepl("^aws_", format))) {
+    tar_warn_deprecate(
+      sprintf("detected target storage format %s. ", format),
+      "Effective 2022-02-13 (targets version > 0.10.0), ",
+      "the \"aws_*\" formats are deprecated. Instead, use the ",
+      "repository argument: for example, instead of ",
+      "tar_target(..., format = \"aws_qs\"), write ",
+      "tar_target(..., format = \"qs\", repository = \"aws\"). ",
+      "Automatically setting repository to \"aws\" for back-compatibility."
+    )
+    format <- gsub("^aws_", "", format)
+  }
   store_assert_format_setting(store_format_dispatch(format))
+}
+
+tar_assert_repository <- function(repository) {
+  tar_assert_scalar(repository)
+  tar_assert_chr(repository)
+  tar_assert_nzchar(repository)
+  store_assert_repository_setting(enclass(repository, repository))
 }
 
 #' @export
@@ -151,6 +171,16 @@ tar_assert_file <- function(x) {
   targets::tar_assert_chr(x, paste(name, "must be a character string."))
   targets::tar_assert_scalar(x, paste(name, "must have length 1."))
   targets::tar_assert_path(x)
+}
+
+#' @export
+#' @rdname tar_assert
+tar_assert_finite <- function(x, msg = NULL) {
+  name <- deparse(substitute(x))
+  default <- paste("all of", name, "must be finite")
+  if (!all(is.finite(x))) {
+    tar_throw_validate(msg %|||% default)
+  }
 }
 
 #' @export
@@ -323,7 +353,7 @@ tar_assert_name <- function(x) {
   tar_assert_chr(x)
   tar_assert_scalar(x)
   tar_assert_nzchar(x)
-  if (!identical(x, make.names(x))) {
+  if (!identical(as.character(x), make.names(x))) {
     tar_throw_validate(x, " is not a valid symbol name.")
   }
   if (grepl("^\\.", x)) {
@@ -581,7 +611,11 @@ tar_assert_unique <- function(x, msg = NULL) {
 #' @export
 #' @rdname tar_assert
 tar_assert_unique_targets <- function(x) {
-  tar_assert_unique(x, "duplicated target names:")
+  if (anyDuplicated(x)) {
+    dups <- paste(unique(x[duplicated(x)]), collapse = ", ")
+    message <- paste("duplicated target names:", dups)
+    tar_throw_validate(message)
+  }
 }
 
 # nocov start

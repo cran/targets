@@ -274,3 +274,22 @@ tar_test("tar_assert_unique_targets()", {
     class = "tar_condition_validate"
   )
 })
+
+tar_test("tar_assert_finite()", {
+  expect_silent(tar_assert_finite(1))
+  expect_silent(tar_assert_finite(c(1, 2)))
+  expect_error(tar_assert_finite(c(1, Inf)), class = "tar_condition_validate")
+})
+
+tar_test("tar_assert_format()", {
+  expect_silent(tar_assert_format("rds"))
+  expect_error(tar_assert_format("invalid"), class = "tar_condition_validate")
+})
+
+tar_test("tar_assert_repository()", {
+  expect_silent(tar_assert_repository("local"))
+  expect_error(
+    tar_assert_repository("invalid"),
+    class = "tar_condition_validate"
+  )
+})

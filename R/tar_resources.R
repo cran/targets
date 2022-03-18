@@ -19,10 +19,11 @@
 #'   non-default settings of various optional backends for data storage
 #'   and high-performance computing.
 #' @param aws Output of function `tar_resources_aws()`.
-#'   AWS S3 storage settings for AWS backed storage formats
-#'   such as `"aws_qs"` and `"aws_parquet`. Applies to all formats
-#'   beginning with the `"aws_"` prefix. For details on formats,
-#'   see the `format` argument of [tar_target()].
+#'   Amazon Web Services (AWS) S3 storage settings for
+#'   `tar_target(..., repository = "aws")`.
+#'   See the cloud storage section of
+#'   <https://books.ropensci.org/targets/data.html>
+#'   for details for instructions.
 #' @param clustermq Output of function `tar_resources_clustermq()`.
 #'   Optional `clustermq` settings for `tar_make_clustermq()`,
 #'   including the `log_worker` and `template` arguments of
@@ -46,6 +47,12 @@
 #'   argument of `future::future()` for `targets`.
 #'   Resources supplied through
 #'   `future::plan()` and `future::tweak()` are completely ignored.
+#' @param gcp Output of function `tar_resources_gcp()`.
+#'   Google Cloud Storage bucket settings for
+#'   `tar_target(..., repository = "gcp")`.
+#'   See the cloud storage section of
+#'   <https://books.ropensci.org/targets/data.html>
+#'   for details for instructions.
 #' @param parquet Output of function `tar_resources_parquet()`.
 #'   Non-default arguments to `arrow::read_parquet()` and
 #'   `arrow::write_parquet()` for `arrow`/parquet-based storage formats.
@@ -78,6 +85,7 @@ tar_resources <- function(
   feather = NULL,
   fst = NULL,
   future = NULL,
+  gcp = NULL,
   parquet = NULL,
   qs = NULL,
   url = NULL

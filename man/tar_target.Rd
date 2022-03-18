@@ -12,6 +12,7 @@ tar_target(
   packages = targets::tar_option_get("packages"),
   library = targets::tar_option_get("library"),
   format = targets::tar_option_get("format"),
+  repository = targets::tar_option_get("repository"),
   iteration = targets::tar_option_get("iteration"),
   error = targets::tar_option_get("error"),
   memory = targets::tar_option_get("memory"),
@@ -67,6 +68,23 @@ gets a file in \verb{_targets/objects}, and each format is a different
 way to save and load this file. See the "Storage formats" section
 for a detailed list of possible data storage formats.}
 
+\item{repository}{Character of length 1, remote repository for target
+storage. Choices:
+\itemize{
+\item \code{"local"}: file system of the local machine.
+\item \code{"aws"}: Amazon Web Services (AWS) S3 bucket. Can be configured
+with a non-AWS S3 bucket using the \code{endpoint} argument of
+\code{\link[=tar_resources_aws]{tar_resources_aws()}}, but versioning capabilities may be lost
+in doing so.
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.
+\item \code{"gcp"}: Google Cloud Platform storage bucket.
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.
+}}
+
 \item{iteration}{Character of length 1, name of the iteration mode
 of the target. Choices:
 \itemize{
@@ -92,6 +110,9 @@ stops and throws an error. Options:
 but no new targets launch after that.
 (Visit \url{https://books.ropensci.org/targets/debugging.html}
 to learn how to debug targets using saved workspaces.)
+\item \code{"null"}: The errored target continues and returns \code{NULL}.
+The data hash is deliberately wrong so the target is not
+up to date for the next run of the pipeline.
 }}
 
 \item{memory}{Character of length 1, memory strategy.
@@ -264,7 +285,9 @@ or else \code{targets} will throw an error. (And if \code{storage} is \code{"wor
 to arrive over a network file system.)
 If the target does not create any files, the return value should be
 \code{character(0)}.
-\item \code{"url"}: A dynamic input URL. It works like \code{format = "file"}
+\item \code{"url"}: A dynamic input URL. For this storage format,
+\code{repository} is implicitly \code{"local"},
+URL format is like \code{format = "file"}
 except the return value of the target is a URL that already exists
 and serves as input data for downstream targets. Optionally
 supply a custom \code{curl} handle through
@@ -279,27 +302,11 @@ trying to use \code{format = "url"} to track uploads. You must be absolutely
 certain the ETag and Last-Modified time stamp are fully updated
 and available by the time the target's command finishes running.
 \code{targets} makes no attempt to wait for the web server.
-\item \code{"aws_rds"}, \code{"aws_qs"}, \code{"aws_parquet"}, \code{"aws_fst"}, \code{"aws_fst_dt"},
-\code{"aws_fst_tbl"}, \code{"aws_keras"}: versions of the
-respective formats \code{"rds"}, \code{"qs"}, etc. powered by
-Amazon Web Services (AWS) Simple Storage Service (S3).
-The only difference is that the data file is
-uploaded to the AWS S3 bucket
-you supply to \code{tar_resources_aws()}. See the cloud computing chapter
-of the manual for details.
-\item \code{"aws_file"}: arbitrary dynamic files on AWS S3. The target
-should return a path to a temporary local file, then
-\code{targets} will automatically upload this file to an S3
-bucket and track it for you. Unlike \code{format = "file"},
-\code{format = "aws_file"} can only handle one single file,
-and that file must not be a directory.
-\code{\link[=tar_read]{tar_read()}} and downstream targets
-download the file to \verb{_targets/scratch/} locally and return the path.
-\verb{_targets/scratch/} gets deleted at the end of \code{\link[=tar_make]{tar_make()}}.
-Requires the same \code{resources} and other configuration details
-as the other AWS-powered formats. See the cloud computing
-chapter of the manual for details.
-\item An entirely custom specification produced by \code{\link[=tar_format]{tar_format()}}.
+\item A custom format can be supplied with \code{tar_format()}. For this choice,
+it is the user's responsibility to provide methods for (un)serialization
+and (un)marshaling the return value of the target.
+\item The formats starting with \code{"aws_"} are deprecated as of 2022-03-13
+(\verb{targets version > 0.10.0). For cloud storage integration, use the }repository` argument instead.
 }
 }
 

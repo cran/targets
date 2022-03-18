@@ -1,22 +1,25 @@
-store_init <- function(format = "rds", resources = list()) {
-  store_new(
+store_init <- function(
+  format = "rds",
+  repository = "local",
+  resources = list()
+) {
+  store <- store_new(
     format = store_format_dispatch(format),
     file = file_init(),
     resources = resources
   )
+  class(store) <- store_class_repository(
+    repository = enclass(repository, repository),
+    store = store,
+    format = format
+  )
+  store
 }
 
 store_new <- function(format, file = NULL, resources = NULL) {
   UseMethod("store_new")
 }
 
-# A format should not be a full class like the store
-# because the responsibilities of store and format
-# would overlap too much.
-store_format_dispatch <- function(format) {
-  class <- gsub(pattern = "\\&.*$", replacement = "", x = format)
-  enclass(format, class)
-}
 
 #' @export
 store_new.default <- function(format, file = NULL, resources = NULL) {
@@ -29,6 +32,23 @@ store_new_default <- function(file, resources) {
   enclass(environment(), "tar_store")
 }
 
+store_class_repository <- function(repository, store, format) {
+  UseMethod("store_class_repository")
+}
+
+#' @export
+store_class_repository.default <- function(repository, store, format) {
+  class(store)
+}
+
+# A format should not be a full class like the store
+# because the responsibilities of store and format
+# would overlap too much.
+store_format_dispatch <- function(format) {
+  class <- gsub(pattern = "\\&.*$", replacement = "", x = format)
+  enclass(format, class)
+}
+
 store_assert_format_setting <- function(format) {
   UseMethod("store_assert_format_setting")
 }
@@ -36,6 +56,19 @@ store_assert_format_setting <- function(format) {
 #' @export
 store_assert_format_setting.default <- function(format) {
   tar_throw_validate(paste("unsupported format:", class(format)[1]))
+}
+
+store_assert_repository_setting <- function(repository) {
+  UseMethod("store_assert_repository_setting")
+}
+
+#' @export
+store_assert_repository_setting.default <- function(repository) {
+  tar_throw_validate(paste("unsupported repository:", repository))
+}
+
+#' @export
+store_assert_repository_setting.local <- function(repository) {
 }
 
 store_read_object <- function(store) {
@@ -66,6 +99,25 @@ store_write_object.default <- function(store, object) {
 
 store_write_path <- function(store, object, path) {
   UseMethod("store_write_path")
+}
+
+store_exist_object <- function(store, name = NULL) {
+  UseMethod("store_exist_object")
+}
+
+#' @export
+store_exist_object.default <- function(store, name = NULL) {
+  all(file.exists(store$file$path))
+}
+
+store_delete_object <- function(store, name = NULL) {
+  UseMethod("store_delete_object")
+}
+
+#' @export
+store_delete_object.default <- function(store, name = NULL) {
+  unlink(store$file$path)
+  unlink(store$file$stage)
 }
 
 store_upload_object <- function(store) {

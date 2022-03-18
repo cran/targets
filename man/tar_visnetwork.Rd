@@ -2,7 +2,7 @@
 % Please edit documentation in R/tar_visnetwork.R
 \name{tar_visnetwork}
 \alias{tar_visnetwork}
-\title{Visualize an abridged fast dependency graph.}
+\title{visNetwork dependency graph.}
 \usage{
 tar_visnetwork(
   targets_only = FALSE,
@@ -15,6 +15,7 @@ tar_visnetwork(
   level_separation = NULL,
   degree_from = 1L,
   degree_to = 1L,
+  zoom_speed = 1,
   reporter = targets::tar_config_get("reporter_outdated"),
   callr_function = callr::r,
   callr_arguments = targets::callr_args_default(callr_function),
@@ -93,6 +94,10 @@ controls the number of edges the neighborhood extends upstream.}
 the graph highlights a neighborhood of that node. \code{degree_to}
 controls the number of edges the neighborhood extends downstream.}
 
+\item{zoom_speed}{Positive numeric of length 1, scaling factor on the
+zoom speed. Above 1 zooms faster than default, below 1 zooms
+lower than default.}
+
 \item{reporter}{Character of length 1, name of the reporter to user.
 Controls how messages are printed as targets are checked. Choices:
 \itemize{
@@ -152,10 +157,8 @@ for a project.}
 A \code{visNetwork} HTML widget object.
 }
 \description{
-Analyze the pipeline defined in the target script file
-(default: \verb{_targets.R})
-and visualize the directed acyclic graph of targets
-and global functions and objects.
+Visualize the pipeline dependency graph with a \code{visNetwork}
+HTML widget.
 }
 \examples{
 if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
@@ -174,14 +177,8 @@ tar_visnetwork(allow = starts_with("y")) # see also all_of()
 }
 }
 \seealso{
-Other inspect: 
-\code{\link{tar_deps_raw}()},
-\code{\link{tar_deps}()},
+Other visualize: 
 \code{\link{tar_glimpse}()},
-\code{\link{tar_manifest}()},
-\code{\link{tar_network}()},
-\code{\link{tar_outdated}()},
-\code{\link{tar_sitrep}()},
-\code{\link{tar_validate}()}
+\code{\link{tar_mermaid}()}
 }
-\concept{inspect}
+\concept{visualize}

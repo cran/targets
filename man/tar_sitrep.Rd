@@ -55,6 +55,10 @@ Otherwise, always \code{FALSE} if the \code{depend} cue is suppressed.
 is different from last time.
 Always \code{NA} if the \code{record} cue is activated.
 Otherwise, always \code{FALSE} if the \code{format} cue is suppressed.
+\item \code{repository}: Whether the storage repository of the target
+is different from last time.
+Always \code{NA} if the \code{record} cue is activated.
+Otherwise, always \code{FALSE} if the \code{format} cue is suppressed.
 \item \code{iteration}: Whether the iteration mode of the target
 is different from last time.
 Always \code{NA} if the \code{record} cue is activated.
@@ -173,11 +177,9 @@ tar_meta(starts_with("y_")) # see also all_of()
 Other inspect: 
 \code{\link{tar_deps_raw}()},
 \code{\link{tar_deps}()},
-\code{\link{tar_glimpse}()},
 \code{\link{tar_manifest}()},
 \code{\link{tar_network}()},
 \code{\link{tar_outdated}()},
-\code{\link{tar_validate}()},
-\code{\link{tar_visnetwork}()}
+\code{\link{tar_validate}()}
 }
 \concept{inspect}

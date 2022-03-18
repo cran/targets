@@ -8,7 +8,7 @@ tar_test("aws_parquet format returns data frames", {
   bucket_name <- random_bucket_name()
   s3 <- paws::s3()
   s3$create_bucket(Bucket = bucket_name)
-  on.exit(destroy_bucket(bucket_name))
+  on.exit(aws_s3_delete_bucket(bucket_name))
   expr <- quote({
     tar_option_set(
       resources = tar_resources(
@@ -17,7 +17,8 @@ tar_test("aws_parquet format returns data frames", {
           prefix = "custom/prefix"
         )
       ),
-      format = "aws_parquet"
+      format = "parquet",
+      repository = "aws"
     )
     list(
       tar_target(x, data.frame(x = seq_len(2), y = seq_len(2)))

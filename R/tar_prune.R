@@ -1,14 +1,14 @@
 #' @title Remove targets that are no longer part of the pipeline.
 #' @export
 #' @family clean
-#' @description Remove target values from `_targets/objects/` and
-#'   target metadata from `_targets/meta/meta` for targets that are no longer
-#'   part of the pipeline.
+#' @description Remove target values from `_targets/objects/` and the cloud
+#'   and remove target metadata from `_targets/meta/meta`
+#'   for targets that are no longer part of the pipeline.
 #' @details
 #'   This is useful if you recently worked through
 #'   multiple changes to your project and are now trying to
 #'   discard irrelevant data while keeping the results that still matter.
-#'   Global objects and dynamic files outside the
+#'   Global objects and local files with `format = "file"` outside the
 #'   data store are unaffected. Also removes `_targets/scratch/`,
 #'   which is only needed while [tar_make()], [tar_make_clustermq()],
 #'   or [tar_make_future()] is running.
@@ -16,6 +16,7 @@
 #'   a handle to the `callr` background process is returned. Either way,
 #'   the value is invisibly returned.
 #' @inheritParams tar_validate
+#' @inheritParams tar_delete
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
@@ -34,6 +35,7 @@
 #' })
 #' }
 tar_prune <- function(
+  cloud = TRUE,
   callr_function = callr::r,
   callr_arguments = targets::callr_args_default(callr_function),
   envir = parent.frame(),
@@ -46,7 +48,7 @@ tar_prune <- function(
   path_scratch_del(store)
   out <- callr_outer(
     targets_function = tar_prune_inner,
-    targets_arguments = list(path_store = store),
+    targets_arguments = list(cloud = cloud, path_store = store),
     callr_function = callr_function,
     callr_arguments = callr_arguments,
     envir = envir,
@@ -57,11 +59,11 @@ tar_prune <- function(
   invisible(out)
 }
 
-tar_prune_inner <- function(pipeline, path_store) {
+tar_prune_inner <- function(pipeline, cloud, path_store) {
   tar_assert_store(path_store)
   names <- pipeline_get_names(pipeline)
   meta <- meta_init(path_store = path_store)
-  data <- meta$database$read_condensed_data()
+  data <- as.data.frame(meta$database$read_condensed_data())
   imports <- data$name[data$type %in% c("function", "object")]
   children <- unlist(data$children[data$name %in% names])
   children <- unique(children[!is.na(children)])
@@ -69,6 +71,9 @@ tar_prune_inner <- function(pipeline, path_store) {
   discard <- setdiff(data$name, keep)
   dynamic_files <- data$name[data$format == "file"]
   discard <- setdiff(discard, dynamic_files)
+  if (cloud) {
+    tar_delete_cloud(names = discard, meta = data, path_store = path_store)
+  }
   data <- as_data_frame(data)[data$name %in% keep, ]
   meta$database$overwrite_storage(data)
   unlink(file.path(path_objects_dir(path_store), discard), recursive = TRUE)

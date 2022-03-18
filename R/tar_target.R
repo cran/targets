@@ -71,7 +71,9 @@
 #'     to arrive over a network file system.)
 #'     If the target does not create any files, the return value should be
 #'     `character(0)`.
-#'   * `"url"`: A dynamic input URL. It works like `format = "file"`
+#'   * `"url"`: A dynamic input URL. For this storage format,
+#'     `repository` is implicitly `"local"`,
+#'     URL format is like `format = "file"`
 #'     except the return value of the target is a URL that already exists
 #'     and serves as input data for downstream targets. Optionally
 #'     supply a custom `curl` handle through
@@ -86,27 +88,26 @@
 #'     certain the ETag and Last-Modified time stamp are fully updated
 #'     and available by the time the target's command finishes running.
 #'     `targets` makes no attempt to wait for the web server.
-#'   * `"aws_rds"`, `"aws_qs"`, `"aws_parquet"`, `"aws_fst"`, `"aws_fst_dt"`,
-#'     `"aws_fst_tbl"`, `"aws_keras"`: versions of the
-#'     respective formats `"rds"`, `"qs"`, etc. powered by
-#'     Amazon Web Services (AWS) Simple Storage Service (S3).
-#'     The only difference is that the data file is
-#'     uploaded to the AWS S3 bucket
-#'     you supply to `tar_resources_aws()`. See the cloud computing chapter
-#'     of the manual for details.
-#'   * `"aws_file"`: arbitrary dynamic files on AWS S3. The target
-#'     should return a path to a temporary local file, then
-#'     `targets` will automatically upload this file to an S3
-#'     bucket and track it for you. Unlike `format = "file"`,
-#'     `format = "aws_file"` can only handle one single file,
-#'     and that file must not be a directory.
-#'     [tar_read()] and downstream targets
-#'     download the file to `_targets/scratch/` locally and return the path.
-#'     `_targets/scratch/` gets deleted at the end of [tar_make()].
-#'     Requires the same `resources` and other configuration details
-#'     as the other AWS-powered formats. See the cloud computing
-#'     chapter of the manual for details.
-#'   * An entirely custom specification produced by [tar_format()].
+#'   * A custom format can be supplied with `tar_format()`. For this choice,
+#'     it is the user's responsibility to provide methods for (un)serialization
+#'     and (un)marshaling the return value of the target.
+#'   * The formats starting with `"aws_"` are deprecated as of 2022-03-13
+#'     (`targets version > 0.10.0). For cloud storage integration, use the
+#'     `repository` argument instead.
+#' @param repository Character of length 1, remote repository for target
+#'   storage. Choices:
+#'   * `"local"`: file system of the local machine.
+#'   * `"aws"`: Amazon Web Services (AWS) S3 bucket. Can be configured
+#'     with a non-AWS S3 bucket using the `endpoint` argument of
+#'     [tar_resources_aws()], but versioning capabilities may be lost
+#'     in doing so.
+#'     See the cloud storage section of
+#'     <https://books.ropensci.org/targets/data.html>
+#'     for details for instructions.
+#'   * `"gcp"`: Google Cloud Platform storage bucket.
+#'     See the cloud storage section of
+#'     <https://books.ropensci.org/targets/data.html>
+#'     for details for instructions.
 #' @param iteration Character of length 1, name of the iteration mode
 #'   of the target. Choices:
 #'   * `"vector"`: branching happens with `vctrs::vec_slice()` and
@@ -166,6 +167,9 @@
 #'     but no new targets launch after that.
 #'   (Visit <https://books.ropensci.org/targets/debugging.html>
 #'   to learn how to debug targets using saved workspaces.)
+#'   * `"null"`: The errored target continues and returns `NULL`.
+#'     The data hash is deliberately wrong so the target is not
+#'     up to date for the next run of the pipeline.
 #' @param memory Character of length 1, memory strategy.
 #'   If `"persistent"`, the target stays in memory
 #'   until the end of the pipeline (unless `storage` is `"worker"`,
@@ -273,6 +277,7 @@ tar_target <- function(
   packages = targets::tar_option_get("packages"),
   library = targets::tar_option_get("library"),
   format = targets::tar_option_get("format"),
+  repository = targets::tar_option_get("repository"),
   iteration = targets::tar_option_get("iteration"),
   error = targets::tar_option_get("error"),
   memory = targets::tar_option_get("memory"),
@@ -301,6 +306,7 @@ tar_target <- function(
     packages = packages,
     library = library,
     format = format,
+    repository = repository,
     iteration = iteration,
     error = error,
     memory = memory,

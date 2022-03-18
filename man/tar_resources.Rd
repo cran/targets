@@ -10,6 +10,7 @@ tar_resources(
   feather = NULL,
   fst = NULL,
   future = NULL,
+  gcp = NULL,
   parquet = NULL,
   qs = NULL,
   url = NULL
@@ -17,10 +18,11 @@ tar_resources(
 }
 \arguments{
 \item{aws}{Output of function \code{tar_resources_aws()}.
-AWS S3 storage settings for AWS backed storage formats
-such as \code{"aws_qs"} and \verb{"aws_parquet}. Applies to all formats
-beginning with the \code{"aws_"} prefix. For details on formats,
-see the \code{format} argument of \code{\link[=tar_target]{tar_target()}}.}
+Amazon Web Services (AWS) S3 storage settings for
+\code{tar_target(..., repository = "aws")}.
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.}
 
 \item{clustermq}{Output of function \code{tar_resources_clustermq()}.
 Optional \code{clustermq} settings for \code{tar_make_clustermq()},
@@ -48,6 +50,13 @@ This is how to supply the \code{resources}
 argument of \code{future::future()} for \code{targets}.
 Resources supplied through
 \code{future::plan()} and \code{future::tweak()} are completely ignored.}
+
+\item{gcp}{Output of function \code{tar_resources_gcp()}.
+Google Cloud Storage bucket settings for
+\code{tar_target(..., repository = "gcp")}.
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.}
 
 \item{parquet}{Output of function \code{tar_resources_parquet()}.
 Non-default arguments to \code{arrow::read_parquet()} and
@@ -110,6 +119,7 @@ Other resources:
 \code{\link{tar_resources_feather}()},
 \code{\link{tar_resources_fst}()},
 \code{\link{tar_resources_future}()},
+\code{\link{tar_resources_gcp}()},
 \code{\link{tar_resources_parquet}()},
 \code{\link{tar_resources_qs}()},
 \code{\link{tar_resources_url}()}

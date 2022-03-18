@@ -50,6 +50,7 @@ tar_option_get <- function(name = NULL, option = NULL) {
     library = tar_options$get_library(),
     envir = tar_options$get_envir(),
     format = tar_options$get_format(),
+    repository = tar_options$get_repository(),
     iteration = tar_options$get_iteration(),
     error = tar_options$get_error(),
     memory = tar_options$get_memory(),

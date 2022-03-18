@@ -1,7 +1,7 @@
 tar_test("aws_s3_exists()", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   expect_false(aws_s3_exists(key = "x", bucket = bucket))
   tmp <- tempfile()
   writeLines("x", tmp)
@@ -12,7 +12,7 @@ tar_test("aws_s3_exists()", {
 tar_test("aws_s3_head()", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   tmp <- tempfile()
   writeLines("x", tmp)
   paws::s3()$put_object(Body = tmp, Key = "x", Bucket = bucket)
@@ -25,7 +25,7 @@ tar_test("aws_s3_head()", {
 tar_test("aws_s3_download()", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   tmp <- tempfile()
   writeLines("x", tmp)
   paws::s3()$put_object(Body = tmp, Key = "x", Bucket = bucket)
@@ -35,10 +35,49 @@ tar_test("aws_s3_download()", {
   expect_equal(readLines(tmp2), "x")
 })
 
+tar_test("aws_s3_delete()", {
+  bucket <- random_bucket_name()
+  paws::s3()$create_bucket(Bucket = bucket)
+  on.exit(aws_s3_delete_bucket(bucket))
+  tmp <- tempfile()
+  writeLines("x", tmp)
+  key <- "x"
+  paws::s3()$put_object(Body = tmp, Key = key, Bucket = bucket)
+  expect_true(aws_s3_exists(key = key, bucket = bucket))
+  aws_s3_delete(key = key, bucket = bucket)
+  expect_false(aws_s3_exists(key = key, bucket = bucket))
+})
+
+tar_test("aws_s3_delete() version", {
+  bucket <- random_bucket_name()
+  paws::s3()$create_bucket(Bucket = bucket)
+  paws::s3()$put_bucket_versioning(
+    Bucket = bucket,
+    VersioningConfiguration = list(
+      MFADelete = "Disabled",
+      Status = "Enabled"
+    )
+  )
+  on.exit(aws_s3_delete_bucket(bucket))
+  tmp <- tempfile()
+  writeLines("x", tmp)
+  key <- "x"
+  head1 <- paws::s3()$put_object(Body = tmp, Key = key, Bucket = bucket)
+  version1 <- head1$VersionId
+  writeLines("y", tmp)
+  head2 <- paws::s3()$put_object(Body = tmp, Key = key, Bucket = bucket)
+  version2 <- head2$VersionId
+  expect_true(aws_s3_exists(key = key, bucket = bucket, version = version1))
+  expect_true(aws_s3_exists(key = key, bucket = bucket, version = version2))
+  aws_s3_delete(key = key, bucket = bucket, version = version1)
+  expect_false(aws_s3_exists(key = key, bucket = bucket, version = version1))
+  expect_true(aws_s3_exists(key = key, bucket = bucket, version = version2))
+})
+
 tar_test("aws_s3_upload() without headers", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   expect_false(aws_s3_exists(key = "x", bucket = bucket))
   tmp <- tempfile()
   writeLines("x", tmp)
@@ -57,7 +96,7 @@ tar_test("aws_s3_upload() and download with metadata and region", {
     Bucket = bucket,
     CreateBucketConfiguration = list(LocationConstraint = region)
   )
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   expect_false(aws_s3_exists(key = "x", bucket = bucket, region = region))
   tmp <- tempfile()
   writeLines("x", tmp)
@@ -80,7 +119,7 @@ tar_test("aws_s3_upload() and download with metadata and region", {
 tar_test("upload twice, get the correct version", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   paws::s3()$put_bucket_versioning(
     Bucket = bucket,
     VersioningConfiguration = list(
@@ -125,7 +164,7 @@ tar_test("upload twice, get the correct version", {
 tar_test("multipart: upload twice, get the correct version", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   paws::s3()$put_bucket_versioning(
     Bucket = bucket,
     VersioningConfiguration = list(
@@ -172,7 +211,7 @@ tar_test("multipart: upload twice, get the correct version", {
 tar_test("graceful error on multipart upload", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
-  on.exit(destroy_bucket(bucket))
+  on.exit(aws_s3_delete_bucket(bucket))
   tmp <- tempfile()
   writeBin(raw(1e4), tmp)
   expect_error(

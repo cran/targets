@@ -75,6 +75,7 @@ tar_target_raw <- function(
   deps = NULL,
   string = NULL,
   format = targets::tar_option_get("format"),
+  repository = targets::tar_option_get("repository"),
   iteration = targets::tar_option_get("iteration"),
   error = targets::tar_option_get("error"),
   memory = targets::tar_option_get("memory"),
@@ -105,8 +106,12 @@ tar_target_raw <- function(
     "library in tar_target_raw() must be NULL or character."
   )
   tar_assert_format(format)
+  tar_assert_repository(repository)
   tar_assert_flag(iteration, c("vector", "list", "group"))
-  tar_assert_flag(error, c("stop", "continue", "abridge", "workspace"))
+  tar_assert_flag(
+    error,
+    c("stop", "continue", "abridge", "workspace", "null")
+  )
   deprecate_error_workspace(error)
   tar_assert_flag(memory, c("persistent", "transient"))
   tar_assert_lgl(garbage_collection)
@@ -131,6 +136,7 @@ tar_target_raw <- function(
     deps = deps,
     string = string,
     format = format,
+    repository = repository,
     iteration = iteration,
     error = error,
     memory = memory,

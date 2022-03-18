@@ -1,3 +1,30 @@
+# targets 0.11.0
+
+## Bug fixes
+
+* Print out the relevant target names if targets have conflicting names.
+* Catch all the target warnings instead of just reporting the last one.
+* Allow 200 group URL status codes instead of just 200 (#797, @petrbouchal).
+
+## New features
+
+* Add Google Cloud Storage via `tar_target(..., repository = "gcp")` (#720, @markedmondson1234). Special thanks to @markedmondson1234 for the cloud storage utilities in `R/utils_gcp.R`
+* `mermaid.js` static graphs with `tar_mermaid()` (#775, @yonicd).
+* Implement `tar_target(..., error = "null")`to allow errored targets to return `NULL` and continue (#807, @zoews). Errors are still registered, those targets are not up to date, and downstream targets have an easier time continuing on.
+* Implement `tar_assert_finite()`.
+* `tar_destroy()`, `tar_delete()`, and `tar_prune()` now attempt to delete cloud data for the appropriate targets (#799). In addition, `tar_exist_objects()` and `tar_objects()` now report about target data in the cloud when applicable. Add a new `cloud` argument to each function to optionally suppress this new behavior.
+* Add a `zoom_speed` argument to `tar_visnetwork()` and `tar_glimpse()` (#749, @dipterix).
+* Report the total runtime of the pipeline in the `"verbose"`, `"verbose_positives"`, `"timestamp"`, and `"timesamp_positives"` reporters.
+
+## Enhancements
+
+* Allow target name character strings to have attributes (#758, @psanker).
+* Sort metadata rows when the pipeline finishes so that version-controlling the metadata is easier (#766, @jameelalsalam).
+
+## Deprecations
+
+* Deprecate the `"aws_*"` storage format values in favor of a new `repository` argument (#803). In other words, `tar_target(..., format = "aws_qs")` is now `tar_target(..., format = "qs", repository = "aws")`. And internally, storage classes with multiple inheritance are created dynamically as opposed to having hard-coded source files. All this paves the way to add new cloud storage platforms without combinatorial chaos.
+
 # targets 0.10.0
 
 ## Bug fixes

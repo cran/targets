@@ -2,22 +2,23 @@
 % Please edit documentation in R/tar_resources_aws.R
 \name{tar_resources_aws}
 \alias{tar_resources_aws}
-\title{Target resources: AWS storage formats}
+\title{Target resources: Amazon Web Services (AWS) S3 storage}
 \usage{
 tar_resources_aws(
   bucket,
   prefix = targets::path_objects_dir_cloud(),
   region = NULL,
-  part_size = 5 * (2^20)
+  part_size = 5 * (2^20),
+  endpoint = NULL
 )
 }
 \arguments{
 \item{bucket}{Character of length 1, name of an existing
-AWS S3 bucket to upload and download the return values
+bucket to upload and download the return values
 of the affected targets during the pipeline.}
 
 \item{prefix}{Character of length 1, "directory path"
-in the S3 bucket where the target return values are stored.}
+in the bucket where the target return values are stored.}
 
 \item{region}{Character of length 1, AWS region containing the S3 bucket.
 Set to \code{NULL} to use the default region.}
@@ -26,6 +27,21 @@ Set to \code{NULL} to use the default region.}
 for each part of a multipart upload. (Except the last part,
 which is the remainder.) In a multipart upload, each part
 must be at least 5 MB.}
+
+\item{endpoint}{Character of length 1, URL endpoint for S3 storage.
+Defaults to the Amazon AWS endpoint if \code{NULL}. Example:
+To use the S3 protocol with Google Cloud Storage,
+set \code{endpoint = "https://storage.googleapis.com"}
+and \code{region = "auto"}. Also make sure to create
+HMAC access keys in the Google Cloud Storage console
+(under Settings => Interoperability) and set the
+\code{AWS_ACCESS_KEY_ID} and \code{AWS_SECRET_ACCESS_KEY} environment
+variables accordingly. After that, you should be able to use
+S3 storage formats with Google Cloud storage buckets.
+There is one limitation, however: even if your bucket has
+object versioning turned on, \code{targets} may fail to record object
+versions. Google Cloud Storage in particular has this
+incompatibility.}
 }
 \value{
 Object of class \code{"tar_resources_aws"}, to be supplied
@@ -33,8 +49,14 @@ to the \code{aws} argument of \code{tar_resources()}.
 }
 \description{
 Create the \code{aws} argument of \code{tar_resources()}
-to specify optional settings to AWS storage formats.
+to specify optional settings to AWS for
+\code{tar_target(..., repository = "aws")}.
 See the \code{format} argument of \code{\link[=tar_target]{tar_target()}} for details.
+}
+\details{
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.
 }
 \section{Resources}{
 
@@ -56,7 +78,8 @@ in \code{resources_1} is discarded for target \code{x}.
 tar_target(
   name,
   command(),
-  format = "aws_qs",
+  format = "qs",
+  repository = "aws",
   resources = tar_resources(
     aws = tar_resources_aws(bucket = "yourbucketname"),
     qs = tar_resources_qs(preset = "fast")
@@ -69,6 +92,7 @@ Other resources:
 \code{\link{tar_resources_feather}()},
 \code{\link{tar_resources_fst}()},
 \code{\link{tar_resources_future}()},
+\code{\link{tar_resources_gcp}()},
 \code{\link{tar_resources_parquet}()},
 \code{\link{tar_resources_qs}()},
 \code{\link{tar_resources_url}()},

@@ -76,6 +76,18 @@ tar_test("format", {
   )
 })
 
+tar_test("repository", {
+  expect_equal(tar_option_get("repository"), "local")
+  tar_option_set(repository = "aws")
+  expect_equal(tar_option_get("repository"), "aws")
+  tar_option_reset()
+  expect_equal(tar_option_get("repository"), "local")
+  expect_error(
+    tar_option_set(repository = 123),
+    class = "tar_condition_validate"
+  )
+})
+
 tar_test("iteration", {
   expect_equal(tar_option_get("iteration"), "vector")
   tar_option_set(iteration = "list")

@@ -1,8 +1,20 @@
+tar_test("no store", {
+  expect_silent(tar_destroy())
+})
+
 tar_test("tar_destroy('all')", {
   pipeline <- pipeline_init(list(target_init("x", quote(0))))
   local_init(pipeline)$run()
   expect_true(file.exists("_targets"))
   tar_destroy(destroy = "all")
+  expect_false(file.exists("_targets"))
+})
+
+tar_test("tar_destroy('local')", {
+  pipeline <- pipeline_init(list(target_init("x", quote(0))))
+  local_init(pipeline)$run()
+  expect_true(file.exists("_targets"))
+  tar_destroy(destroy = "local")
   expect_false(file.exists("_targets"))
 })
 

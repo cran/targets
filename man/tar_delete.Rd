@@ -4,12 +4,16 @@
 \alias{tar_delete}
 \title{Delete locally stored target return values.}
 \usage{
-tar_delete(names, store = targets::tar_config_get("store"))
+tar_delete(names, cloud = TRUE, store = targets::tar_config_get("store"))
 }
 \arguments{
 \item{names}{Names of the targets to remove from \verb{_targets/objects/}.
 You can supply symbols
 or \code{tidyselect} helpers like \code{\link[=all_of]{all_of()}} and \code{\link[=starts_with]{starts_with()}}.}
+
+\item{cloud}{Logical of length 1, whether to delete objects
+from the cloud if applicable (e.g. AWS, GCP). If \code{FALSE},
+files are not deleted from the cloud.}
 
 \item{store}{Character of length 1, path to the
 \code{targets} data store. Defaults to \code{tar_config_get("store")},
@@ -27,8 +31,15 @@ but keep the records in \verb{_targets/meta/meta}.
 \details{
 If you have a small number of data-heavy targets you
 need to discard to conserve storage, this function can help.
-Dynamic files and cloud data (e.g. \code{format = "file"}
-and \code{format = "aws_parquet"}) are not deleted.
+Local external files files (i.e. \code{format = "file"}
+and \code{repository = "local"}) are not deleted.
+For targets with \code{repository} not equal \code{"local"}, \code{tar_delete()} attempts
+to delete the file and errors out if the deletion is unsuccessful.
+If deletion fails, either log into the cloud platform
+and manually delete the file (e.g. the AWS web console
+in the case of \code{repository = "aws"}) or call
+\code{\link[=tar_invalidate]{tar_invalidate()}} on that target so that \code{targets}
+does not try to delete the object.
 For patterns recorded in the metadata, all the branches
 will be deleted. For patterns no longer in the metadata,
 branches are left alone.

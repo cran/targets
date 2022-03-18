@@ -28,6 +28,21 @@ tar_test("store_file packages", {
   expect_equal(out, character(0))
 })
 
+tar_test("default delete and exists methods", {
+  tar_script(tar_target(x, 1))
+  tar_make(callr_function = NULL)
+  path <- path_objects(path_store_default(), "x")
+  meta <- tar_meta()
+  meta <- meta[meta$name == "x",, drop = FALSE] # nolint
+  record <- record_from_row(row = meta, path_store = path_store_default())
+  store <- record_bootstrap_store(record)
+  expect_true(file.exists(path))
+  expect_true(store_exist_object(store))
+  store_delete_object(store)
+  expect_false(file.exists(path))
+  expect_false(store_exist_object(store))
+})
+
 tar_test("alternate storage with _targets.yaml", {
   path <- file.path(tempfile(), "custom", "store")
   tar_config_set(store = path)
