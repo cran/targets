@@ -3,16 +3,17 @@
 #' @family data
 #' @description Load the return values of targets into the current environment
 #'   (or the environment of your choosing). For a typical target, the return
-#'   value lives in a file in `_targets/objects/`. For dynamic files
-#'   (i.e. `format = "file"`) the paths loaded in place of the values.
+#'   value lives in a file in `_targets/objects/`. For dynamic files (i.e.
+#'   `format = "file"`) the paths loaded in place of the values.
+#'   [tar_load_everything()] is shorthand for `tar_load(everything())`
+#'   to load all targets.
 #' @return Nothing.
 #' @inheritSection tar_read Limited scope
 #' @inheritParams tar_load_raw
-#' @param names Names of the targets to load. You can supply
-#'   symbols, a character vector, or `tidyselect` helpers like
-#'    [all_of()] and [starts_with()]. Names are selected
-#'    from the metadata in `_targets/meta`, which may
-#'    include errored targets.
+#' @param names Names of the targets to load.
+#'   You may supply `tidyselect` helpers like [all_of()] and [starts_with()].
+#'   Names are selected from the metadata in `_targets/meta`,
+#'   which may include errored targets.
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
@@ -24,7 +25,11 @@
 #'   )
 #' }, ask = FALSE)
 #' tar_make()
-#' tar_load(starts_with("y")) # see also all_of()
+#' ls() # Does not have "y1", "y2", or "z".
+#' tar_load(starts_with("y"))
+#' ls() # Has "y1" and "y2" but not "z".
+#' tar_load(all_of("z"))
+#' ls() # Has "y1", "y2", and "z".
 #' })
 #' }
 tar_load <- function(

@@ -166,6 +166,7 @@ database_class <- R6::R6Class(
       file.rename(from = tmp, to = self$path)
     },
     produce_line = function(row) {
+      withr::local_options(.new = list(OutDec = "."))
       paste(map_chr(row, self$produce_subline), collapse = database_sep_outer)
     },
     produce_subline = function(element) {
@@ -235,11 +236,23 @@ database_read_existing_data <- function(database) {
   # TODO: use sep2 once implemented:
   # https://github.com/Rdatatable/data.table/issues/1162
   # We can also delete the list_columns arg then.
+  encoding <- getOption("encoding")
+  encoding <- if_any(
+    identical(tolower(encoding), "latin1"),
+    "Latin-1",
+    encoding
+  )
+  encoding <- if_any(
+    encoding %in% c("unknown", "UTF-8", "Latin-1"),
+    encoding,
+    "unknown"
+  )
   out <- data.table::fread(
     file = database$path,
     sep = database_sep_outer,
     fill = TRUE,
-    na.strings = ""
+    na.strings = "",
+    encoding = encoding
   )
   out <- as_data_frame(out)
   if (nrow(out) < 1L) {

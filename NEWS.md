@@ -1,3 +1,25 @@
+# targets 0.12.0
+
+## Bug fixes
+
+* Fix `tar_mermaid()` graph ordering.
+* Hash the node names and quote the label names of `tar_mermaid()` graphs to avoid JavaScript keywords.
+* Remove superfluous line breaks in the node labels of graph visuals.
+* Fix metadata migration to version >= 0.10.0 (#812, @tjmahr).
+* `data.table::fread()` with encoding equal to `getOption("encoding")` if available (#814, @svraka). Only works with UTF-8 and latin1 because that is what `data.table` supports.
+* Force add files in GitHub Actions workflow job (#815, @tarensanders).
+
+## New features
+
+* `use_targets()` now writes a `_targets.R` file tailored to the project in the current working directory (#639, @noamross).
+* Move the old `use_targets()` to `use_targets_rmd()`.
+
+## Enhancements
+
+* Load packages when loading data for downstream targets in the pipeline (#713).
+* Handle edge case when `getOption("OutDec")` is not `"."` to prevent time stamps from being corrupted (#433, @jarauh).
+* Added helper function `tar_load_everything()` to quickly load all targets (#823, @malcolmbarrett)
+
 # targets 0.11.0
 
 ## Bug fixes
