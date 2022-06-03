@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run the pipeline in a persistent background process:
+# Submit the pipeline as a background process with ./run.sh
 nohup nice -4 R CMD BATCH run.R &
 
 # Change the nice level above as appropriate

@@ -8,9 +8,17 @@
 #'   2. Template files `"clustermq.tmpl"` and `"future.tmpl"`
 #'     to configure [tar_make_clustermq()] and [tar_make_future()]
 #'     to a resource manager if detected on your system.
-#'   3. Scripts `run.R` and `run.sh` to conveniently execute the pipeline.
-#'     `run.sh` is an optional shell script that calls `run.R` in a
-#'     persistent background process.
+#'   3. Script `run.R` to conveniently execute the pipeline.
+#'     Call `Rscript run.R` or `R CMD BATCH run.R` to run the pipeline
+#'     using `run.R`.
+#'   4. Script `run.sh` to conveniently call `run.R` in a persistent
+#'     background process. Enter `./run.sh` in the shell to run it.
+#'   5. If you have a high-performance computing scheduler
+#'     like Sun Grid Engine (SGE) (or select one using the
+#'     `scheduler` argument of `use_targets()`), then
+#'     script `job.sh` is created. `job.sh` conveniently executes `run.R`
+#'     as a job on a cluster. For example, to run the pipeline as a
+#'     job on an SGE cluster, enter `qsub job.sh` in the terminal.
 #'
 #' After you call `use_targets()`, there is still configuration left to do:
 #'   1. Open `_targets.R` and edit by hand. Follow the comments to
@@ -20,6 +28,7 @@
 #'     ([tar_make()], [tar_make_clustermq()], or [tar_make_future()]).
 #'   3. If applicable, edit `clustermq.tmpl` and/or `future.tmpl`
 #'     to configure settings for your resource manager.
+#'   4. If applicable, configure `job.sh` for your resource manager.
 #'
 #'  After you finished configuring your project, follow the steps at
 #'    <https://books.ropensci.org/targets/walkthrough.html#inspect-the-pipeline>: # nolint
@@ -95,6 +104,11 @@ use_targets <- function(
     path <- file.path("run", file)
     path <- system.file(path, package = "targets", mustWork = TRUE)
     use_targets_copy(from = path, to = file, overwrite = overwrite)
+  }
+  if (!scheduler %in% c("multicore", "multiprocess")) {
+    path <- file.path("run", "job", paste0(scheduler, ".sh"))
+    path <- system.file(path, package = "targets", mustWork = TRUE)
+    use_targets_copy(from = path, to = "job.sh", overwrite = overwrite)
   }
   # covered in tests/interactive/test-
   # nocov start

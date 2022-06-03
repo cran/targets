@@ -1,3 +1,16 @@
+# targets 0.12.1
+
+## New features
+
+* Add arguments `legend` and `color` to further configure `tar_mermaid()` (#848, @noamross).
+* For HPC schedulers like SLURM and SGE, `use_targets()` now creates a `job.sh` script to run the pipeline as a cluster job (#839).
+
+## Enhancements
+
+* Use lapply() to source scripts in `use_targets()`. Avoids defining a global variable for the file.
+* Recursively find scripts to source in the `use_targets()` `_targets.R` file.
+* Refactor error printing.
+
 # targets 0.12.0
 
 ## Bug fixes
