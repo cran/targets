@@ -268,13 +268,13 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h2>The walkthrough</h2>
 <p>The <a href="https://books.ropensci.org/targets/">user manual</a> starts with a <a href="https://books.ropensci.org/targets/walkthrough.html">walkthrough</a> chapter, a short tutorial to quickly started with <code>targets</code> using a simple example project. That project also has a <a href="https://github.com/wlandau/targets-minimal">repository</a> with the source code and an <a href="https://rstudio.cloud/project/1430691">RStudio Cloud workspace</a> that lets you try out the workflow in a web browser. Sign up for a free RStudio Cloud account, click on the link, and try out functions <code>tar_make()</code> and <code>tar_read()</code> in the R console.</p>
 </div>
-<div id="target-markdown" class="section level2">
-<h2>Target Markdown</h2>
-<p><a href="https://books.ropensci.org/targets/markdown.html">Target Markdown</a> is an R Markdown interface for testing, prototyping, and constructing targets and pipelines. It combines the convenience of R Markdown with the power of <code>targets</code>. See the <a href="https://books.ropensci.org/targets/markdown.html">chapter</a> in the manual for a tutorial.</p>
-</div>
 <div id="debugging" class="section level2">
 <h2>Debugging</h2>
 <p>The <a href="https://books.ropensci.org/targets/debugging.html">debugging chapter</a> describes two alternative built-in systems for troubleshooting errors. The first system uses workspaces, which let you load a target’s dependencies into you R session. This way is usually preferred, especially with large pipelines on computing clusters, but it still may require some manual work. The second system launches an interactive debugger while the pipeline is actually running, which may not be feasible in some situations, but can often help you reach the problem more quickly.</p>
+</div>
+<div id="performance" class="section level2">
+<h2>Performance</h2>
+<p><a href="https://books.ropensci.org/targets/performance.html" class="uri">https://books.ropensci.org/targets/performance.html</a> explains how to monitor the progress of a running pipeline and optimize your pipeline for performance.</p>
 </div>
 <div id="functions" class="section level2">
 <h2>Functions</h2>
@@ -304,6 +304,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li>Rendering within a target. Here, you define a special kind of target that runs a lightweight R Markdown report which depends on upstream targets.</li>
 <li>Target Markdown, an overarching system in which one or more R Markdown files write the <code>_targets.R</code> file and encapsulate the pipeline.</li>
 </ol>
+<p>Visit <a href="https://books.ropensci.org/targets/literate-programming.html" class="uri">https://books.ropensci.org/targets/literate-programming.html</a> to learn more.</p>
 </div>
 <div id="dynamic-branching" class="section level2">
 <h2>Dynamic branching</h2>

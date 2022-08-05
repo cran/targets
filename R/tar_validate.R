@@ -57,7 +57,7 @@
 #' }
 tar_validate <- function(
   callr_function = callr::r,
-  callr_arguments = targets::callr_args_default(callr_function),
+  callr_arguments = targets::tar_callr_args_default(callr_function),
   envir = parent.frame(),
   script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
@@ -77,7 +77,7 @@ tar_validate <- function(
   )
   invisible(out)
 }
-  
+
 tar_validate_inner <- function(pipeline, store) {
   pipeline_validate(pipeline)
 }

@@ -110,7 +110,13 @@ for details for instructions.
 See the cloud storage section of
 \url{https://books.ropensci.org/targets/data.html}
 for details for instructions.
-}}
+}
+
+Note: if \code{repository} is not \code{"local"} and \code{format} is \code{"file"}
+then the target should create a single output file.
+That output file is uploaded to the cloud and tracked for changes
+where it exists in the cloud. The local file is deleted after
+the target runs.}
 
 \item{iteration}{Character of length 1, name of the iteration mode
 of the target. Choices:
@@ -152,12 +158,14 @@ If \code{"transient"}, the target gets unloaded
 after every new target completes.
 Either way, the target gets automatically loaded into memory
 whenever another target needs the value.
-For cloud-based dynamic files such as \code{format = "aws_file"},
-this memory strategy applies to
-temporary local copies of the file in \verb{_targets/scratch/"}:
-\code{"persistent"} means they remain until the end of the pipeline,
-and \code{"transient"} means they get deleted from the file system
-as soon as possible. The former conserves bandwidth,
+For cloud-based dynamic files
+(e.g. \code{format = "file"} with \code{repository = "aws"}),
+this memory strategy applies to the
+temporary local copy of the file:
+\code{"persistent"} means it remains until the end of the pipeline
+and is then deleted,
+and \code{"transient"} means it gets deleted as soon as possible.
+The former conserves bandwidth,
 and the latter conserves local storage.}
 
 \item{garbage_collection}{Logical, whether to run \code{base::gc()}
@@ -212,7 +220,7 @@ each downstream target still attempts to load the data file
 If you select \code{storage = "none"}, then
 the return value of the target's command is ignored,
 and the data is not saved automatically.
-As with dynamic files (\code{format = "file"} or \code{"aws_file"}) it is the
+As with dynamic files (\code{format = "file"}) it is the
 responsibility of the user to write to
 \code{\link[=tar_path]{tar_path()}} from inside the target.
 An example target
@@ -222,11 +230,11 @@ tar_target(x,
 storage = "none")`.
 
 The distinguishing feature of \code{storage = "none"}
-(as opposed to \code{format = "file"} or \code{"aws_file"})
+(as opposed to \code{format = "file"})
 is that in the general case,
 downstream targets will automatically try to load the data
 from the data store as a dependency. As a corollary, \code{storage = "none"}
-is completely unnecessary if \code{format} is \code{"file"} or \code{"aws_file"}.
+is completely unnecessary if \code{format} is \code{"file"}.
 }}
 
 \item{retrieval}{Character of length 1, only relevant to
@@ -319,7 +327,8 @@ Requires the \code{torch} package (not installed by default).
 \item \code{"file"}: A dynamic file. To use this format,
 the target needs to manually identify or save some data
 and return a character vector of paths
-to the data. (These paths must be existing files
+to the data (must be a single file path if \code{repository}
+is not \code{"local"}). (These paths must be existing files
 and nonempty directories.)
 Then, \code{targets} automatically checks those files and cues
 the appropriate build decisions if those files are out of date.
@@ -331,6 +340,14 @@ or else \code{targets} will throw an error. (And if \code{storage} is \code{"wor
 to arrive over a network file system.)
 If the target does not create any files, the return value should be
 \code{character(0)}.
+
+If \code{repository} is not \code{"local"} and \code{format} is \code{"file"},
+then the character vector returned by the target must be of length 1
+and point to a single file. (Directories and vectors of multiple
+file paths are not supported for dynamic files on the cloud.)
+That output file is uploaded to the cloud and tracked for changes
+where it exists in the cloud. The local file is deleted after
+the target runs.
 \item \code{"url"}: A dynamic input URL. For this storage format,
 \code{repository} is implicitly \code{"local"},
 URL format is like \code{format = "file"}

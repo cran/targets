@@ -23,10 +23,10 @@ callr_outer <- function(
       ),
       error = function(condition) {
         cli_red_x("Problem with the pipeline.")
-        cli_alert_info(
+        cli_mark_info(
           "Show errors: tar_meta(fields = error, complete_only = TRUE)"
         )
-        cli_alert_info(
+        cli_mark_info(
           "Learn more: https://books.ropensci.org/targets/debugging.html"
         )
       }
@@ -98,8 +98,8 @@ callr_inner <- function(
   on.exit(targets::tar_runtime_object()$unset_fun(), add = TRUE)
   withr::local_options(options)
   targets <- eval(parse(text = readLines(script, warn = FALSE)), envir = envir)
-  targets_arguments$pipeline <- targets::as_pipeline(targets)
-  targets::pipeline_validate_lite(targets_arguments$pipeline)
+  targets_arguments$pipeline <- targets::tar_as_pipeline(targets)
+  targets::tar_pipeline_validate_lite(targets_arguments$pipeline)
   do.call(targets_function, targets_arguments)
 }
 
@@ -129,10 +129,38 @@ callr_prepare_arguments <- function(callr_function, callr_arguments) {
 #'   that starts an external R process.
 #' @param reporter Character of length 1, choice of reporter
 #'   for [tar_make()] or a related function.
-callr_args_default <- function(callr_function, reporter = NULL) {
+#' @examples
+#' tar_callr_args_default(callr::r)
+tar_callr_args_default <- function(callr_function, reporter = NULL) {
   if (is.null(callr_function)) {
     return(list())
   }
   out <- list(spinner = !identical(reporter, "summary"))
   out[intersect(names(out), names(formals(callr_function)))]
+}
+
+#' @title Deprecated: `callr` arguments.
+#' @export
+#' @keywords internal
+#' @description Deprecated on 2022-08-05 (version 0.13.1).
+#'   Please use [tar_callr_args_default()] instead.
+#' @details Not a user-side function. Do not invoke directly.
+#'   Exported for internal purposes only.
+#' @return A list of arguments to `callr_function`.
+#' @param callr_function A function from the `callr` package
+#'   that starts an external R process.
+#' @param reporter Character of length 1, choice of reporter
+#'   for [tar_make()] or a related function.
+#' @examples
+#' tar_callr_args_default(callr::r)
+callr_args_default <- function(callr_function, reporter = NULL) {
+  msg <- paste(
+    "callr_args_default() is deprecated in {targets}.",
+    "please use tar_callr_args_default() instead"
+  )
+  cli_red_x(msg)
+  tar_callr_args_default(
+    callr_function = callr_function,
+    reporter = reporter
+  )
 }

@@ -227,9 +227,33 @@ pipeline_bootstrap_deps <- function(pipeline, meta, names) {
   deps <- map(names, ~pipeline_get_target(pipeline, .x)$command$deps)
   deps <- intersect(unique(unlist(deps)), pipeline_get_names(pipeline))
   deps <- setdiff(x = deps, y = names)
+  branched_over <- map(
+    names,
+    ~pipeline_get_target(pipeline, .x)$settings$dimensions
+  )
+  branched_over <- intersect(
+    unique(unlist(branched_over)),
+    pipeline_get_names(pipeline)
+  )
+  branched_over <- setdiff(x = branched_over, y = names)
+  not_branched_over <- setdiff(deps, branched_over)
   map(
-    deps,
-    ~target_bootstrap(pipeline_get_target(pipeline, .x), pipeline, meta)
+    not_branched_over,
+    ~target_bootstrap(
+      pipeline_get_target(pipeline, .x),
+      pipeline,
+      meta,
+      branched_over = FALSE
+    )
+  )
+  map(
+    branched_over,
+    ~target_bootstrap(
+      pipeline_get_target(pipeline, .x),
+      pipeline,
+      meta,
+      branched_over = TRUE
+    )
   )
 }
 
@@ -258,7 +282,7 @@ pipeline_validate_conflicts <- function(pipeline) {
 }
 
 pipeline_validate <- function(pipeline) {
-  pipeline_validate_lite(pipeline)
+  tar_pipeline_validate_lite(pipeline)
   pipeline_validate_targets(pipeline$targets)
   pipeline_validate_dag(pipeline_produce_igraph(pipeline))
   counter_validate(pipeline$loaded)
@@ -270,7 +294,7 @@ pipeline_validate <- function(pipeline) {
 #' @keywords internal
 #' @description Internal function. Do not invoke directly.
 #' @param pipeline A pipeline object.
-pipeline_validate_lite <- function(pipeline) {
+tar_pipeline_validate_lite <- function(pipeline) {
   tar_assert_inherits(pipeline, "tar_pipeline", msg = "invalid pipeline.")
   tar_assert_correct_fields(pipeline, pipeline_new)
   pipeline_validate_conflicts(pipeline)
@@ -282,19 +306,19 @@ pipeline_validate_lite <- function(pipeline) {
 #' @description Not a user-side function. Do not invoke directly.
 #' @return An object of class `"tar_pipeline"`.
 #' @param x A list of target objects or a pipeline object.
-as_pipeline <- function(x) {
-  UseMethod("as_pipeline")
+tar_as_pipeline <- function(x) {
+  UseMethod("tar_as_pipeline")
 }
 
 #' @export
 #' @keywords internal
-as_pipeline.tar_pipeline <- function(x) {
+tar_as_pipeline.tar_pipeline <- function(x) {
   x
 }
 
 #' @export
 #' @keywords internal
-as_pipeline.default <- function(x) {
+tar_as_pipeline.default <- function(x) {
   out <- unlist(list(x), recursive = TRUE)
   out <- fltr(out, ~inherits(x = .x, what = "tar_target"))
   pipeline_init(out)

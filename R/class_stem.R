@@ -102,10 +102,17 @@ target_validate.tar_stem <- function(target) {
 }
 
 #' @export
-target_bootstrap.tar_stem <- function(target, pipeline, meta) {
+target_bootstrap.tar_stem <- function(
+  target,
+  pipeline,
+  meta,
+  branched_over
+) {
   NextMethod()
-  stem_restore_junction(target, pipeline, meta)
-  stem_insert_buds(target, pipeline)
+  if (branched_over) {
+    stem_restore_junction(target, pipeline, meta)
+    stem_insert_buds(target, pipeline)
+  }
   invisible()
 }
 

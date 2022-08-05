@@ -1,6 +1,8 @@
+# Use sparingly to minimize GCP costs.
+# Verify all `targets` buckets are deleted afterwards.
 tar_test("gcp_gcs_exists()", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -15,7 +17,7 @@ tar_test("gcp_gcs_exists()", {
 
 tar_test("gcp_gcs_head()", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -41,7 +43,7 @@ tar_test("gcp_gcs_head()", {
 
 tar_test("gcp_gcs_download()", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -66,7 +68,7 @@ tar_test("gcp_gcs_download()", {
 
 tar_test("gcp_gcs_delete()", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -83,7 +85,7 @@ tar_test("gcp_gcs_delete()", {
 
 tar_test("gcp_gcs_delete() with versions", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -121,7 +123,7 @@ tar_test("gcp_gcs_delete() with versions", {
 
 tar_test("gcp_gcs_upload() without headers", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -143,7 +145,7 @@ tar_test("gcp_gcs_upload() without headers", {
 
 tar_test("gcp_gcs_upload() and download with metadata", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -169,7 +171,7 @@ tar_test("gcp_gcs_upload() and download with metadata", {
 
 tar_test("gcp_gcs upload twice, get the correct version", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
@@ -219,7 +221,7 @@ tar_test("gcp_gcs upload twice, get the correct version", {
 
 tar_test("gcp_gcs_upload: upload twice, get the correct version", {
   skip_if_no_gcp()
-  auth_gcp()
+  gcp_gcs_auth()
   bucket <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")

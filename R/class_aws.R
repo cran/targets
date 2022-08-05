@@ -40,7 +40,7 @@ store_produce_aws_path <- function(store, name, object, path_store) {
   tar_assert_scalar(endpoint %|||% "endpoint")
   prefix <- store$resources$aws$prefix %|||%
     store$resources$prefix %|||%
-    path_objects_dir_cloud()
+    tar_path_objects_dir_cloud()
   tar_assert_nonempty(prefix)
   tar_assert_chr(prefix)
   tar_assert_scalar(prefix)
@@ -125,17 +125,19 @@ store_aws_split_colon <- function(path) {
 #' @export
 store_read_object.tar_aws <- function(store) {
   path <- store$file$path
-  tmp <- tempfile()
-  on.exit(unlink(tmp))
+  scratch <- path_scratch(path_store = tempdir(), pattern = "targets_aws_")
+  on.exit(unlink(scratch))
+  dir_create(dirname(scratch))
   aws_s3_download(
     key = store_aws_key(path),
     bucket = store_aws_bucket(path),
-    file = tmp,
+    file = scratch,
     region = store_aws_region(path),
     endpoint = store_aws_endpoint(path),
-    version = store_aws_version(path)
+    version = store_aws_version(path),
+    args = store$resources$aws$args
   )
-  store_convert_object(store, store_read_path(store, tmp))
+  store_convert_object(store, store_read_path(store, scratch))
 }
 
 #' @export
@@ -146,7 +148,8 @@ store_exist_object.tar_aws <- function(store, name = NULL) {
     bucket = store_aws_bucket(path),
     region = store_aws_region(path),
     endpoint = store_aws_endpoint(path),
-    version = store_aws_version(path)
+    version = store_aws_version(path),
+    args = store$resources$aws$args
   )
 }
 
@@ -171,7 +174,8 @@ store_delete_object.tar_aws <- function(store, name = NULL) {
       bucket =  bucket,
       region = region,
       endpoint = endpoint,
-      version = version
+      version = version,
+      args = store$resources$aws$args
     ),
     error = function(condition) {
       tar_throw_validate(message, conditionMessage(condition))
@@ -181,6 +185,11 @@ store_delete_object.tar_aws <- function(store, name = NULL) {
 
 #' @export
 store_upload_object.tar_aws <- function(store) {
+  on.exit(unlink(store$file$stage, recursive = TRUE, force = TRUE))
+  store_upload_object_aws(store)
+}
+
+store_upload_object_aws <- function(store) {
   key <- store_aws_key(store$file$path)
   head <- if_any(
     file_exists_stage(store$file),
@@ -191,7 +200,8 @@ store_upload_object.tar_aws <- function(store) {
       region = store_aws_region(store$file$path),
       endpoint = store_aws_endpoint(store$file$path),
       metadata = list("targets-hash" = store$file$hash),
-      part_size = store$resources$aws$part_size %|||% (5 * (2 ^ 20))
+      part_size = store$resources$aws$part_size %|||% (5 * (2 ^ 20)),
+      args = store$resources$aws$args
     ),
     tar_throw_file(
       "Cannot upload non-existent AWS staging file ",
@@ -225,7 +235,8 @@ store_has_correct_hash.tar_aws <- function(store) {
       bucket = bucket,
       region = region,
       endpoint = endpoint,
-      version = version
+      version = version,
+      args = store$resources$aws$args
     ),
     identical(
       store_aws_hash(
@@ -233,7 +244,8 @@ store_has_correct_hash.tar_aws <- function(store) {
         bucket = bucket,
         region = region,
         endpoint = endpoint,
-        version = version
+        version = version,
+        args = store$resources$aws$args
       ),
       store$file$hash
     ),
@@ -241,13 +253,14 @@ store_has_correct_hash.tar_aws <- function(store) {
   )
 }
 
-store_aws_hash <- function(key, bucket, region, endpoint, version) {
+store_aws_hash <- function(key, bucket, region, endpoint, version, args) {
   head <- aws_s3_head(
     key = key,
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = version
+    version = version,
+    args = args
   )
   head$Metadata[["targets-hash"]]
 }

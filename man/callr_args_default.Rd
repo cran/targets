@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_callr.R
 \name{callr_args_default}
 \alias{callr_args_default}
-\title{Default \code{callr} arguments.}
+\title{Deprecated: \code{callr} arguments.}
 \usage{
 callr_args_default(callr_function, reporter = NULL)
 }
@@ -17,11 +17,14 @@ for \code{\link[=tar_make]{tar_make()}} or a related function.}
 A list of arguments to \code{callr_function}.
 }
 \description{
-Default \code{callr} arguments for the \code{callr_arguments}
-argument of \code{\link[=tar_make]{tar_make()}} and related functions.
+Deprecated on 2022-08-05 (version 0.13.1).
+Please use \code{\link[=tar_callr_args_default]{tar_callr_args_default()}} instead.
 }
 \details{
 Not a user-side function. Do not invoke directly.
 Exported for internal purposes only.
+}
+\examples{
+tar_callr_args_default(callr::r)
 }
 \keyword{internal}

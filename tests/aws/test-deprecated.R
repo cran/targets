@@ -1,4 +1,5 @@
-# Use sparingly. We do not want to max out any AWS quotas.
+# Use sparingly to minimize AWS costs.
+# Verify all `targets` buckets are deleted afterwards.
 # After this test runs, log into the AWS console,
 # check that the data and prefix are correct,
 # and MANUALLY CLEAR OUT THE BUCKET.
@@ -60,7 +61,6 @@ tar_test("deprecated format = \"aws_parquet\"", {
   out <- tar_read(x)
   expect_equal(out, data.frame(x = seq_len(2), y = seq_len(2)))
 })
-
 
 tar_test("migrate meta database", {
   skip_if_no_aws()
