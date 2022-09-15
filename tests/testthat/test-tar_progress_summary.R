@@ -1,9 +1,15 @@
 tar_test("progress does not exist", {
-  expect_error(tar_progress_summary(), class = "tar_condition_validate")
+  out <- tar_progress_summary()
+  for (field in colnames(out)) {
+    if (is.numeric(out[[field]])) {
+      expect_equal(out[[field]], 0)
+    }
+  }
+  expect_equal(out$since, "")
 })
 
 tar_test("default progress", {
-  skip_on_cran()
+  skip_cran()
   tar_script(
     list(
       tar_target(x, seq_len(2)),
@@ -27,7 +33,7 @@ tar_test("default progress", {
 })
 
 tar_test("progress with tidyselect fields", {
-  skip_on_cran()
+  skip_cran()
   tar_script(
     list(
       tar_target(x, seq_len(2)),
@@ -44,7 +50,7 @@ tar_test("progress with tidyselect fields", {
 })
 
 tar_test("tar_progress_summary_gt()", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("gt")
   tar_script(
     list(
@@ -61,7 +67,7 @@ tar_test("tar_progress_summary_gt()", {
 })
 
 tar_test("custom script and store args", {
-  skip_on_cran()
+  skip_cran()
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
   tar_script({

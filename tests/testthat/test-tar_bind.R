@@ -1,4 +1,5 @@
 tar_test("tar_bind() works", {
+  skip_cran()
   tar_script({
     pipeline1 <- tar_pipeline(
       tar_target(a, 1L),
@@ -22,6 +23,7 @@ tar_test("tar_bind() works", {
 })
 
 tar_test("tar_bind() errors if names are duplicated", {
+  skip_cran()
   tar_script({
     pipeline1 <- tar_pipeline(tar_target(a, 1))
     pipeline2 <- tar_pipeline(tar_target(a, 2))
@@ -30,12 +32,13 @@ tar_test("tar_bind() errors if names are duplicated", {
   suppressWarnings(
     expect_error(
       tar_make(callr_function = NULL),
-      class = "tar_condition_validate"
+      class = "tar_condition_run"
     )
   )
 })
 
 tar_test("valid pipeline with patterns only (#245)", {
+  skip_cran()
   expect_silent(
     out1 <- pipeline_init(list(tar_target(x, y, pattern = map(y))))
   )

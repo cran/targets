@@ -1,14 +1,3 @@
-tar_test("empty tar_make() works even with names", {
-  tar_script(list())
-  expect_silent(
-    tar_make(
-      names = x,
-      reporter = "silent",
-      callr_function = NULL
-    )
-  )
-})
-
 tar_test("tar_make() works", {
   tar_script(
     list(
@@ -19,19 +8,32 @@ tar_test("tar_make() works", {
   )
   tar_make(
     reporter = "silent",
-    callr_arguments = list(show = FALSE)
+    callr_function = NULL
   )
   out <- tar_read(z)
   expect_equal(out, 4L)
 })
 
+tar_test("empty tar_make() works even with names", {
+  skip_cran()
+  tar_script(list())
+  expect_silent(
+    tar_make(
+      names = x,
+      reporter = "silent",
+      callr_function = NULL
+    )
+  )
+})
+
 tar_test("tar_make() deduplicates metadata", {
+  skip_cran()
   tar_script({
     tar_option_set(envir = new.env(parent = baseenv()))
     list(tar_target(x, 1L, cue = tar_cue(mode = "always")))
   })
   for (index in seq_len(3L)) {
-    tar_make(callr_function = NULL)
+    tar_make(callr_arguments = list(show = FALSE))
   }
   out <- meta_init()$database$read_data()
   expect_equal(nrow(out), 1L)
@@ -55,6 +57,7 @@ tar_test("tar_make() can use tidyselect", {
 })
 
 tar_test("tar_make() finds the correct environment", {
+  skip_cran()
   tar_script({
     f <- function(x) {
       g(x) + 1L
@@ -74,7 +77,7 @@ tar_test("tar_make() finds the correct environment", {
 })
 
 tar_test("tar_make() handles callr errors", {
-  skip_on_cran()
+  skip_cran()
   withr::local_envvar(list(TAR_TEST = "false")) # covers some lines
   tar_script({
     list(
@@ -93,7 +96,7 @@ tar_test("tar_make() handles callr errors", {
 })
 
 tar_test("priorities apply to tar_make() (#437)", {
-  skip_on_cran()
+  skip_cran()
   tar_script(
     list(
       tar_target(x1, 1, priority = 0),
@@ -111,6 +114,7 @@ tar_test("priorities apply to tar_make() (#437)", {
 })
 
 tar_test("custom script and store args", {
+  skip_cran()
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
   tar_script(
@@ -138,7 +142,7 @@ tar_test("custom script and store args", {
 })
 
 tar_test("custom script and store args with callr function", {
-  skip_on_cran()
+  skip_cran()
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
   tar_script(
@@ -166,7 +170,7 @@ tar_test("custom script and store args with callr function", {
 })
 
 tar_test("runtime settings are forwarded, local process", {
-  skip_on_cran()
+  skip_cran()
   tar_script({
     writeLines(tar_store(), "store.txt")
     tar_target(x, 1)
@@ -176,7 +180,7 @@ tar_test("runtime settings are forwarded, local process", {
 })
 
 tar_test("runtime settings are forwarded, extrernal process", {
-  skip_on_cran()
+  skip_cran()
   tar_script({
     writeLines(tar_store(), "store.txt")
     tar_target(x, 1)
@@ -190,6 +194,7 @@ tar_test("runtime settings are forwarded, extrernal process", {
 })
 
 tar_test("null environment", {
+  skip_cran()
   tar_script(tar_target(x, "x"))
   tar_make(callr_function = NULL, envir = NULL)
   expect_equal(tar_read(x), "x")

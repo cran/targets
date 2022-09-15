@@ -1,3 +1,31 @@
+# targets 0.13.4
+
+* Implement custom alternative to `skip_on_cran()` to avoid https://github.com/r-lib/testthat/issues/1470#issuecomment-1248145555.
+* Skip more tests on CRAN.
+
+# targets 0.13.3
+
+## Enhancements
+
+* Print "no targets found" when there are no targets in the pipeline to check or build, or if the `names` argument of `tar_make()` does not identify any such targets in the pipeline (#923, @llrs).
+* Ignore `.packageName`, `.__NAMESPACE__.`, and `.__S3MethodsTable__.` when importing objects from packages with the `imports` option of `tar_option_set()`.
+* Import datasets from packages in the `imports` option of `tar_option_set()` (#926, @joelnitta).
+* Print target-specific elapsed runtimes in the verbose and timestamp reporters.
+* Improve error messages in functions like `tar_read()` and `tar_load()` when the data store is missing.
+
+# targets 0.13.2
+
+## Bug fixes
+
+* Do not incorrectly reference feather resources for parquet storage.
+
+## Enhancements
+
+* Simplify and improve error handling.
+* In the `command` column of `tar_manifest()` output, separate lines with "\n" instead of "\\n" so the text output is straightforward to work with.
+* Add a `drop_missing` argument to `tar_manifest()` to hide/show columns with all `NA` values.
+* Do not set Parquet version.
+
 # targets 0.13.1
 
 * Fix reverse dependency checks.

@@ -4,6 +4,7 @@ tar_test("future$workers", {
 })
 
 tar_test("workerless deployment works", {
+  skip_cran()
   skip_if_not_installed("future")
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
@@ -26,6 +27,7 @@ tar_test("workerless deployment works", {
 })
 
 tar_test("semi-workerless deployment works", {
+  skip_cran()
   skip_if_not_installed("future")
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
@@ -48,6 +50,7 @@ tar_test("semi-workerless deployment works", {
 })
 
 tar_test("some targets up to date, some not", {
+  skip_cran()
   skip_if_not_installed("future")
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
@@ -69,6 +72,7 @@ tar_test("some targets up to date, some not", {
 })
 
 tar_test("specialized plans (unstructured resources)", {
+  skip_cran()
   skip_if_not_installed("future")
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
@@ -90,7 +94,7 @@ tar_test("specialized plans (unstructured resources)", {
 })
 
 tar_test("future algo can skip targets", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
@@ -113,7 +117,7 @@ tar_test("future algo can skip targets", {
 })
 
 tar_test("nontrivial globals", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   skip_if_not_installed("future.callr")
   tar_runtime$set_fun("tar_make_future")
@@ -140,7 +144,7 @@ tar_test("nontrivial globals", {
 })
 
 tar_test("branching plan", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
@@ -188,6 +192,7 @@ tar_test("branching plan", {
 })
 
 tar_test("future_value_target() produces target objects", {
+  skip_cran()
   tar_runtime$set_fun("tar_make_future")
   on.exit(tar_runtime$unset_fun())
   pipeline <- pipeline_init(list(tar_target(x, 1)))

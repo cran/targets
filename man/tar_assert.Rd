@@ -38,6 +38,7 @@
 \alias{tar_assert_nonmissing}
 \alias{tar_assert_positive}
 \alias{tar_assert_scalar}
+\alias{tar_assert_store}
 \alias{tar_assert_target}
 \alias{tar_assert_target_list}
 \alias{tar_assert_true}
@@ -117,6 +118,8 @@ tar_assert_positive(x, msg = NULL)
 
 tar_assert_scalar(x, msg = NULL)
 
+tar_assert_store(store)
+
 tar_assert_target(x, msg = NULL)
 
 tar_assert_target_list(x)
@@ -152,6 +155,8 @@ assertions like \code{tar_assert_le()}/\code{tar_assert_ge()}.}
 
 \item{pattern}{Character of length 1, a \code{grep} pattern for certain
 assertions.}
+
+\item{store}{Character of length 1, path to the data store of the pipeline.}
 }
 \description{
 These functions assert the correctness of user inputs

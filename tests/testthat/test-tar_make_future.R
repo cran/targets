@@ -1,4 +1,15 @@
+tar_test("tar_make_future() works with callr_function = NULL", {
+  skip_if_not_installed("future")
+  tar_script(list(tar_target(x, "x")))
+  tar_make_future(
+    callr_function = NULL,
+    reporter = "silent"
+  )
+  expect_equal(tar_read(x), "x")
+})
+
 tar_test("tar_make_future() works", {
+  skip_cran()
   skip_if_not_installed("future")
   tar_script(list(tar_target(x, "x")))
   tar_make_future(
@@ -9,6 +20,7 @@ tar_test("tar_make_future() works", {
 })
 
 tar_test("tar_make_future() can use tidyselect", {
+  skip_cran()
   skip_if_not_installed("future")
   tar_script(
     list(
@@ -27,7 +39,7 @@ tar_test("tar_make_future() can use tidyselect", {
 })
 
 tar_test("nontrivial globals with global environment", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   skip_if_not_installed("future.callr")
   tar_script({
@@ -51,7 +63,7 @@ tar_test("nontrivial globals with global environment", {
 })
 
 tar_test("nontrivial globals with non-global environment", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   skip_if_not_installed("future.callr")
   tar_script({
@@ -79,7 +91,7 @@ tar_test("nontrivial globals with non-global environment", {
 })
 
 tar_test("custom script and store args", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
@@ -108,7 +120,7 @@ tar_test("custom script and store args", {
 })
 
 tar_test("custom script and store args with callr function", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
@@ -137,7 +149,7 @@ tar_test("custom script and store args with callr function", {
 })
 
 tar_test("bootstrap builder for shortcut", {
-  skip_on_cran()
+  skip_cran()
   skip_if_not_installed("future")
   tar_script({
     list(

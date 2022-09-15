@@ -4,6 +4,7 @@ tar_test("clustermq$workers", {
 })
 
 tar_test("workerless deployment works", {
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -29,6 +30,7 @@ tar_test("workerless deployment works", {
 })
 
 tar_test("semi-workerless deployment works", {
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -58,6 +60,7 @@ tar_test("semi-workerless deployment works", {
 })
 
 tar_test("some targets up to date, some not", {
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -85,7 +88,7 @@ tar_test("some targets up to date, some not", {
 })
 
 tar_test("clustermq algo can skip targets", {
-  skip_on_cran()
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -113,7 +116,7 @@ tar_test("clustermq algo can skip targets", {
 })
 
 tar_test("nontrivial common data", {
-  skip_on_cran()
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   skip_on_covr()
@@ -147,7 +150,7 @@ tar_test("nontrivial common data", {
 })
 
 tar_test("clustermq with a dynamic file", {
-  skip_on_cran()
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   skip_on_covr()
@@ -188,7 +191,7 @@ tar_test("clustermq with a dynamic file", {
 })
 
 tar_test("branching plan", {
-  skip_on_cran()
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -242,7 +245,7 @@ tar_test("branching plan", {
 })
 
 tar_test("cover the worker shutdown step in clustermq$iterate() event loop", {
-  skip_on_cran()
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()

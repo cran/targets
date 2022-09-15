@@ -1,4 +1,23 @@
+tar_test("tar_make_clustermq() works with callr_function = NULL", {
+  skip_on_os("windows")
+  skip_on_os("solaris")
+  require_clustermq()
+  skip_on_covr()
+  tar_script({
+    options(clustermq.scheduler = "multiprocess")
+    list(tar_target(x, "x"))
+  })
+  suppressWarnings(
+    tar_make_clustermq(
+      callr_function = NULL,
+      reporter = "silent"
+    )
+  )
+  expect_equal(tar_read(x), "x")
+})
+
 tar_test("tar_make_clustermq() works", {
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -15,6 +34,7 @@ tar_test("tar_make_clustermq() works", {
 })
 
 tar_test("tar_make_clustermq() can use tidyselect", {
+  skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
   require_clustermq()
@@ -40,7 +60,7 @@ tar_test("tar_make_clustermq() can use tidyselect", {
 })
 
 tar_test("custom script and store args", {
-  skip_on_cran()
+  skip_cran()
   require_clustermq()
   skip_on_covr()
   skip_on_os("windows")
@@ -75,7 +95,7 @@ tar_test("custom script and store args", {
 })
 
 tar_test("custom script and store args with callr function", {
-  skip_on_cran()
+  skip_cran()
   require_clustermq()
   skip_on_covr()
   skip_on_os("windows")
@@ -110,7 +130,7 @@ tar_test("custom script and store args with callr function", {
 })
 
 tar_test("bootstrap builder for shortcut", {
-  skip_on_cran()
+  skip_cran()
   skip_on_os("windows")
   require_clustermq()
   skip_on_covr()

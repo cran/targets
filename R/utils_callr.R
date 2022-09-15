@@ -8,33 +8,40 @@ callr_outer <- function(
   store,
   fun
 ) {
+  tar_assert_scalar(store)
+  tar_assert_chr(store)
+  tar_assert_nzchar(store)
   tar_assert_script(script)
-  tryCatch(
-    withCallingHandlers(
-      callr_dispatch(
-        targets_function = targets_function,
-        targets_arguments = targets_arguments,
-        callr_function = callr_function,
-        callr_arguments = callr_arguments,
-        envir = envir,
-        script = script,
-        store = store,
-        fun = fun
-      ),
-      error = function(condition) {
-        cli_red_x("Problem with the pipeline.")
-        cli_mark_info(
-          "Show errors: tar_meta(fields = error, complete_only = TRUE)"
-        )
-        cli_mark_info(
-          "Learn more: https://books.ropensci.org/targets/debugging.html"
-        )
-      }
-    ),
-    callr_error = function(e) {
-      tar_throw_run("problem with the pipeline.")
-    }
+  out <- callr_dispatch(
+    targets_function = targets_function,
+    targets_arguments = targets_arguments,
+    callr_function = callr_function,
+    callr_arguments = callr_arguments,
+    envir = envir,
+    script = script,
+    store = store,
+    fun = fun
   )
+  if_any(
+    inherits(out, "error"),
+    callr_error(condition = out, fun = fun),
+    out
+  )
+}
+
+callr_error <- function(condition, fun) {
+  message <- sprintf(
+    paste0(
+      "Error running targets::%s()\n",
+      "  Target errors: ",
+      "targets::tar_meta(fields = error, complete_only = TRUE)\n",
+      "  Tips: https://books.ropensci.org/targets/debugging.html\n",
+      "  Last error: %s"
+    ),
+    fun,
+    conditionMessage(condition)
+  )
+  tar_throw_run(message)
 }
 
 callr_dispatch <- function(
@@ -86,6 +93,51 @@ callr_inner <- function(
 ) {
   force(envir)
   parent <- parent.frame()
+  tryCatch(
+    targets::tar_callr_inner_try(
+      targets_function = targets_function,
+      targets_arguments = targets_arguments,
+      options = options,
+      envir = envir,
+      parent = parent,
+      script = script,
+      store = store,
+      fun = fun
+    ),
+    error = function(condition) condition
+  )
+}
+
+#' @title Invoke a `targets` task from inside a `callr` function.
+#' @export
+#' @keywords internal
+#' @description Not a user-side function. Do not invoke directly.
+#'   Exported for internal purposes only.
+#' @return The output of a call to a `targets` function that uses
+#'   `callr` for reproducibility.
+#' @inheritParams tar_validate
+#' @param targets_function A function from `targets` to call.
+#' @param targets_arguments Named list of arguments of targets_function.
+#' @param options Names of global options to temporarily set
+#'   in the `callr` process.
+#' @param envir Name of the environment to run in. If `NULL`,
+#'   the environment defaults to `tar_option_get("envir")`.
+#' @param parent Parent environment of the call to
+#'   `tar_call_inner()`.
+#' @param fun Character of length 1, name of the `targets`
+#'   function being called.
+#' @examples
+#' # See the examples of tar_make().
+tar_callr_inner_try <- function(
+  targets_function,
+  targets_arguments,
+  options,
+  envir = NULL,
+  parent,
+  script,
+  store,
+  fun
+) {
   if (is.null(envir)) {
     envir <- parent
   }
