@@ -18,6 +18,9 @@ tar_format(
   unmarshal = function(object) {
      identity(object)
  },
+  convert = function(object) {
+     identity(object)
+ },
   repository = NULL
 )
 }
@@ -47,6 +50,17 @@ on a parallel worker. It should not read or write any persistent files.
 See the Marshalling section for details.
 See the "Format functions" section for specific requirements.}
 
+\item{convert}{The \code{convert} argument is a function
+that accepts the object returned by the command of the target
+and changes it into an acceptable format (e.g. can be
+saved with the \code{read} function). The \code{convert}
+ensures the in-memory copy
+of an object during the running pipeline session
+is the same as the copy of the object that is saved
+to disk. The function should be idempotent, and it should
+handle edge cases like \code{NULL} values (especially for
+\code{error = "null"} in \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}).}
+
 \item{repository}{Deprecated. Use the \code{repository} argument of
 \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}} instead.}
 }
@@ -58,6 +72,11 @@ argument of \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_s
 \description{
 Define a custom target storage format for the
 \code{format} argument of \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}.
+}
+\details{
+It is good practice to write formats that correctly handle
+\code{NULL} objects if you are planning to set \code{error = "null"}
+in \code{\link[=tar_option_set]{tar_option_set()}}.
 }
 \section{Marshalling}{
 
@@ -90,17 +109,31 @@ functions or objects in the global environment of your pipeline.
 so it must not rely on any data in the closure.
 This disqualifies functions produced by \code{Vectorize()},
 for example.
+
+The functions to read and write the object
+should not do any conversions on the object. That is the job
+of the \code{convert} argument. The \code{convert} argument is a function
+that accepts the object returned by the command of the target
+and changes it into an acceptable format (e.g. can be
+saved with the \code{read} function). Working with the \code{convert}
+function is best because it ensures the in-memory copy
+of an object during the running pipeline session
+is the same as the copy of the object that is saved
+to disk.
 }
 
 \examples{
-# The following target is equivalent to
-# tar_target(name, command(), format = "keras"):
+# The following target is equivalent to the current superseded
+# tar_target(name, command(), format = "keras").
+# An improved version of this would supply a `convert` argument
+# to handle NULL objects, which are returned by the target if it
+# errors and the error argument of tar_target() is "null".
 tar_target(
-  name,
-  command(),
+  name = keras_target,
+  command = your_function(),
   format = tar_format(
     read = function(path) {
-       keras::load_model_hdf5(path)
+      keras::load_model_hdf5(path)
     },
     write = function(object, path) {
       keras::save_model_hdf5(object = object, filepath = path)
@@ -110,6 +143,35 @@ tar_target(
     },
     unmarshal = function(object) {
       keras::unserialize_model(object)
+    }
+  )
+)
+# And the following is equivalent to the current superseded
+# tar_target(name, torch::torch_tensor(seq_len(4)), format = "torch"),
+# except this version has a `convert` argument to handle
+# cases when `NULL` is returned (e.g. if the target errors out
+# and the `error` argument is "null" in tar_target()
+# or tar_option_set())
+tar_target(
+  name = torch_target,
+  command = torch::torch_tensor(),
+  format = tar_format(
+    read = function(path) {
+      torch::torch_load(path)
+    },
+    write = function(object, path) {
+      torch::torch_save(obj = object, path = path)
+    },
+    marshal = function(object) {
+      con <- rawConnection(raw(), open = "wr")
+      on.exit(close(con))
+      torch::torch_save(object, con)
+      rawConnectionValue(con)
+    },
+    unmarshal = function(object) {
+      con <- rawConnection(object, open = "r")
+      on.exit(close(con))
+      torch::torch_load(con)
     }
   )
 )

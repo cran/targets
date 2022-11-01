@@ -22,6 +22,8 @@ tar_test("aws_s3_head()", {
   bucket <- random_bucket_name()
   paws::s3()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket))
+  expect_null(aws_s3_head(key = "x", bucket = random_bucket_name()))
+  expect_null(aws_s3_head(key = "x", bucket = bucket))
   tmp <- tempfile()
   writeLines("x", tmp)
   paws::s3()$put_object(Body = tmp, Key = "x", Bucket = bucket)
@@ -29,13 +31,12 @@ tar_test("aws_s3_head()", {
   expect_true(is.list(head))
   expect_true(is.character(head$ETag))
   expect_true(nzchar(head$ETag))
-  expect_error(
+  expect_null(
     aws_s3_head(
       key = "x",
       bucket = bucket,
       args = list(ExpectedBucketOwner = "phantom_f4acd87c52d4e62b")
-    ),
-    class = "http_error"
+    )
   )
 })
 
@@ -81,6 +82,7 @@ tar_test("aws_s3_delete()", {
   expect_true(aws_s3_exists(key = key, bucket = bucket))
   aws_s3_delete(key = key, bucket = bucket)
   expect_false(aws_s3_exists(key = key, bucket = bucket))
+  aws_s3_delete(key = key, bucket = bucket)
 })
 
 tar_test("aws_s3_delete() version", {

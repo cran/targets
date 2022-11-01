@@ -2,7 +2,7 @@
 % Please edit documentation in R/tar_path.R
 \name{tar_path}
 \alias{tar_path}
-\title{Identify the file path where a target will be stored.}
+\title{Deprecated: identify the file path where a target will be stored.}
 \usage{
 tar_path(
   name = NULL,
@@ -57,15 +57,19 @@ upload it to the AWS S3 bucket. This does not apply to
 anyway.
 }
 \description{
-Identify the file path where a target will be stored
-after the target finishes running in the pipeline.
+Deprecated: identify the file path where a target will be
+stored after the target finishes running in the pipeline.
+}
+\details{
+\code{tar_path()} was deprecated on 2022-10-11 (version 0.13.5.9000).
+Use \code{\link[=tar_path_target]{tar_path_target()}} instead.
 }
 \examples{
-tar_path()
-tar_path(your_target)
+tar_path_target()
+tar_path_target(your_target)
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 tar_dir({ # tar_dir() runs code from a temporary directory.
-tar_script(tar_target(returns_path, tar_path()), ask = FALSE)
+tar_script(tar_target(returns_path, tar_path_target()), ask = FALSE)
 tar_make()
 tar_read(returns_path)
 })
@@ -80,8 +84,13 @@ Other utilities:
 \code{\link{tar_envir}()},
 \code{\link{tar_group}()},
 \code{\link{tar_name}()},
+\code{\link{tar_path_script_support}()},
+\code{\link{tar_path_script}()},
+\code{\link{tar_path_store}()},
+\code{\link{tar_path_target}()},
 \code{\link{tar_seed}()},
 \code{\link{tar_source}()},
 \code{\link{tar_store}()}
 }
 \concept{utilities}
+\keyword{internal}

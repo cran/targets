@@ -1,16 +1,23 @@
 tar_test("tar_path() outside a pipeline with no arguments", {
-  expect_true(is.character(tar_path()))
-  expect_true(is.na(tar_path()))
-  expect_equal(length(tar_path()), 1L)
-  expect_equal(tar_path(default = "x"), "x")
+  skip_cran()
+  expect_warning(tar_path(), class = "tar_condition_deprecate")
+  expect_true(is.character(suppressWarnings(tar_path())))
+  expect_true(is.na(suppressWarnings(tar_path())))
+  expect_equal(length(suppressWarnings(tar_path())), 1L)
+  expect_equal(suppressWarnings(tar_path(default = "x")), "x")
 })
 
 tar_test("tar_path() with a name arg", {
-  expect_equal(tar_path(x), file.path("_targets", "objects", "x"))
+  skip_cran()
+  expect_equal(
+    suppressWarnings(tar_path(x)),
+    file.path("_targets", "objects", "x")
+  )
 })
 
 tar_test("tar_path() inside a pipeline", {
-  x <- target_init("x", quote(targets::tar_path()))
+  skip_cran()
+  x <- target_init("x", quote(suppressWarnings(targets::tar_path())))
   tar_runtime$set_store(path_store_default())
   on.exit(tar_runtime$unset_store())
   pipeline <- pipeline_init(list(x))
@@ -24,7 +31,7 @@ tar_test("custom script and store args", {
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
   expect_false(file.exists("example/store"))
-  out <- tar_path(x, store = "example/store")
+  out <- suppressWarnings(tar_path(x, store = "example/store"))
   expect_equal(out, "example/store/objects/x")
   expect_false(file.exists("example/store"))
   expect_false(file.exists("_targets.yaml"))
@@ -39,18 +46,21 @@ tar_test("custom script and store args", {
 })
 
 tar_test("tar_path() idempotently creates dir if create_dir is TRUE", {
+  skip_cran()
   for (index in seq_len(2)) {
-    out <- tar_path("x", create_dir = TRUE)
+    out <- suppressWarnings(tar_path("x", create_dir = TRUE))
     expect_true(file.exists(dirname(out)))
   }
 })
 
 tar_test("tar_path() does not create dir if create_dir is FALSE", {
-  out <- tar_path("x", create_dir = FALSE)
+  skip_cran()
+  out <- suppressWarnings(tar_path("x", create_dir = FALSE))
   expect_false(file.exists(dirname(out)))
 })
 
 tar_test("tar_path() returns non-cloud path for non-cloud storage formats", {
+  skip_cran()
   x <- tar_target(x, 1, format = "parquet")
   on.exit({
     tar_runtime$unset_store()
@@ -58,28 +68,33 @@ tar_test("tar_path() returns non-cloud path for non-cloud storage formats", {
   })
   tar_runtime$set_store(path_store_default())
   tar_runtime$set_target(x)
-  out <- tar_path(create_dir = FALSE)
+  out <- suppressWarnings(tar_path(create_dir = FALSE))
   expect_false(file.exists(dirname(out)))
-  out <- tar_path(create_dir = TRUE)
+  out <- suppressWarnings(tar_path(create_dir = TRUE))
   expect_true(file.exists(dirname(out)))
   expect_equal(out, path_objects(path_store_default(), "x"))
 })
 
 tar_test("tar_path() returns stage for cloud formats", {
+  skip_cran()
   x <- tar_target(x, 1, format = "parquet", repository = "aws")
   store_update_stage_early(x$store, x$settings$name, path_store_default())
+  dir <- dirname(x$store$file$stage)
+  unlink(dir, recursive = TRUE)
   on.exit(tar_runtime$unset_target())
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   tar_runtime$set_target(x)
-  out <- tar_path(create_dir = FALSE)
+  out <- suppressWarnings(tar_path(create_dir = FALSE))
   expect_false(file.exists(dirname(out)))
-  out <- tar_path(create_dir = TRUE)
+  out <- suppressWarnings(tar_path(create_dir = TRUE))
   expect_true(file.exists(dirname(out)))
   expect_equal(dirname(out), dirname(path_scratch(tempdir())))
   expect_equal(out, x$store$file$stage)
 })
 
 tar_test("tar_path() with alternative data store in tar_make()", {
-  tar_script(tar_target(x, tar_path()))
+  skip_cran()
+  tar_script(tar_target(x, suppressWarnings(tar_path())))
   store <- "example_store"
   tar_make(callr_function = NULL, store = store)
   expect_equal(

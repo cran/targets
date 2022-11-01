@@ -25,7 +25,8 @@ tar_option_set(
   cue = NULL,
   debug = NULL,
   workspaces = NULL,
-  workspace_on_error = NULL
+  workspace_on_error = NULL,
+  seed = NULL
 )
 }
 \arguments{
@@ -238,12 +239,7 @@ the return value of the target's command is ignored,
 and the data is not saved automatically.
 As with dynamic files (\code{format = "file"}) it is the
 responsibility of the user to write to
-\code{\link[=tar_path]{tar_path()}} from inside the target.
-An example target
-could look something like
-tar_target(x,
-{saveRDS("value", tar_path(create_dir = TRUE)); "ignored"},
-storage = "none")`.
+the data store from inside the target.
 
 The distinguishing feature of \code{storage = "none"}
 (as opposed to \code{format = "file"})
@@ -291,6 +287,29 @@ See \code{\link[=tar_workspace]{tar_workspace()}} for details about workspaces.}
 a workspace file for each target that throws an error.
 Workspace files help with debugging.
 See \code{\link[=tar_workspace]{tar_workspace()}} for details about workspaces.}
+
+\item{seed}{Integer of length 1, seed for generating
+target-specific pseudo-random number generator seeds.
+These target-specific seeds are deterministic and depend on
+\code{tar_option_get("seed")} and the target name. Target-specific seeds
+are applied to each target's command using \code{withr::with_seed()},
+and they are stored in the metadata and retrievable with
+\code{\link[=tar_meta]{tar_meta()}} or \code{\link[=tar_seed]{tar_seed()}}.
+
+Either the user or third-party packages built on top of \code{targets}
+may still set seeds inside the command of a target.
+For example, some target factories in the
+\code{tarchetypes} package assigns replicate-specific
+seeds for the purposes of reproducible within-target batched replication.
+In cases like these, the effect of the target-specific seed saved
+in the metadata becomes irrelevant and the seed defined in the command
+applies.
+
+The \code{seed} option can also be \code{NA} to disable
+automatic seed-setting. Any targets defined while
+\code{tar_option_get("seed")} is \code{NA} will not set a seed.
+In this case, those targets will never be up to date
+unless they have \code{cue = tar_cue(seed = FALSE)}.}
 }
 \value{
 \code{NULL} (invisibly).
@@ -333,10 +352,14 @@ Requires the \code{fst} package (not installed by default).
 Optionally set the compression level the same way as for \code{"fst"}.
 \item \code{"fst_tbl"}: Same as \code{"fst"}, but the value is a \code{tibble}.
 Optionally set the compression level the same way as for \code{"fst"}.
-\item \code{"keras"}: Uses \code{keras::save_model_hdf5()} and
+\item \code{"keras"}: superseded by \code{\link[=tar_format]{tar_format()}} and incompatible
+with \code{error = "null"} (in \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}).
+Uses \code{keras::save_model_hdf5()} and
 \code{keras::load_model_hdf5()}. The value must be a Keras model.
 Requires the \code{keras} package (not installed by default).
-\item \code{"torch"}: Uses \code{torch::torch_save()} and \code{torch::torch_load()}.
+\item \code{"torch"}: superseded by \code{\link[=tar_format]{tar_format()}} and incompatible
+with \code{error = "null"} (in \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}).
+Uses \code{torch::torch_save()} and \code{torch::torch_load()}.
 The value must be an object from the \code{torch} package
 such as a tensor or neural network module.
 Requires the \code{torch} package (not installed by default).

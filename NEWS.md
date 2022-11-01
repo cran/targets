@@ -1,3 +1,22 @@
+# targets 0.14.0
+
+* Move `#!/bin/sh` line to the top of SLURM `clustermq` template file (#944, #955, @GiuseppeTT).
+* Add new function `tar_path_script()`.
+* Rename `tar_store()` to `tar_path_store()` with deprecation.
+* Rename `tar_path()` to `tar_path_target()` with deprecation.
+* Add new function `tar_path_script_support()`.
+* Make Target Markdown target scripts dynamically locate their support scripts so the appropriate scripts can be found even when they are generated from one directory and sourced from another (#953, #957, @TylerGrantSmith).
+* Allow user-side control of the seeds at the pipeline level. `tar_option_set()` now supports a `seed` argument, and target-specific seeds are determined by `tar_option_get("seed")` and the target name. `tar_option_set(seed = NA)` disables seed-setting behavior but forcibly invalidates all the affected targets except when `seed` is `FALSE` in the target's `tar_cue()` (#882, @sworland-thyme, @joelnitta).
+* Implement a `seed` argument in `tar_cue()` to control whether targets update in response to changing or `NA` seeds (#882, @sworland-thyme, @joelnitta).
+* Reduce the number of per-target AWS/GCP storage API calls. Previously there were 3 API calls per target, including 2 HEAD requests. Now there is just 1 for a typical target (unless dependencies have to be downloaded). Relies on S3 strong read-after-write consistency (#958).
+* Update the `tar_github_actions()` workflow file to use `@v2` (#960, @kulinar).
+* Print helpful hints while debugging a target interactively (#961).
+* Only attempt to debug a target when `callr_function` is `NULL` (#961).
+* Make formats `"feather"`, `"parquet"`, `"file"`, and `"url"` work with `error = "null"` (#969).
+* Declare formats `"keras"` and `"torch"` superseded by `tar_format()`. Documented in the `tar_target()` help file.
+* Declare formats `"keras"` and `"torch"` incompatible with `error = "null"`. Documented in the `tar_target()` help file and in a warning thrown by `tar_target()` via `tar_target_raw()`.
+* Add a `convert` argument to `tar_format()` to allow custom `store_convert_object()` methods (#970).
+
 # targets 0.13.5
 
 * Use `any_of()` instead of `all_of()` in tests to ensure compatibility with `tidyselect` 1.1.2.9000 (#928, @hadley).

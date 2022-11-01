@@ -181,12 +181,7 @@ the return value of the target's command is ignored,
 and the data is not saved automatically.
 As with dynamic files (\code{format = "file"}) it is the
 responsibility of the user to write to
-\code{\link[=tar_path]{tar_path()}} from inside the target.
-An example target
-could look something like
-tar_target(x,
-{saveRDS("value", tar_path(create_dir = TRUE)); "ignored"},
-storage = "none")`.
+the data store from inside the target.
 
 The distinguishing feature of \code{storage = "none"}
 (as opposed to \code{format = "file"})
@@ -272,10 +267,14 @@ Requires the \code{fst} package (not installed by default).
 Optionally set the compression level the same way as for \code{"fst"}.
 \item \code{"fst_tbl"}: Same as \code{"fst"}, but the value is a \code{tibble}.
 Optionally set the compression level the same way as for \code{"fst"}.
-\item \code{"keras"}: Uses \code{keras::save_model_hdf5()} and
+\item \code{"keras"}: superseded by \code{\link[=tar_format]{tar_format()}} and incompatible
+with \code{error = "null"} (in \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}).
+Uses \code{keras::save_model_hdf5()} and
 \code{keras::load_model_hdf5()}. The value must be a Keras model.
 Requires the \code{keras} package (not installed by default).
-\item \code{"torch"}: Uses \code{torch::torch_save()} and \code{torch::torch_load()}.
+\item \code{"torch"}: superseded by \code{\link[=tar_format]{tar_format()}} and incompatible
+with \code{error = "null"} (in \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}).
+Uses \code{torch::torch_save()} and \code{torch::torch_load()}.
 The value must be an object from the \code{torch} package
 such as a tensor or neural network module.
 Requires the \code{torch} package (not installed by default).

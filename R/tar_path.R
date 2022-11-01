@@ -1,8 +1,11 @@
-#' @title Identify the file path where a target will be stored.
+#' @title Deprecated: identify the file path where a target will be stored.
 #' @export
+#' @keywords internal
 #' @family utilities
-#' @description Identify the file path where a target will be stored
-#'   after the target finishes running in the pipeline.
+#' @description Deprecated: identify the file path where a target will be
+#'   stored after the target finishes running in the pipeline.
+#' @details `tar_path()` was deprecated on 2022-10-11 (version 0.13.5.9000).
+#'   Use [tar_path_target()] instead.
 #' @return Character, file path of the return value of the target.
 #'   If not called from inside a running target,
 #'   `tar_path(name = your_target)` just returns
@@ -42,11 +45,11 @@
 #'   and actual the path to the running pipeline's data store
 #'   is used instead.
 #' @examples
-#' tar_path()
-#' tar_path(your_target)
+#' tar_path_target()
+#' tar_path_target(your_target)
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temporary directory.
-#' tar_script(tar_target(returns_path, tar_path()), ask = FALSE)
+#' tar_script(tar_target(returns_path, tar_path_target()), ask = FALSE)
 #' tar_make()
 #' tar_read(returns_path)
 #' })
@@ -57,6 +60,9 @@ tar_path <- function(
   create_dir = FALSE,
   store = targets::tar_config_get("store")
 ) {
+  tar_warn_deprecate(
+    "tar_path() is deprecated. Use tar_path_target() instead."
+  )
   name <- tar_deparse_language(substitute(name))
   tar_assert_chr(name %|||% character(0))
   tar_assert_chr(default)

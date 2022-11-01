@@ -92,6 +92,7 @@ builder_should_run <- function(target, meta) {
   if (cue_format(cue, target, meta)) return(TRUE)
   if (cue_repository(cue, target, meta)) return(TRUE)
   if (cue_iteration(cue, target, meta)) return(TRUE)
+  if (cue_seed(cue, target, meta)) return(TRUE)
   if (cue_file(cue, target, meta)) return(TRUE)
   FALSE
 }
@@ -221,10 +222,19 @@ builder_cancel <- function(target, pipeline, scheduler, meta) {
 #' @export
 target_debug.tar_builder <- function(target) {
   debug <- tar_option_get("debug")
-  if (length(debug) && target_get_name(target) %in% debug) {
+  should_debug <- length(debug) &&
+    (target_get_name(target) %in% debug) &&
+    interactive()
+  if (should_debug) {
     # Covered in tests/interactive/test-debug.R
     # nocov start
-    target$command$expr <- c(expression(browser()), target$command$expr)
+    target$command$expr <- as.expression(
+      list(
+        instructions = quote(targets::tar_debug_instructions()),
+        browser = quote(browser()),
+        expr = target$command$expr
+      )
+    )
     target$cue$mode <- "always"
     target$settings$deployment <- "main"
     # nocov end
@@ -498,6 +508,7 @@ builder_sitrep <- function(target, meta) {
     format = if_any(record, NA, cue_format(cue, target, meta)),
     repository = if_any(record, NA, cue_repository(cue, target, meta)),
     iteration = if_any(record, NA, cue_iteration(cue, target, meta)),
-    file = if_any(record, NA, cue_file(cue, target, meta))
+    file = if_any(record, NA, cue_file(cue, target, meta)),
+    seed = if_any(record, NA, cue_seed(cue, target, meta))
   )
 }
