@@ -11,10 +11,15 @@ build_init <- function(
     NULL
   }
   capture_warning <- function(condition) {
-    state$warnings <- paste(
-      c(state$warnings, build_message(condition)),
-      collapse = ". "
-    )
+    state$count_warnings <- (state$count_warnings %||% 0L) + 1L
+    should_store_warning <- (state$count_warnings < 51L) &&
+      (nchar(state$warnings %||% "") < build_message_max_nchar)
+    if (should_store_warning) {
+      state$warnings <- paste(
+        c(state$warnings, build_message(condition)),
+        collapse = ". "
+      )
+    }
     warning(as_immediate_condition(condition))
     invokeRestart("muffleWarning")
   }
@@ -34,6 +39,9 @@ build_init <- function(
     error = function(condition) {
     }
   )
+  if (!is.null(state$warnings)) {
+    state$warnings <- build_message_text_substr(state$warnings)
+  }
   metrics <- metrics_new(
     seconds = round(build_time_seconds() - start, 3),
     warnings = state$warnings,
@@ -86,15 +94,24 @@ build_time_seconds <- function() {
 }
 
 build_message <- function(condition, prefix = character(0)) {
-  out <- substr(
-    paste(c(prefix, conditionMessage(condition)), collapse = " "),
-    start = 0L,
-    stop = 2048L
+  out <- build_message_text_substr(
+    message = conditionMessage(condition),
+    prefix = prefix
   )
   if_any(nzchar(out), out, ".")
+}
+
+build_message_text_substr <- function(message, prefix = character(0)) {
+  substr(
+    paste(c(prefix, message), collapse = " "),
+    start = 0L,
+    stop = build_message_max_nchar
+  )
 }
 
 build_validate <- function(build) {
   tar_assert_correct_fields(build, build_new)
   metrics_validate(build$metrics)
 }
+
+build_message_max_nchar <- 2048L
