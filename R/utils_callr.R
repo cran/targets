@@ -33,15 +33,16 @@ callr_error <- function(condition, fun) {
   message <- sprintf(
     paste0(
       "Error running targets::%s()\n",
-      "  Target errors: ",
+      "  Error messages: ",
       "targets::tar_meta(fields = error, complete_only = TRUE)\n",
-      "  Tips: https://books.ropensci.org/targets/debugging.html\n",
+      "  Debugging guide: https://books.ropensci.org/targets/debugging.html\n",
+      "  How to ask for help: https://books.ropensci.org/targets/help.html\n",
       "  Last error: %s"
     ),
     fun,
     conditionMessage(condition)
   )
-  tar_throw_run(message)
+  tar_throw_run(message, class = class(condition))
 }
 
 callr_dispatch <- function(
