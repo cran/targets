@@ -1,15 +1,15 @@
-42e59d8c601cbf02ba1cf3db96202e19 *DESCRIPTION
+d7bd550a944dc20dd4648c8f87441321 *DESCRIPTION
 d00d099c18d809e93f2d77f6df7693ad *LICENSE
 60ce5ffd4311d07ac949f25a710a5d5a *NAMESPACE
-64b7ad2fa1d12fa232de921be3d42cb7 *NEWS.md
+c6a715e0186d3fd4994e1873bc8f5675 *NEWS.md
 f98a57a0d1480fdf0c81e44cc9e74701 *R/class_active.R
 c538340e72d1e6273d9dfe13f745cdfa *R/class_algorithm.R
 41377d1a6c8e1497577b00366ee4b8a0 *R/class_aws.R
-b4227b9ddccbabc8bacfc0c8b7847a59 *R/class_aws_file.R
+34ba455981650877d47f52e56c706cd1 *R/class_aws_file.R
 88b3ae50ed35689ca303d629f7f0de20 *R/class_backoff.R
 15546371ebf4dc2add6150353ec96fc4 *R/class_branch.R
 35dd0f2311f650ea8e982fab228a4da3 *R/class_bud.R
-a6cf443df15ba82587430d0168a8a4c6 *R/class_build.R
+f0471edb60a1c1cf890ba7f178ce7880 *R/class_build.R
 34656fa5660c1615fe4ca5cfc4cad406 *R/class_builder.R
 a0a26a5f27c304d76bf7c7109b2e50ad *R/class_cloud.R
 942aa635ff631e0e6caeb90b3385a823 *R/class_clustermq.R
@@ -28,7 +28,7 @@ aced9ef15874bb836dba1f9b36de153d *R/class_fst.R
 ac4e2b36bee1bdbff5b39638eb39e4aa *R/class_fst_tbl.R
 5fcf40e3707f0739747c137111bd75e7 *R/class_future.R
 4f349fab6f659425f463429073d6b2b5 *R/class_gcp.R
-74391db96d0f9ae396c7ef6183026bf0 *R/class_gcp_file.R
+8e31978557ce8b2365ead4a0b303a757 *R/class_gcp_file.R
 c56da2c91105eb417b55bc295c52542c *R/class_glimpse.R
 e1e17c5c13502802641361d0fd88f59b *R/class_graph.R
 166940fc703110743ef69c0737059b76 *R/class_group.R
@@ -80,7 +80,7 @@ a4133fe510254a273b69640f6a467408 *R/class_settings.R
 46dacb8340cf79b420dda30c764ade92 *R/class_stem.R
 ef192a191731f64174dbc27a12a6b547 *R/class_store.R
 a8df2418d5b2f6160e93fdb51f7e7a97 *R/class_store_custom.R
-6db3ffec671e933c48f0334fc4ca302d *R/class_store_file.R
+e681cfad072ea9175878cce6d7e14c3c *R/class_store_file.R
 a2f5438a314c5b76065e7b599f9fcfc0 *R/class_summary.R
 90d17abc3fcb9bc3704f11d305a81022 *R/class_target.R
 b25d84ecc96bf282e60454f8f445f2df *R/class_timestamp.R
@@ -183,7 +183,7 @@ f29e3e7dc55b6bcdc3a53f738693519a *R/tar_read.R
 08d0962b2fa23750807e423ada832034 *R/tar_renv.R
 af5279dcf49eb3d6a33174ed6e9d7046 *R/tar_reprex.R
 b875fdc092a34f3db3ef270ccfd48bd1 *R/tar_resources.R
-8115ca075a9a30b0c91298d4ac75d812 *R/tar_resources_aws.R
+9b8db4ed3c6ed1049fa11372ddc9946f *R/tar_resources_aws.R
 4e5d2c58f0e55a7b68bb505f8972fbc2 *R/tar_resources_clustermq.R
 baa7d1ae4c26c80bfc989b236d0403ab *R/tar_resources_feather.R
 72e8b18283ea512bbcbeb5211318e061 *R/tar_resources_fst.R
@@ -200,7 +200,7 @@ c6caa74bcf81a31f83c8cdffe6aa14f3 *R/tar_source.R
 d19ea52b81741ff4e81b439817d4b152 *R/tar_started.R
 233568c9b8dd6e8be327beb35138c4f9 *R/tar_store.R
 49515ecc0efe1f60613f0ab24ac45469 *R/tar_target.R
-22d2c71ea87d620f5421bb5b2e77177e *R/tar_target_raw.R
+48daa2ff6bf7f8284e9bf6f70822fc62 *R/tar_target_raw.R
 dce68e406e2621d64a288dada7fcb020 *R/tar_test.R
 d4b1898e5cbf71fe4e2b388d503148c7 *R/tar_tidyselect.R
 53576d9aa5056f3c2c333b6fe986b82f *R/tar_timestamp.R
@@ -238,9 +238,9 @@ d96b5eab8d9a0a930387de931c82ae8d *R/utils_path.R
 7361d759a76f125443281d0cfc0c87ba *R/utils_rstudio_addins.R
 74ef3dca9d601dbf6e7a4c782076effa *R/utils_units.R
 c6b32fdaddb9becdbdea28f7f1696ebf *R/utils_url.R
-0c6ad5b3446721162c89589e8077ab1c *build/partial.rdb
-87aacf0af0a9115f92212d0ecff2eaad *build/vignette.rds
-6ced48043c1601e32a7c474091b8bfe1 *inst/CITATION
+ea124a494ad7922985532ad3b308e4d5 *build/partial.rdb
+eb47160de94391880125bbb740b8f0ad *build/vignette.rds
+51352549be0ea06db327af6828b8b5d1 *inst/CITATION
 4f202363f0e4e6294e41b6e772ee0aaf *inst/WORDLIST
 05e8e862ed8b6ea837e9d65e83768137 *inst/doc/overview.Rmd
 d73ca59fa9cb1d9435700eb98a24bbd6 *inst/doc/overview.html
@@ -249,7 +249,7 @@ bb966f63fc44b29034f647d171010667 *inst/names/animals.rds
 6cc4b599c63a02ee9b2d4560cca5a8e4 *inst/paper/paper.bib
 5d019fcd16704a282f8f119dbc85b210 *inst/paper/paper.md
 47de32c13640925ba0b7ff900065a550 *inst/pipelines/_targets_r.R
-365d37a769cd362a43203f66f57c1e7d *inst/pipelines/example.R
+3a0d4c5f0b45fd7f85a8754705b426ca *inst/pipelines/example.R
 3ec4cc9f9d7e2405a64613a2250f0e52 *inst/pipelines/use_targets.R
 77608893a4e3fcc258e5a0b2c9f3ed64 *inst/rmarkdown/templates/targets/skeleton/skeleton.Rmd
 e1b1509b04af184efd5c9471330db508 *inst/rmarkdown/templates/targets/template.yaml
@@ -371,7 +371,7 @@ a43d4f5e6e2812865e0ca028d148ebcb *man/tar_random_port.Rd
 30efcef0e676d93ab856e15e91cdb661 *man/tar_renv.Rd
 f8b4fb81cb05cd782f14576ed17feed5 *man/tar_reprex.Rd
 43ab3f8421fa64431221e81b51a38e53 *man/tar_resources.Rd
-307380f8aa84f3c95e249136bf9570f0 *man/tar_resources_aws.Rd
+ef17abf0318ccff63e1bbbe26e5c4a0c *man/tar_resources_aws.Rd
 da7e7b6ccb06e1b876b297378eefc0db *man/tar_resources_clustermq.Rd
 514458a149551510acacf7b900de8d77 *man/tar_resources_feather.Rd
 2d5578a16cc87b05b550cd97a4ce194b *man/tar_resources_fst.Rd
@@ -389,7 +389,7 @@ cabb760193dc9caa02e86e6872415cea *man/tar_source.Rd
 c1a9306e6021b395da4ee01b439e8560 *man/tar_started.Rd
 a9ac160949d3f6a44846658ab01a2d1e *man/tar_store.Rd
 0b5fd78bc9c5aa87bac1ed9f6e5e5ec9 *man/tar_target.Rd
-bcfe2ef377946ab2d994b3f312cb43c5 *man/tar_target_raw.Rd
+a335af87dc40b9734ac3bb4d75d2a3ac *man/tar_target_raw.Rd
 e7c45cad49f2c068c136b2e9b9d0d258 *man/tar_test.Rd
 f4ff6e740c54133a0ac4bd7a631590e9 *man/tar_timestamp.Rd
 38ad0d390cbbc059f6ba3d3c0bf62295 *man/tar_timestamp_raw.Rd
@@ -442,13 +442,6 @@ a33c11c6e520aa0402f09a1ea465aa80 *tests/hpc/test-future_keras.R
 e73d87c413e9f97e78125a1bf2ac4cff *tests/hpc/test-parallel.R
 d7e2d929212189ff824a1ac029420605 *tests/hpc/test-retrieval.R
 47de32c13640925ba0b7ff900065a550 *tests/interactive/_targets.R
-999d5e41a45ca8ca014e43bcd0eec6ad *tests/interactive/_targets/meta/meta
-4e53ae83b07289004ca395570727ef70 *tests/interactive/_targets/meta/process
-37f0a853d8bd096ae449a94de3d4202b *tests/interactive/_targets/meta/progress
-5f569b0278fe8cb3cffde46f4b63bdc5 *tests/interactive/_targets/objects/data
-1d2bb130d6e5ee0c35390b4fc27811ad *tests/interactive/_targets/objects/fit
-bf432925406aecfaf4f2be46ba6189ee *tests/interactive/_targets/objects/hist
-a593232e760a249fb4cc29faa02921cc *tests/interactive/_targets/objects/raw_data
 1658e77bd5bf4aab20142252172a9ccc *tests/interactive/test-backoff.R
 b2e728fa49c819ad8511f165f64785cb *tests/interactive/test-class_url.R
 66c2c05a3ea90a338d7484f824659ad1 *tests/interactive/test-database.R
@@ -490,7 +483,7 @@ e652f65be779134275a0a4f1e2d7cf56 *tests/testthat/test-class_active.R
 fca7532998f87f7a7b41e2312e45a295 *tests/testthat/test-class_backoff.R
 2510c9e77a97708e35d158a4a24fcb75 *tests/testthat/test-class_branch.R
 0e0304e96601d16ae95c476752c671b7 *tests/testthat/test-class_bud.R
-6097ec372270d2910a97ee20e5d57cbd *tests/testthat/test-class_build.R
+d3ee6a8fb419eb06c49a2fdfd9b48867 *tests/testthat/test-class_build.R
 e1c71aab41a24ba6c2a5726256329059 *tests/testthat/test-class_builder.R
 4d3ac156c77a8fc76be8f956b2efaf2d *tests/testthat/test-class_clustermq.R
 3476108157c04e90ad5f3ade09419811 *tests/testthat/test-class_command.R
@@ -535,7 +528,7 @@ b3ff323dda2079da325e140a1e28e747 *tests/testthat/test-class_qs.R
 27a913e22c2a18f00a2d66fe42dba43b *tests/testthat/test-class_rds.R
 eb8d85a485e4f43cd9617b398b344a17 *tests/testthat/test-class_record.R
 645f25cc39cb0d89280770c46d88eab5 *tests/testthat/test-class_resources.R
-497260ce34ad4903071d2b5314afe717 *tests/testthat/test-class_resources_aws.R
+6ac8a92b8ff92b77e7ae33f39f3a548d *tests/testthat/test-class_resources_aws.R
 3c893cd092057dcdaf1933659a0cd449 *tests/testthat/test-class_resources_clustermq.R
 bad21bfaac5abf41e73e00d33540e15b *tests/testthat/test-class_resources_feather.R
 967bfca923e05337889deb56a1c885df *tests/testthat/test-class_resources_fst.R
@@ -617,7 +610,7 @@ b0683f353c199db41f2cbab5c133ef28 *tests/testthat/test-tar_older.R
 29373e1e073b0a598363412f467a7728 *tests/testthat/test-tar_option_set.R
 e9dd61c30f81f62d5e4adef004f7c838 *tests/testthat/test-tar_outdated.R
 6012a1914b0748da832c021eee32bfb3 *tests/testthat/test-tar_path.R
-dd182cc8f22c5699b01492eeb83f881b *tests/testthat/test-tar_path_script.R
+5a612fe3562bc26b2cfd138847b079e0 *tests/testthat/test-tar_path_script.R
 3b00851195fc691c84adf51e52e626e2 *tests/testthat/test-tar_path_script_support.R
 d964fa79c265fcd6a398ad246a571702 *tests/testthat/test-tar_path_store.R
 03da1615cbca465d04964e86459eab33 *tests/testthat/test-tar_path_target.R
@@ -631,8 +624,8 @@ a4124056c896d2620b20310442658ab8 *tests/testthat/test-tar_process.R
 63c199a95c94c31f365b5a3b2dc649d3 *tests/testthat/test-tar_prune.R
 74ba6303d389f27a0bb06acbfc13de4a *tests/testthat/test-tar_read.R
 801418255a77b21dd394d86d3de15909 *tests/testthat/test-tar_renv.R
-36b387169c82c8f377851ae3ed4a0488 *tests/testthat/test-tar_resources.R
-5e2b922f208e6c209c86087f2d1ca378 *tests/testthat/test-tar_resources_aws.R
+954c977153a7903226b046dccb4e7335 *tests/testthat/test-tar_resources.R
+7965bd6d2cc0bfe2c9c39b96260e1518 *tests/testthat/test-tar_resources_aws.R
 1913eef4cbb510fe651d11a367bc0acd *tests/testthat/test-tar_resources_clustermq.R
 7e3e48406d038c8f4ef403af3823b509 *tests/testthat/test-tar_resources_feather.R
 f414a3649a745d51199d3e6247214d87 *tests/testthat/test-tar_resources_fst.R

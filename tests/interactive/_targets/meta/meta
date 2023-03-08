@@ -1,6 +1,0 @@
-name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-create_plot|function|9a9f266c80d6a25e|||||||||||||||
-data|stem|53cc9e86389fd7fb|173ca52d67e263fa|f9739d4b6c27afd9|1588979285||t19300.8527217866s|928f28f6ec044076|1081|rds|local|vector|||0.008||
-fit|stem|9f5a38ea9955b24c|aa0df6c5dbd10537|7d267e57fa0c5e91|1780184594||t19300.8527219415s|7cc8cb4ff3fd3cfc|1575|rds|local|vector|||0.003||
-hist|stem|12b2d86e3b8f6f30|68877181ab74e51e|626e86a873bfb3cc|-1026346201||t19300.8527224313s|56b9a8c8660f9b70|44521|rds|local|vector|||0.011||
-raw_data|stem|5140580a2ee3f28d|81e4f6e420278630|a1d7102420575b1a|-979620141||t19300.8527213758s|efc41887cf3e9bfa|1262|rds|local|vector|||0.455||

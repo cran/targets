@@ -1,3 +1,8 @@
+# targets 0.14.3
+
+* Handle encoding errors while trying to process error and warning messages (#1019, @adrian-quintario).
+* Fix S3 generic/method consistency.
+
 # targets 0.14.2
 
 * Forward user-level custom error conditions to the top of the pipeline (#997, @alexverse).
