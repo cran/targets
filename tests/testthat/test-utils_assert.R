@@ -168,6 +168,15 @@ tar_test("tar_assert_nonempty()", {
   )
 })
 
+tar_test("tar_assert_all_na()", {
+  skip_cran()
+  expect_silent(tar_assert_all_na(NA_character_))
+  expect_error(
+    tar_assert_all_na("abc"),
+    class = "tar_condition_validate"
+  )
+})
+
 tar_test("tar_assert_none_na()", {
   skip_cran()
   expect_silent(tar_assert_none_na("abc"))
@@ -348,5 +357,15 @@ tar_test("tar_assert_named()", {
   expect_error(
     tar_assert_named(list(1, 2)),
     class = "tar_condition_validate"
+  )
+})
+
+test_that("tar_assert_internet()", {
+  skip_cran()
+  expect_silent(
+    tryCatch(
+      tar_assert_internet(),
+      tar_condition_run = function(condition) NULL
+    )
   )
 })

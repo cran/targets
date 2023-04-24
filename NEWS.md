@@ -1,3 +1,25 @@
+# targets 1.0.0
+
+`targets` is moving to version 1.0.0 because it is significantly more mature than previous versions. Specifically,
+
+1. `tar_make()` now integrates with `crew`, which will significantly improve the way `targets` does high-performance computing going forward.
+2. All other functionality in `targets` has stabilized. There is still room for smaller new features, but none as large as `crew` integration, none that will fundamentally change how the package operates.
+
+## Major improvements
+
+* Support distributed computing through the `crew` package in `tar_make()` (#753). `crew` itself is still in its early stages and currently lacks the launcher plugins to match the `clustermq` and `future` backends, but long-term, `crew` will be the predominant high-performance computing backend.
+
+## Minor improvements
+
+* Add a new `store_copy_object()` to the store class to enable `"fst_dt"` and other formats to make deep copies when needed (#1041, @MilesMcBain).
+* Add a new `copy` argument to allow `tar_format()` formats to set the `store_copy_object()` method (#1041, @MilesMcBain).
+* Shorten the output string returned by `tar_format()` when default methods are used.
+* Add a `change_directory` argument to `tar_source()` (#1040, @dipterix).
+* In `format = "url"` targets, implement retries and timeouts when connecting to URLs. The default timeout is 10 seconds, and the default retry interval is 1 second. Both are configurable via `tar_resources_url()` (#1048).
+* Use `parallelly::freePort()` in `tar_random_port()`.
+* Rename a target and a function in the `tar_script()` example pipeline (#1033, @b-rodrigues).
+* Edit the description.
+
 # targets 0.14.3
 
 * Handle encoding errors while trying to process error and warning messages (#1019, @adrian-quintario).

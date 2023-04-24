@@ -9,16 +9,38 @@
 #' @examples
 #' tar_random_port()
 tar_random_port <- function(lower = 49152L, upper = 65355L) {
-  sample(seq.int(from = lower, to = upper, by = 1L), size = 1L)
+  tar_assert_package("parallelly")
+  ports <- seq.int(from = lower, to = upper, by = 1L)
+  parallelly::freePort(ports = ports, default = NA_integer_)
 }
 
-url_exists <- function(url, handle = NULL) {
-  unlist(lapply(url, url_exists_impl, handle = handle))
+# Tested in tests/interactive/test-class_url.R,
+# not in testthat due to unreliable URLs.
+# nocov start
+url_exists <- function(
+  url,
+  handle = NULL,
+  seconds_interval,
+  seconds_timeout
+) {
+  tar_assert_internet()
+  handle <- url_handle(handle)
+  envir <- new.env(parent = emptyenv())
+  envir$out <- rep(FALSE, length(url))
+  retry(
+    ~{
+      envir$out <- map_lgl(url, url_exists_impl, handle = handle)
+      all(envir$out)
+    },
+    seconds_interval = seconds_interval,
+    seconds_timeout = seconds_timeout,
+    catch_error = TRUE,
+    message = paste("Cannot connect to url:", url)
+  )
+  envir$out
 }
 
 url_exists_impl <- function(url, handle) {
-  tar_assert_internet()
-  handle <- url_handle(handle)
   tryCatch(url_exists_try(url, handle), error = function(e) FALSE)
 }
 
@@ -27,8 +49,19 @@ url_exists_try <- function(url, handle) {
   url_status_success(req$status_code)
 }
 
-url_hash <- function(url, handle = NULL) {
-  digest_obj64(lapply(url, url_hash_impl, handle = handle))
+url_hash <- function(url, handle = NULL, seconds_interval, seconds_timeout) {
+  envir <- new.env(parent = emptyenv())
+  retry(
+    ~{
+      envir$out <- digest_obj64(lapply(url, url_hash_impl, handle = handle))
+      TRUE
+    },
+    seconds_interval = seconds_interval,
+    seconds_timeout = seconds_timeout,
+    catch_error = TRUE,
+    message = paste("Cannot connect to url:", url)
+  )
+  envir$out
 }
 
 url_hash_impl <- function(url, handle) {
@@ -84,6 +117,7 @@ url_process_error <- function(url, req, headers) {
 url_status_success <- function(status_code) {
   (status_code >= 200L) && (status_code < 300L)
 }
+# nocov end
 
 # Tested in tests/interactive/test-tar_watch.R. # nolint
 # nocov start

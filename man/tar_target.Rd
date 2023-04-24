@@ -264,6 +264,8 @@ a data frame. Optionally set the compression level for
 \code{fst::write_fst()} through \code{tar_resources()} and \code{tar_resources_fst()}.
 Requires the \code{fst} package (not installed by default).
 \item \code{"fst_dt"}: Same as \code{"fst"}, but the value is a \code{data.table}.
+Deep copies are made as appropriate in order to protect
+against the global effects of in-place modification.
 Optionally set the compression level the same way as for \code{"fst"}.
 \item \code{"fst_tbl"}: Same as \code{"fst"}, but the value is a \code{tibble}.
 Optionally set the compression level the same way as for \code{"fst"}.
@@ -343,8 +345,8 @@ data <- tar_target(target_name, get_data(!!n_rows), tidy_eval = FALSE)
 print(data)
 tar_option_reset()
 # In a pipeline:
-if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
-tar_dir({ # tar_dir() runs code from a temporary directory.
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script(tar_target(x, 1 + 1), ask = FALSE)
 tar_make()
 tar_read(x)

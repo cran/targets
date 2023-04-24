@@ -1,3 +1,6 @@
+# Tested in tests/interactive/test-class_url.R,
+# not in testthat due to unreliable URLs.
+# nocov start
 #' @export
 store_new.url <- function(format, file = NULL, resources = NULL) {
   store_url_new(file, resources)
@@ -51,7 +54,9 @@ store_assert_format.tar_url <- function(store, object, name) {
 store_hash_early.tar_url <- function(store) { # nolint
   store$file$hash <- url_hash(
     url = store$file$path,
-    handle = store$resources$url$handle %|||% store$resources$handle
+    handle = store$resources$url$handle %|||% store$resources$handle,
+    seconds_interval = store$resources$url$seconds_interval %|||% 0.1,
+    seconds_timeout = store$resources$url$seconds_timeout %|||% 5
   )
 }
 
@@ -74,11 +79,29 @@ store_sync_file_meta.tar_url <- function(store, target, meta) {
 #' @export
 store_has_correct_hash.tar_url <- function(store) {
   handle <- store$resources$url$handle %|||% store$resources$handle
-  all(url_exists(store$file$path, handle)) &&
-    identical(url_hash(store$file$path, handle), store$file$hash)
+  seconds_interval <- store$resources$url$seconds_interval %|||% 0.1
+  seconds_timeout <- store$resources$url$seconds_timeout %|||% 5
+  all(
+    url_exists(
+      url = store$file$path,
+      handle = handle,
+      seconds_interval = seconds_interval,
+      seconds_timeout = seconds_timeout
+    )
+  ) &&
+    identical(
+      url_hash(
+        url = store$file$path,
+        handle = handle,
+        seconds_interval = seconds_interval,
+        seconds_timeout = seconds_timeout
+      ),
+      store$file$hash
+    )
 }
 
 #' @export
 store_get_packages.tar_url <- function(store) {
   "curl"
 }
+# nocov end

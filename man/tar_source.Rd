@@ -4,14 +4,24 @@
 \alias{tar_source}
 \title{Run R scripts.}
 \usage{
-tar_source(files = "R", envir = targets::tar_option_get("envir"))
+tar_source(
+  files = "R",
+  envir = targets::tar_option_get("envir"),
+  change_directory = FALSE
+)
 }
 \arguments{
 \item{files}{Character vector of file and directory paths
-to look for R scripts to run.}
+to look for R scripts to run. Paths must either be absolute
+paths or must be relative to the current working directory
+just before the function call.}
 
 \item{envir}{Environment to run the scripts. Defaults to
 \code{tar_option_get("envir")}, the environment of the pipeline.}
+
+\item{change_directory}{Logical, whether to temporarily change
+the working directory to the directory of each R script
+before running it.}
 }
 \value{
 \code{NULL} (invisibly)
@@ -28,8 +38,8 @@ in \code{.R} or \code{.r}, and it runs each with
 \code{eval(parse(text = readLines(script_file, warn = FALSE)), envir)}.
 }
 \examples{
-if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
-tar_dir({ # tar_dir() runs code from a temporary directory.
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 # Running in tar_dir(), these files are written in tempdir().
 dir.create("R")
 writeLines("f <- function(x) x + 1", file.path("R", "functions.R"))

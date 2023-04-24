@@ -49,23 +49,28 @@
 #'   * `"verbose_positives"`: same as the `"verbose"` reporter
 #'     except without messages for skipped targets.
 #' @examples
-#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
-#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+#' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
-#'   tar_option_set()
-#'   list(tar_target(x, 1 + 1))
-#' })
-#' tar_make()
-#' tar_script({
-#'   tar_option_set()
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
 #'     tar_target(z, y1 + y2)
 #'   )
 #' }, ask = FALSE)
-#' prefix <- "y"
-#' tar_make(starts_with(!!prefix)) # Only processes y1 and y2.
+#' tar_make(starts_with("y")) # Only processes y1 and y2.
+#' # Distributed computing with crew:
+#' if (requireNamespace("crew", quietly = TRUE)) {
+#' tar_script({
+#'   tar_option_set(controller = crew::controller_local())
+#'   list(
+#'     tar_target(y1, 1 + 1),
+#'     tar_target(y2, 1 + 1),
+#'     tar_target(z, y1 + y2)
+#'   )
+#' }, ask = FALSE)
+#' tar_make()
+#' }
 #' })
 #' }
 tar_make <- function(
@@ -110,21 +115,35 @@ tar_make_inner <- function(
   shortcut,
   reporter
 ) {
-  pipeline_reset_deployments(pipeline)
   names <- tar_tidyselect_eval(names_quosure, pipeline_get_names(pipeline))
-  queue <- if_any(
-    pipeline_uses_priorities(pipeline),
-    "parallel",
-    "sequential"
-  )
-  local_init(
-    pipeline = pipeline,
-    meta = meta_init(path_store = path_store),
-    names = names,
-    shortcut = shortcut,
-    queue = queue,
-    reporter = reporter,
-    envir = tar_option_get("envir")
-  )$run()
+  controller <- tar_option_get("controller")
+  if (is.null(controller)) {
+    pipeline_reset_deployments(pipeline)
+    queue <- if_any(
+      pipeline_uses_priorities(pipeline),
+      "parallel",
+      "sequential"
+    )
+    local_init(
+      pipeline = pipeline,
+      meta = meta_init(path_store = path_store),
+      names = names,
+      shortcut = shortcut,
+      queue = queue,
+      reporter = reporter,
+      envir = tar_option_get("envir")
+    )$run()
+  } else {
+    crew_init(
+      pipeline = pipeline,
+      meta = meta_init(path_store = path_store),
+      names = names,
+      shortcut = shortcut,
+      queue = "parallel",
+      reporter = reporter,
+      envir = tar_option_get("envir"),
+      controller = controller
+    )$run()
+  }
   invisible()
 }

@@ -46,6 +46,8 @@
 #'     `fst::write_fst()` through `tar_resources()` and `tar_resources_fst()`.
 #'     Requires the `fst` package (not installed by default).
 #'   * `"fst_dt"`: Same as `"fst"`, but the value is a `data.table`.
+#'     Deep copies are made as appropriate in order to protect
+#'     against the global effects of in-place modification.
 #'     Optionally set the compression level the same way as for `"fst"`.
 #'   * `"fst_tbl"`: Same as `"fst"`, but the value is a `tibble`.
 #'     Optionally set the compression level the same way as for `"fst"`.
@@ -279,8 +281,8 @@
 #' print(data)
 #' tar_option_reset()
 #' # In a pipeline:
-#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
-#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+#' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script(tar_target(x, 1 + 1), ask = FALSE)
 #' tar_make()
 #' tar_read(x)

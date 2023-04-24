@@ -14,6 +14,43 @@ tar_test("tar_make() works", {
   expect_equal(out, 4L)
 })
 
+# TODO: reactivate all crew tests
+# after fully solving https://github.com/shikokuchuo/mirai/issues/53.
+tar_test("tar_make() works with crew", {
+  skip_crew()
+  skip_cran()
+  skip_on_os("windows")
+  skip_on_os("solaris")
+  skip_if_not_installed("R.utils")
+  should_skip <- identical(tolower(Sys.info()[["sysname"]]), "windows") &&
+    isTRUE(as.logical(Sys.getenv("CI")))
+  if (should_skip) {
+    skip("skipping on Windows CI.")
+  }
+  tar_script({
+    tar_option_set(controller = crew::crew_controller_local())
+    tar_target(
+      x,
+      TRUE,
+      memory = "transient",
+      garbage_collection = TRUE
+    )
+  })
+  on.exit({
+    gc()
+    crew_test_sleep()
+  })
+  R.utils::withTimeout(
+    tar_make(
+      reporter = "silent",
+      callr_function = NULL
+    ),
+    timeout = 180
+  )
+  out <- tar_read(x)
+  expect_equal(out, TRUE)
+})
+
 tar_test("empty tar_make() works even with names", {
   skip_cran()
   tar_script(list())

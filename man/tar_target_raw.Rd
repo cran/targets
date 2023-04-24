@@ -63,7 +63,13 @@ when loading \code{packages}.}
 
 \item{deps}{Optional character vector of the adjacent upstream
 dependencies of the target, including targets and global objects.
-If \code{NULL}, dependencies are resolved automatically as usual.}
+If \code{NULL}, dependencies are resolved automatically as usual.
+The \code{deps} argument is only for developers of extension
+packages such as \code{tarchetypes},
+not for end users, and it should almost never be used at all.
+In scenarios that at first appear to requires \code{deps},
+there is almost always a simpler and more robust workaround
+that avoids setting \code{deps}.}
 
 \item{string}{Optional string representation of the command.
 Internally, the string gets hashed to check if the command changed
@@ -261,8 +267,8 @@ target_list <- lapply(seq_len(4), function(i) {
 })
 print(target_list[[1]])
 print(target_list[[2]])
-if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
-tar_dir({ # tar_dir() runs code from a temporary directory.
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script(tar_target_raw("x", quote(1 + 1)), ask = FALSE)
 tar_make()
 tar_read(x)

@@ -21,8 +21,8 @@
 #' tar_target(x, 1)$settings$format
 #' tar_option_reset() # reset the format
 #' tar_target(x, 1)$settings$format
-#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
-#' tar_dir({ # tar_dir() runs code from a temporary directory.
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+#' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
 #'   tar_option_set(cue = tar_cue(mode = "always")) # All targets always run.
 #'   list(tar_target(x, 1), tar_target(y, 2))
@@ -65,6 +65,7 @@ tar_option_get <- function(name = NULL, option = NULL) {
     debug = tar_options$get_debug(),
     workspaces = tar_options$get_workspaces(),
     workspace_on_error = tar_options$get_workspace_on_error(),
-    seed = tar_options$get_seed()
+    seed = tar_options$get_seed(),
+    controller = tar_options$get_controller()
   )
 }

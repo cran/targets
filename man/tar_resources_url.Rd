@@ -4,11 +4,23 @@
 \alias{tar_resources_url}
 \title{Target resources: URL storage formats}
 \usage{
-tar_resources_url(handle = targets::tar_option_get("resources")$url$handle)
+tar_resources_url(
+  handle = targets::tar_option_get("resources")$url$handle,
+  seconds_interval = 1,
+  seconds_timeout = 10
+)
 }
 \arguments{
 \item{handle}{Object returned by \code{curl::new_handle} or \code{NULL}.
 Defaults to \code{NULL}.}
+
+\item{seconds_interval}{Nonnegative numeric of length 1,
+number of seconds to wait between individual retries
+while attempting to connect to the URL.}
+
+\item{seconds_timeout}{Nonnegative numeric of length 1,
+number of seconds to wait before timing out while trying to
+connect to the URL.}
 }
 \value{
 Object of class \code{"tar_resources_url"}, to be supplied
@@ -43,7 +55,7 @@ supply non-default resources to \code{tar_target()}.)
 }
 
 \examples{
-if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) {
+if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 # Somewhere in you target script file (usually _targets.R):
 tar_target(
   name,
@@ -59,6 +71,7 @@ tar_target(
 Other resources: 
 \code{\link{tar_resources_aws}()},
 \code{\link{tar_resources_clustermq}()},
+\code{\link{tar_resources_crew}()},
 \code{\link{tar_resources_feather}()},
 \code{\link{tar_resources_fst}()},
 \code{\link{tar_resources_future}()},
