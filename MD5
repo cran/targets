@@ -1,7 +1,7 @@
-3d5221717efa169c48431bd65e298bf7 *DESCRIPTION
+d44908ccab59b4692a5dc2fe0f1c4b36 *DESCRIPTION
 d00d099c18d809e93f2d77f6df7693ad *LICENSE
 97184625e58300c64a8a1927120577f2 *NAMESPACE
-10b59c998ff7990203ef31c0b1efa152 *NEWS.md
+17d37ffbe0c6ea458660a03dd8162e11 *NEWS.md
 119d77d3a30a05b669e86d494b7055cc *R/class_active.R
 bfd6085c756fc4bf3aad6506bc4d26d8 *R/class_algorithm.R
 41d572c8a17f023f7f4e5d6dada2c1de *R/class_aws.R
@@ -74,7 +74,7 @@ e0c19e3bed58c1f21231a663ec8b111d *R/class_resources_gcp.R
 7ad46fb743b2b96b183f5c7c0526be12 *R/class_resources_parquet.R
 8ecf2100b19f2fc89653ce38916ac06e *R/class_resources_qs.R
 397f1ff9f4ad032ec2b16b343874d8bd *R/class_resources_url.R
-2a012e3a20a6b7f651c0848c54ee8a3e *R/class_runtime.R
+973e582d390e32aec1099a175d9359da *R/class_runtime.R
 d8fae6da832b9cbcf90b1a7df61e507d *R/class_scheduler.R
 a64b0267acac59bb124d17b224b64637 *R/class_sequential.R
 a4133fe510254a273b69640f6a467408 *R/class_settings.R
@@ -247,11 +247,11 @@ d754b80e80217d163a8121e0f525597c *R/utils_logic.R
 b10c39d938c0dbc8db21a66e20d5b786 *R/utils_path.R
 7361d759a76f125443281d0cfc0c87ba *R/utils_rstudio_addins.R
 fef956e6b033fe775959bcf28603828e *R/utils_seed.R
-9c93bb50786ba43bc1a634a0b21966d0 *R/utils_time.R
+03c1f444293cfbcc6ffcd7f2676c321e *R/utils_time.R
 74ef3dca9d601dbf6e7a4c782076effa *R/utils_units.R
 e63d7989a117f1abab792814f8d67a05 *R/utils_url.R
-439bf689fa27cf9affd0335332142165 *build/partial.rdb
-1296c0cabfb9a7c2062e60756a671485 *build/vignette.rds
+7f2094c7b4d5faa522b624cffc621f8b *build/partial.rdb
+232e6610169bdd224326e1c1a485ad04 *build/vignette.rds
 51352549be0ea06db327af6828b8b5d1 *inst/CITATION
 4f202363f0e4e6294e41b6e772ee0aaf *inst/WORDLIST
 05e8e862ed8b6ea837e9d65e83768137 *inst/doc/overview.Rmd
@@ -460,6 +460,7 @@ d8b32ad0e9232d02ee29a2311f2404ba *tests/hpc/test-future_local.R
 53512212b429268cc0dd40b861cb0c07 *tests/hpc/test-future_sge.R
 e73d87c413e9f97e78125a1bf2ac4cff *tests/hpc/test-parallel.R
 d7e2d929212189ff824a1ac029420605 *tests/hpc/test-retrieval.R
+47de32c13640925ba0b7ff900065a550 *tests/interactive/_targets.R
 1658e77bd5bf4aab20142252172a9ccc *tests/interactive/test-backoff.R
 4421cf608d8717a1b1ff07082c6fe9da *tests/interactive/test-class_url.R
 66c2c05a3ea90a338d7484f824659ad1 *tests/interactive/test-database.R
@@ -496,7 +497,7 @@ a519d05b8c49be57cf0204cd4bc6639e *tests/testthat/helper-gcp.R
 3fc6451a32a2d579a49c07cf7a584bd3 *tests/testthat/helper-pipelines.R
 81c26b7d64402f4b24e938e721c6c91b *tests/testthat/helper-utils.R
 0e2ab2a010cace2b833e683336c6ae6e *tests/testthat/test-class_active.R
-61d371c5ce95608779377c0fbccce571 *tests/testthat/test-class_aws.R
+8ac820758c7626db396e993b1d23366c *tests/testthat/test-class_aws.R
 1e1cd559956e8dca23d580bdce60c8d5 *tests/testthat/test-class_aws_file.R
 fca7532998f87f7a7b41e2312e45a295 *tests/testthat/test-class_backoff.R
 2510c9e77a97708e35d158a4a24fcb75 *tests/testthat/test-class_branch.R
@@ -517,7 +518,7 @@ f1154d14bcc3c90f9409ac79cfefacde *tests/testthat/test-class_clustermq.R
 2804abac068f438a7467123eac7a2635 *tests/testthat/test-class_fst_dt.R
 2118b787f833241a5a6992f703dc717d *tests/testthat/test-class_fst_tbl.R
 f9da1f54d86e04fdfd88a03ebfa0ca41 *tests/testthat/test-class_future.R
-e9ad0eb86e48312754ada2961cdb42c6 *tests/testthat/test-class_gcp.R
+690140438c544375df33b590f020c0f7 *tests/testthat/test-class_gcp.R
 ba51431032413a951e2d29dded4dce9b *tests/testthat/test-class_gcp_file.R
 78604a29d5b991d2e345efbc190cc1f0 *tests/testthat/test-class_glimpse.R
 d93ba6a8b5ee5ab0057038871c8a9d2f *tests/testthat/test-class_graph.R
@@ -558,7 +559,7 @@ fb18e2dcef63ec95f8399c9dfdb2022e *tests/testthat/test-class_resources_gcp.R
 d2c52e9666dfd662601d5fb40925b81c *tests/testthat/test-class_resources_parquet.R
 37bcaabae0a84bda4bad6b9ee48bae32 *tests/testthat/test-class_resources_qs.R
 db471e53724cd7290123b446c22cd513 *tests/testthat/test-class_resources_url.R
-d117436a5510e940430a13e03d912272 *tests/testthat/test-class_runtime.R
+893c3d48272134ebd18d8f56ea892c5a *tests/testthat/test-class_runtime.R
 6ca0c73ec17065b33f4c6acbae0bb573 *tests/testthat/test-class_scheduler.R
 efb265d76a9bff2993d538a46418f451 *tests/testthat/test-class_sequential.R
 0bbb3805a94e9f2e65477951d1d84ed5 *tests/testthat/test-class_settings.R
@@ -693,5 +694,6 @@ ab7e295a030b5d976805ce5002f57027 *tests/testthat/test-utils_igraph.R
 cbbe7b573c4b28bb91ae292416ff1a34 *tests/testthat/test-utils_logic.R
 072d3fb9640cbed0e31565fb88f647e4 *tests/testthat/test-utils_oop.R
 724185be832a9306b4a9bb07cb92a9d9 *tests/testthat/test-utils_packages.R
+c88b426af582b10856a27176e551fdac *tests/testthat/test-utils_time.R
 81c24fdead64ab01a2ca740950d6ceb4 *tests/testthat/test-utils_units.R
 05e8e862ed8b6ea837e9d65e83768137 *vignettes/overview.Rmd
