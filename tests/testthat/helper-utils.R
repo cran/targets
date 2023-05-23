@@ -20,13 +20,6 @@ skip_cran <- function() {
   }
 }
 
-skip_crew <- function() {
-  skip_if_not_installed("crew")
-  if (!identical(tolower(Sys.getenv("TAR_TESTS_CREW")), "true")) {
-    skip("skipping crew tests")
-  }
-}
-
 skip_torch <- function() {
   skip_if_not_installed("torch")
   tryCatch(
@@ -41,5 +34,20 @@ crew_test_sleep <- function() {
   on_ci <- isTRUE(as.logical(Sys.getenv("CI")))
   if (on_windows || on_cran || on_ci) {
     Sys.sleep(2.25)
+  }
+}
+
+# TODO: always test and bump required versions when the next
+# crew/mirai/nanonext are on CRAN.
+skip_if_low_dep_versions <- function() {
+  sufficient_versions <- rlang::is_installed(
+    pkg = c(
+      "crew (>= 0.2.1)",
+      "mirai (>= 0.8.7.9012)",
+      "nanonext (>= 0.8.3.9007)"
+    )
+  )
+  if (!sufficient_versions) {
+    skip("version of crew, mirai, or nanonext is too low")
   }
 }

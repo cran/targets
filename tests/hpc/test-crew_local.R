@@ -1,8 +1,8 @@
 tar_test("packages are actually loaded", {
   skip_on_cran()
   skip_if_not_installed("crew")
-  tar_runtime$set_fun("tar_make")
-  on.exit(tar_runtime$unset_fun())
+  tar_runtime$fun <- "tar_make"
+  on.exit(tar_runtime$fun <- NULL)
   tar_option_set(envir = environment())
   x <- tar_target_raw(
     "x",
@@ -20,8 +20,8 @@ tar_test("packages are actually loaded", {
 tar_test("crew iteration loop can wait for and shut down workers", {
   skip_on_os("windows")
   skip_if_not_installed("crew")
-  tar_runtime$set_fun("tar_make")
-  on.exit(tar_runtime$unset_fun())
+  tar_runtime$fun <- "tar_make"
+  on.exit(tar_runtime$fun <- NULL)
   x <- tar_target_raw("x", quote(Sys.sleep(2)), garbage_collection = TRUE)
   y <- tar_target_raw("y", quote(list(x, a = "x")), garbage_collection = TRUE)
   pipeline <- pipeline_init(list(x, y))
@@ -58,8 +58,8 @@ tar_test("prevent high-memory data via target objects", {
   # and once outside tar_test() global environment.
   skip_on_cran()
   skip_if_not_installed("crew")
-  tar_runtime$set_fun("tar_make")
-  on.exit(tar_runtime$unset_fun())
+  tar_runtime$fun <- "tar_make"
+  on.exit(tar_runtime$fun <- NULL)
   t <- list(tar_target(x, runif(1e7), deployment = "main", format = "qs"))
   pipeline <- pipeline_init(list(t[[1]], tar_target(y, x)))
   controller <- crew::crew_controller_local()
@@ -117,5 +117,45 @@ tar_test("heavily parallel workload should run fast", {
     )
   })
   tar_make()
+  expect_equal(tar_outdated(callr_function = NULL), character(0))
+})
+
+tar_test("saturated controllers should not get tasks", {
+  # Also watch CPU usage on htop. Should be low.
+  skip_on_cran()
+  skip_if_not_installed("crew")
+  tar_script({
+    library(targets)
+    controller <- crew::crew_controller_local(workers = 2)
+    tar_option_set(controller = controller)
+    list(
+      tar_target(w, Sys.sleep(10)),
+      tar_target(x, Sys.sleep(10)),
+      tar_target(y, Sys.sleep(10)),
+      tar_target(z, Sys.sleep(10))
+    )
+  })
+  tar_make() # First two should start, then a pause, then the next two.
+  expect_equal(tar_outdated(callr_function = NULL), character(0))
+})
+
+tar_test("controllers are assessed individually for saturation in a group", {
+  skip_on_cran()
+  skip_if_not_installed("crew")
+  tar_script({
+    library(targets)
+    a <- crew::crew_controller_local(name = "a", workers = 2)
+    b <- crew::crew_controller_local(name = "b", workers = 2)
+    tar_option_set(controller = crew::crew_controller_group(a, b))
+    resources_a <- tar_resources(crew = tar_resources_crew(controller = "a"))
+    resources_b <- tar_resources(crew = tar_resources_crew(controller = "b"))
+    list(
+      tar_target(w, Sys.sleep(5), resources = resources_a),
+      tar_target(x, Sys.sleep(5), resources = resources_a),
+      tar_target(y, Sys.sleep(5), resources = resources_b),
+      tar_target(z, Sys.sleep(5), resources = resources_b)
+    )
+  })
+  tar_make() # All 4 should start at once and finish at once.
   expect_equal(tar_outdated(callr_function = NULL), character(0))
 })

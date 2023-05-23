@@ -3,33 +3,53 @@ store_init <- function(
   repository = "local",
   resources = list()
 ) {
+  format_dispatch <- store_format_dispatch(format)
+  repository_dispatch <- enclass(repository, repository)
   store <- store_new(
-    format = store_format_dispatch(format),
+    format = format_dispatch,
     file = file_init(),
     resources = resources
   )
+  class(store) <- store_class_format(format_dispatch)
   class(store) <- store_class_repository(
-    repository = enclass(repository, repository),
+    repository = repository_dispatch,
     store = store,
     format = format
   )
+  store_set_timestamp_trust(store)
   store
+}
+
+store_mock <- function(
+  format = "rds",
+  repository = "local"
+) {
+  mock <- enclass(list(), store_class_format(store_format_dispatch(format)))
+  class(mock) <- store_class_repository(
+    repository = enclass(repository, repository),
+    store = mock,
+    format = format
+  )
+  mock
 }
 
 store_new <- function(format, file = NULL, resources = NULL) {
   UseMethod("store_new")
 }
 
-
 #' @export
 store_new.default <- function(format, file = NULL, resources = NULL) {
-  store_new_default(file, resources)
+  store_new_default(file = file, resources = resources)
 }
 
-store_new_default <- function(file, resources) {
+store_new_default <- function(file = NULL, resources = NULL) {
   force(file)
   force(resources)
-  enclass(environment(), "tar_store")
+  environment()
+}
+
+store_class_format <- function(format) {
+  UseMethod("store_class_format")
 }
 
 store_class_repository <- function(repository, store, format) {
@@ -45,7 +65,11 @@ store_class_repository.default <- function(repository, store, format) {
 # because the responsibilities of store and format
 # would overlap too much.
 store_format_dispatch <- function(format) {
-  class <- gsub(pattern = "\\&.*$", replacement = "", x = format)
+  class <- if_any(
+    grepl(pattern = "format_custom", x = format, fixed = TRUE),
+    "format_custom",
+    format
+  )
   enclass(format, class)
 }
 
@@ -71,6 +95,15 @@ store_assert_repository_setting.default <- function(repository) {
 store_assert_repository_setting.local <- function(repository) {
 }
 
+store_set_timestamp_trust <- function(store) {
+  UseMethod("store_set_timestamp_trust")
+}
+
+#' @export
+store_set_timestamp_trust.default <- function(store) {
+  store$file$trust_timestamps <- tar_options$get_trust_object_timestamps()
+}
+
 store_read_object <- function(store) {
   UseMethod("store_read_object")
 }
@@ -91,14 +124,26 @@ store_write_object <- function(store, object) {
 store_write_object.default <- function(store, object) {
   path <- store$file$path
   stage <- store$file$stage
-  dir_create(dirname(path))
-  dir_create(dirname(stage))
+  dir_create_runtime(dirname(path))
+  dir_create_runtime(dirname(stage))
   store_write_path(store, store_convert_object(store, object), stage)
   file.rename(stage, path)
 }
 
 store_write_path <- function(store, object, path) {
   UseMethod("store_write_path")
+}
+
+store_cache_path <- function(store, path) {
+  UseMethod("store_cache_path")
+}
+
+# @export
+store_cache_path.default <- function(store, path) {
+  cache <- tar_runtime$file_exist
+  if (!is.null(cache)) {
+    counter_set_names(counter = cache, names = path)
+  }
 }
 
 store_exist_object <- function(store, name = NULL) {
@@ -265,22 +310,25 @@ store_ensure_correct_hash.default <- function(store, storage, deployment) {
   }
 }
 
-store_wait_correct_hash <- function(store, sleep = 0.01, timeout = 60) {
-  time_left <- timeout
-  while (time_left > 0) {
-    if (store_has_correct_hash(store)) {
-      return(invisible())
-    }
-    Sys.sleep(sleep)
-    time_left <- time_left - sleep
-  }
-  msg <- paste(
-    "Path",
-    paste(store$file$path, collapse = " "),
-    "does not exist or has incorrect hash.",
-    "File sync timed out."
+store_wait_correct_hash <- function(store) {
+  seconds_interval <- store$resources$network$seconds_interval %|||% 0.25
+  seconds_timeout <- store$resources$network$seconds_timeout %|||% 60
+  max_tries <- store$resources$network$max_tries %|||% Inf
+  verbose <- store$resources$network$verbose %|||% TRUE
+  retry_until_true(
+    fun = ~store_has_correct_hash(store),
+    seconds_interval = seconds_interval,
+    seconds_timeout = seconds_timeout,
+    max_tries = max_tries,
+    catch_error = FALSE,
+    message = paste(
+      "Path",
+      paste(store$file$path, collapse = " "),
+      "does not exist or has incorrect hash.",
+      "File sync timed out."
+    ),
+    verbose = verbose
   )
-  tar_throw_file(msg)
 }
 
 store_has_correct_hash <- function(store) {
@@ -289,7 +337,7 @@ store_has_correct_hash <- function(store) {
 
 #' @export
 store_has_correct_hash.default <- function(store) {
-  (sum(!is.na(store$file$path)) < 1L || file_exists_path(store$file)) &&
+  (all(is.na(store$file$path)) || file_exists_path(store$file)) &&
     file_has_correct_hash(store$file)
 }
 
@@ -311,7 +359,7 @@ store_sync_file_meta.default <- function(store, target, meta) {
     size = record$size,
     bytes = record$bytes
   )
-  info <- file_info(target$store$file$path)
+  info <- file_info_runtime(target$store$file$path)
   time <- file_time(info)
   bytes <- file_bytes(info)
   size <- file_size(bytes)

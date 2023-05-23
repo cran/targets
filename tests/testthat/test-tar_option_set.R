@@ -168,13 +168,45 @@ tar_test("priority", {
   )
 })
 
-tar_test("backoff", {
-  expect_equal(tar_option_get("backoff"), 0.1)
-  tar_option_set(backoff = 1)
-  expect_equal(tar_option_get("backoff"), 1)
+tar_test("classed backoff", {
+  backoff <- tar_option_get("backoff")
+  expect_s3_class(backoff, "tar_backoff")
+  expect_equal(backoff$min, 0.001)
+  expect_equal(backoff$max, 0.1)
+  expect_equal(backoff$rate, 1.5)
+  tar_option_set(backoff = tar_backoff(min = 0.5, max = 2, rate = 1.25))
+  backoff <- tar_option_get("backoff")
+  expect_s3_class(backoff, "tar_backoff")
+  expect_equal(backoff$min, 0.5)
+  expect_equal(backoff$max, 2)
+  expect_equal(backoff$rate, 1.25)
   tar_option_reset()
-  expect_equal(tar_option_get("backoff"), 0.1)
-  expect_error(tar_option_set(backoff = -1), class = "tar_condition_validate")
+  backoff <- tar_option_get("backoff")
+  expect_s3_class(backoff, "tar_backoff")
+  expect_equal(backoff$min, 0.001)
+  expect_equal(backoff$max, 0.1)
+  expect_equal(backoff$rate, 1.5)
+  expect_error(
+    suppressWarnings(tar_option_set(backoff = "nope")),
+    class = "tar_condition_validate"
+  )
+})
+
+tar_test("deprecated backoff", {
+  expect_equal(tar_option_get("backoff")$max, 0.1)
+  suppressWarnings(
+    expect_warning(
+      tar_option_set(backoff = 1),
+      class = "tar_condition_deprecate"
+    )
+  )
+  expect_equal(tar_option_get("backoff")$max, 1)
+  tar_option_reset()
+  expect_equal(tar_option_get("backoff")$max, 0.1)
+  expect_error(
+    suppressWarnings(tar_option_set(backoff = -1)),
+    class = "tar_condition_validate"
+  )
 })
 
 tar_test("resources", {
@@ -289,6 +321,18 @@ tar_test("controller", {
   expect_null(tar_option_get("controller"))
   expect_error(
     tar_option_set(controller = "?"),
+    class = "tar_condition_validate"
+  )
+})
+
+tar_test("trust_object_timestamps", {
+  expect_equal(tar_option_get("trust_object_timestamps"), TRUE)
+  tar_option_set(trust_object_timestamps = FALSE)
+  expect_equal(tar_option_get("trust_object_timestamps"), FALSE)
+  tar_option_reset()
+  expect_equal(tar_option_get("trust_object_timestamps"), TRUE)
+  expect_error(
+    tar_option_set(trust_object_timestamps = 0),
     class = "tar_condition_validate"
   )
 })

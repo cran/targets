@@ -1,3 +1,8 @@
+#' @export
+store_set_timestamp_trust.default <- function(store) {
+  store$file$trust_timestamps <- FALSE
+}
+
 # Semi-automated tests of Amazon S3 integration live in tests/aws/. # nolint
 # Same for other potential cloud storage functionality.
 # These tests should not be fully automated because they
@@ -10,10 +15,7 @@ store_tar_path.tar_cloud <- function(store, target, path_store) {
 
 #' @export
 store_produce_stage.tar_cloud <- function(store, name, object, path_store) {
-  path_scratch(
-    path_store = tempdir(),
-    pattern = paste0("targets_cloud_", name)
-  )
+  path_scratch(path_store = tempdir(), pattern = name)
 }
 
 #' @export
@@ -21,6 +23,10 @@ store_write_object.tar_cloud <- function(store, object) {
   stage <- store$file$stage
   dir_create(dirname(stage))
   store_write_path(store, store_convert_object(store, object), stage)
+}
+
+#' @export
+store_cache_path.tar_cloud <- function(store, path) {
 }
 
 #' @export

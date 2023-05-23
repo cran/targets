@@ -14,13 +14,11 @@ tar_test("tar_make() works", {
   expect_equal(out, 4L)
 })
 
-# TODO: reactivate all crew tests
-# after fully solving https://github.com/shikokuchuo/mirai/issues/53.
 tar_test("tar_make() works with crew", {
-  skip_crew()
-  skip_cran()
+  skip_if_low_dep_versions()
   skip_on_os("windows")
   skip_on_os("solaris")
+  skip_if_not_installed("crew")
   skip_if_not_installed("R.utils")
   should_skip <- identical(tolower(Sys.info()[["sysname"]]), "windows") &&
     isTRUE(as.logical(Sys.getenv("CI")))
@@ -28,7 +26,10 @@ tar_test("tar_make() works with crew", {
     skip("skipping on Windows CI.")
   }
   tar_script({
-    tar_option_set(controller = crew::crew_controller_local())
+    tar_option_set(
+      controller = crew::crew_controller_local(seconds_interval = 0.5),
+      backoff = tar_backoff(min = 0.5, max = 0.5)
+    )
     tar_target(
       x,
       TRUE,
@@ -40,15 +41,18 @@ tar_test("tar_make() works with crew", {
     gc()
     crew_test_sleep()
   })
+  expect_error(tar_crew(), class = "tar_condition_validate")
   R.utils::withTimeout(
     tar_make(
       reporter = "silent",
-      callr_function = NULL
+      callr_function = NULL,
+      garbage_collection = TRUE
     ),
-    timeout = 180
+    timeout = 360
   )
   out <- tar_read(x)
   expect_equal(out, TRUE)
+  expect_true(is.data.frame(tar_crew()))
 })
 
 tar_test("empty tar_make() works even with names", {
@@ -115,7 +119,9 @@ tar_test("tar_make() finds the correct environment", {
 
 tar_test("tar_make() handles callr errors", {
   skip_cran()
-  withr::local_envvar(list(TAR_TEST = "false")) # covers some lines
+  old <- Sys.getenv("TAR_TEST")
+  on.exit(Sys.setenv(TAR_TEST = old))
+  Sys.setenv(TAR_TEST = "false")
   tar_script({
     list(
       tar_target(x, "x"),
@@ -244,4 +250,22 @@ tar_test("null environment", {
   tar_script(tar_target(x, "x"))
   tar_make(callr_function = NULL, envir = NULL)
   expect_equal(tar_read(x), "x")
+})
+
+tar_test("working directory antipattern", {
+  skip_cran()
+  dir.create("x")
+  tar_script(
+    list(
+      tar_target(x, {
+        setwd("x")
+        1
+      }),
+      tar_target(y, x)
+    )
+  )
+  expect_error(
+    suppressWarnings(tar_make(callr_function = NULL)),
+    class = "tar_condition_run"
+  )
 })

@@ -25,25 +25,27 @@ tar_test("command_produce_build()", {
 tar_test("command$produce_build() uses seed", {
   x <- command_init(expr = quote(sample.int(1e9, 1L)))
   x$seed <- 0L
-  exp0 <- withr::with_seed(0L, sample.int(1e9, 1L))
+  sample_with_seed <- function(seed) {
+    # Borrowed from https://github.com/r-lib/withr/blob/main/R/seed.R
+    # under the MIT license. See the NOTICE file
+    # in the targets package source.
+    old_seed <- .GlobalEnv[[".Random.seed"]]
+    set.seed(seed)
+    on.exit(restore_seed(old_seed))
+    sample.int(1e9, 1L)
+  }
+  exp0 <- sample_with_seed(0L)
   for (i in seq_len(2)) {
     out <- command_produce_build(x, environment())$object
     expect_equal(out, exp0)
   }
   x$seed <- 1L
-  exp1 <- withr::with_seed(1L, sample.int(1e9, 1))
+  exp1 <- sample_with_seed(1L)
   for (i in seq_len(2)) {
     out <- command_produce_build(x, environment())$object
     expect_equal(out, exp1)
   }
   expect_false(exp0 == exp1)
-})
-
-tar_test("command$produce_build() does not change working dir", {
-  dir <- getwd()
-  x <- command_init(expr = quote(setwd(tempdir()))) # nolint
-  command_produce_build(x, environment())
-  expect_equal(getwd(), dir)
 })
 
 tar_test("command_init(deps)", {

@@ -78,11 +78,11 @@ tar_path_target <- function(
 
 tar_path_running <- function(default, path_store) {
   if_any(
-    tar_runtime$exists_target(),
+    !is.null(tar_runtime$target),
     store_tar_path(
-      tar_runtime$get_target()$store,
-      tar_runtime$get_target(),
-      tar_runtime$get_store()
+      tar_runtime$target$store,
+      tar_runtime$target,
+      tar_runtime$store
     ),
     as.character(default)
   )

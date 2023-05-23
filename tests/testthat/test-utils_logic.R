@@ -31,10 +31,10 @@ tar_test("if_any()", {
   expect_equal(if_any(FALSE, "x", "y"), "y")
 })
 
-tar_test("retry() with argless function", {
-  expect_silent(retry(fun = function() TRUE))
+tar_test("retry_until_true() with argless function", {
+  expect_silent(retry_until_true(fun = function() TRUE))
   expect_error(
-    retry(
+    retry_until_true(
       fun = function() FALSE,
       seconds_interval = 0.01,
       seconds_timeout = 0.05
@@ -43,13 +43,13 @@ tar_test("retry() with argless function", {
   )
 })
 
-tar_test("retry() on a file", {
+tar_test("retry_until_true() on a file", {
   skip_on_cran()
   tmp <- tempfile()
   fun <- function(x) file.exists(x)
   args <- list(x = tmp)
   expect_error(
-    retry(
+    retry_until_true(
       fun = ~FALSE,
       args = args,
       seconds_interval = 0.01,
@@ -59,16 +59,16 @@ tar_test("retry() on a file", {
   )
   file.create(tmp)
   on.exit(unlink(tmp))
-  expect_silent(retry(fun = fun, args = args))
+  expect_silent(retry_until_true(fun = fun, args = args))
 })
 
-tar_test("retry(catch_error = TRUE)", {
+tar_test("retry_until_true(catch_error = TRUE)", {
   skip_on_cran()
   tmp <- tempfile()
   fun <- function(x) file.exists(x)
   args <- list(x = tmp)
   expect_error(
-    retry(
+    retry_until_true(
       fun = ~rlang::abort(message = "error", class = "ad_hoc"),
       args = args,
       seconds_interval = 0.01,
@@ -79,13 +79,13 @@ tar_test("retry(catch_error = TRUE)", {
   )
 })
 
-tar_test("retry(catch_error = FALSE)", {
+tar_test("retry_until_true(catch_error = FALSE)", {
   skip_on_cran()
   tmp <- tempfile()
   fun <- function(x) file.exists(x)
   args <- list(x = tmp)
   expect_error(
-    retry(
+    retry_until_true(
       fun = ~rlang::abort(message = "error", class = "ad_hoc"),
       args = args,
       seconds_interval = 0.01,
@@ -94,4 +94,23 @@ tar_test("retry(catch_error = FALSE)", {
     ),
     class = "ad_hoc"
   )
+})
+
+tar_test("retry_until_true() max_tries", {
+  skip_on_cran()
+  envir <- new.env(parent = emptyenv())
+  envir$count <- 0L
+  expect_error(
+    retry_until_true(
+      fun = ~{
+        envir$count <- envir$count + 1L
+        FALSE
+      },
+      seconds_interval = 0.001,
+      seconds_timeout = 60,
+      max_tries = 5L
+    ),
+    class = "tar_condition_expire"
+  )
+  expect_equal(envir$count, 5L)
 })

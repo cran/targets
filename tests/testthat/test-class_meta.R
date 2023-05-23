@@ -10,7 +10,12 @@ tar_test("meta$depends", {
 
 tar_test("meta$get_record() for internal storage", {
   meta <- meta_init()
-  row <- list(name = "x", type = "cross", path = list(letters))
+  row <- list(
+    name = "x",
+    type = "cross",
+    format = "rds",
+    path = list(letters)
+  )
   meta$database$set_row(row)
   record <- meta$get_record("x")
   expect_silent(record_validate(record))
@@ -44,13 +49,14 @@ tar_test("builder metadata recording", {
   meta <- local$meta
   db <- meta$database
   db$ensure_storage()
+  expect_gt(nrow(db$read_data()), 0L)
   db$reset_storage()
-  data <- db$read_data()
-  expect_equal(nrow(data), 0L)
+  expect_equal(nrow(db$read_data()), 0L)
   meta$insert_record(target_produce_record(target, pipeline, meta))
   expect_true(db$exists_row(target_get_name(target)))
-  data <- db$read_data()
-  expect_equal(nrow(data), 1L)
+  expect_equal(nrow(db$read_data()), 0L)
+  db$dequeue_rows()
+  expect_equal(nrow(db$read_data()), 1L)
 })
 
 tar_test("meta$record_imports()", {

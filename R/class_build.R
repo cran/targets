@@ -29,7 +29,7 @@ build_init <- function(
     NULL
   }
   state <- new.env(hash = FALSE, parent = emptyenv())
-  start <- build_time_seconds()
+  start <- time_seconds()
   object <- tryCatch(
     withCallingHandlers(
       build_run_expr(expr, envir, seed, packages, library),
@@ -44,7 +44,7 @@ build_init <- function(
     state$warnings <- build_message_text_substr(state$warnings)
   }
   metrics <- metrics_new(
-    seconds = round(build_time_seconds() - start, 3),
+    seconds = round(time_seconds() - start, 3),
     warnings = state$warnings,
     error = state$error,
     error_class = state$error_class,
@@ -62,14 +62,15 @@ build_new <- function(object = NULL, metrics = NULL) {
 
 build_run_expr <- function(expr, envir, seed, packages, library) {
   load_packages(packages = packages, library = library)
-  withr::with_dir(
-    getwd(),
-    if_any(
-      anyNA(seed),
-      build_eval_fce17be7(expr, envir),
-      withr::with_seed(seed, build_eval_fce17be7(expr, envir))
-    )
-  )
+  if (!anyNA(seed)) {
+    # Borrowed from https://github.com/r-lib/withr/blob/main/R/seed.R
+    # under the MIT license. See the NOTICE file
+    # in the targets package source.
+    old_seed <- .GlobalEnv[[".Random.seed"]]
+    set.seed(seed)
+    on.exit(restore_seed(old_seed), add = TRUE)
+  }
+  build_eval_fce17be7(expr, envir)
 }
 
 # Marker to shorten tracebacks.
@@ -89,10 +90,6 @@ build_traceback.tar_condition_cancel <- function(condition, calls) {
 #' @export
 build_traceback.default <- function(condition, calls) {
   as.character(calls)
-}
-
-build_time_seconds <- function() {
-  as.numeric(proc.time()["elapsed"])
 }
 
 build_message <- function(condition, prefix = character(0)) {

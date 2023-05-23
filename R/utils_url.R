@@ -7,7 +7,9 @@
 #' @param lower Integer of length 1, lowest possible port.
 #' @param upper Integer of length 1, highest possible port.
 #' @examples
+#' if (requireNamespace("parallelly", quietly = TRUE)) {
 #' tar_random_port()
+#' }
 tar_random_port <- function(lower = 49152L, upper = 65355L) {
   tar_assert_package("parallelly")
   ports <- seq.int(from = lower, to = upper, by = 1L)
@@ -21,21 +23,25 @@ url_exists <- function(
   url,
   handle = NULL,
   seconds_interval,
-  seconds_timeout
+  seconds_timeout,
+  max_tries,
+  verbose
 ) {
   tar_assert_internet()
   handle <- url_handle(handle)
   envir <- new.env(parent = emptyenv())
   envir$out <- rep(FALSE, length(url))
-  retry(
+  retry_until_true(
     ~{
       envir$out <- map_lgl(url, url_exists_impl, handle = handle)
       all(envir$out)
     },
     seconds_interval = seconds_interval,
     seconds_timeout = seconds_timeout,
+    max_tries = max_tries,
     catch_error = TRUE,
-    message = paste("Cannot connect to url:", url)
+    message = paste("Cannot connect to url:", url),
+    verbose = verbose
   )
   envir$out
 }
@@ -49,17 +55,26 @@ url_exists_try <- function(url, handle) {
   url_status_success(req$status_code)
 }
 
-url_hash <- function(url, handle = NULL, seconds_interval, seconds_timeout) {
+url_hash <- function(
+  url,
+  handle = NULL,
+  seconds_interval,
+  seconds_timeout,
+  max_tries,
+  verbose
+) {
   envir <- new.env(parent = emptyenv())
-  retry(
+  retry_until_true(
     ~{
       envir$out <- digest_obj64(lapply(url, url_hash_impl, handle = handle))
       TRUE
     },
     seconds_interval = seconds_interval,
     seconds_timeout = seconds_timeout,
+    max_tries = max_tries,
     catch_error = TRUE,
-    message = paste("Cannot connect to url:", url)
+    message = paste("Cannot connect to url:", url),
+    verbose = verbose
   )
   envir$out
 }

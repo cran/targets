@@ -5,6 +5,8 @@ clustermq_init <- function(
   shortcut = FALSE,
   queue = "parallel",
   reporter = "verbose",
+  seconds_interval = 0.5,
+  garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   workers = 1L,
   log_worker = FALSE
@@ -16,6 +18,8 @@ clustermq_init <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
+    seconds_interval = seconds_interval,
+    garbage_collection = garbage_collection,
     envir = envir,
     workers = as.integer(workers),
     log_worker = log_worker
@@ -29,9 +33,10 @@ clustermq_new <- function(
   shortcut = NULL,
   queue = NULL,
   reporter = NULL,
+  seconds_interval = NULL,
+  garbage_collection = NULL,
   envir = NULL,
   workers = NULL,
-  crew = NULL,
   log_worker = NULL
 ) {
   clustermq_class$new(
@@ -41,9 +46,10 @@ clustermq_new <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
+    seconds_interval = seconds_interval,
+    garbage_collection = garbage_collection,
     envir = envir,
     workers = workers,
-    crew = crew,
     log_worker = log_worker
   )
 }
@@ -55,8 +61,8 @@ clustermq_class <- R6::R6Class(
   cloneable = FALSE,
   public = list(
     workers = NULL,
-    crew = NULL,
     log_worker = NULL,
+    worker_list = NULL,
     initialize = function(
       pipeline = NULL,
       meta = NULL,
@@ -64,9 +70,10 @@ clustermq_class <- R6::R6Class(
       shortcut = NULL,
       queue = NULL,
       reporter = NULL,
+      seconds_interval = NULL,
+      garbage_collection = NULL,
       envir = NULL,
       workers = NULL,
-      crew = NULL,
       log_worker = NULL
     ) {
       super$initialize(
@@ -76,10 +83,11 @@ clustermq_class <- R6::R6Class(
         shortcut = shortcut,
         queue = queue,
         reporter = reporter,
+        seconds_interval = seconds_interval,
+        garbage_collection = garbage_collection,
         envir = envir
       )
       self$workers <- as.integer(workers)
-      self$crew <- crew
       self$log_worker <- log_worker
     },
     # Need to suppress tests on covr only, due to
@@ -88,12 +96,12 @@ clustermq_class <- R6::R6Class(
     # due to https://github.com/ropensci/targets/discussions/780
     # nocov start
     set_common_data = function() {
-      self$crew$set_common_data(
+      self$worker_list$set_common_data(
         fun = identity,
         const = list(),
         export = self$produce_exports(
           envir = self$envir,
-          path_store = self$meta$get_path_store()
+          path_store = self$meta$store
         ),
         rettype = list(),
         pkgs = "targets",
@@ -101,18 +109,18 @@ clustermq_class <- R6::R6Class(
         token = "set_common_data_token"
       )
     },
-    create_crew = function() {
-      crew <- clustermq::workers(
+    create_worker_list = function() {
+      worker_list <- clustermq::workers(
         n_jobs = self$workers,
         template = tar_option_get("resources")$clustermq$template %|||%
           tar_option_get("resources") %|||%
           list(),
         log_worker = self$log_worker
       )
-      self$crew <- crew
+      self$worker_list <- worker_list
     },
-    start_crew = function() {
-      self$create_crew()
+    start_worker_list = function() {
+      self$create_worker_list()
       self$set_common_data()
     },
     any_upcoming_jobs = function() {
@@ -123,6 +131,9 @@ clustermq_class <- R6::R6Class(
       length(need_workers) > 0L
     },
     run_worker = function(target) {
+      if (self$garbage_collection) {
+        gc()
+      }
       args <- list(
         expr = quote(
           targets::target_run_worker(
@@ -136,14 +147,14 @@ clustermq_class <- R6::R6Class(
         ),
         env = list(target = target)
       )
-      do.call(what = self$crew$send_call, args = args)
+      do.call(what = self$worker_list$send_call, args = args)
     },
     run_main = function(target) {
       self$wait_or_shutdown()
       target_run(
         target = target,
         envir = self$envir,
-        path_store = self$meta$get_path_store()
+        path_store = self$meta$store
       )
       target_conclude(
         target,
@@ -154,7 +165,6 @@ clustermq_class <- R6::R6Class(
     },
     run_target = function(name) {
       target <- pipeline_get_target(self$pipeline, name)
-      target_gc(target)
       target_prepare(target, self$pipeline, self$scheduler)
       if_any(
         target_should_run_worker(target),
@@ -176,7 +186,7 @@ clustermq_class <- R6::R6Class(
     },
     shut_down_worker = function() {
       if (self$workers > 0L) {
-        self$crew$send_shutdown_worker()
+        self$worker_list$send_shutdown_worker()
         self$workers <- self$workers - 1L
         self$scheduler$backoff$reset()
       }
@@ -190,7 +200,7 @@ clustermq_class <- R6::R6Class(
       try(
         if_any(
           self$any_upcoming_jobs(),
-          self$crew$send_wait(),
+          self$worker_list$send_wait(),
           self$shut_down_worker()
         )
       )
@@ -223,11 +233,16 @@ clustermq_class <- R6::R6Class(
       self$scheduler$backoff$reset()
     },
     iterate = function() {
-      message <- if_any(self$workers > 0L, self$crew$receive_data(), list())
+      self$poll_meta()
+      message <- if_any(
+        self$workers > 0L,
+        self$worker_list$receive_data(),
+        list()
+      )
       self$conclude_worker_target(message$result)
       token <- message$token
       if (self$workers > 0L && !identical(token, "set_common_data_token")) {
-        self$crew$send_common_data()
+        self$worker_list$send_common_data()
       } else if (self$scheduler$queue$is_nonempty()) {
         self$next_target()
       } else {
@@ -241,17 +256,19 @@ clustermq_class <- R6::R6Class(
         names = self$names,
         queue = self$queue,
         reporter = self$reporter,
+        garbage_collection = self$garbage_collection,
+        seconds_interval = self$seconds_interval,
         envir = self$envir,
         scheduler = self$scheduler
       )
     },
     run_clustermq = function() {
-      on.exit(try(self$crew$finalize()))
-      self$start_crew()
+      on.exit(try(self$worker_list$finalize()))
+      self$start_worker_list()
       while (self$scheduler$progress$any_remaining()) {
         self$iterate()
       }
-      if (identical(try(self$crew$cleanup()), TRUE)) {
+      if (identical(try(self$worker_list$cleanup()), TRUE)) {
         on.exit()
       }
     },

@@ -72,20 +72,9 @@
 #'   To include package objects as upstream dependencies in the pipeline,
 #'   assign the package to the `packages` and `imports` arguments
 #'   of `tar_option_set()`.
-#' @param backoff Numeric of length 1, must be greater than or equal to 0.01.
-#'   Maximum upper bound of the random polling interval
-#'   for the priority queue (seconds).
-#'   In high-performance computing (e.g. [tar_make_clustermq()]
-#'   and [tar_make_future()]) it can be expensive to repeatedly poll the
-#'   priority queue if no targets are ready to process. The number of seconds
-#'   between polls is `runif(1, 0.001, max(backoff, 0.001 * 1.5 ^ index))`,
-#'   where `index` is the number of consecutive polls so far that found
-#'   no targets ready to skip or run.
-#'   (If no target is ready, `index` goes up by 1. If a target is ready,
-#'   `index` resets to 0. For more information on exponential,
-#'   backoff, visit <https://en.wikipedia.org/wiki/Exponential_backoff>).
-#'   Raising `backoff` is kinder to the CPU etc. but may incur delays
-#'   in some instances.
+#' @param backoff An object from [`tar_backoff()`] configuring the exponential
+#'   backoff algorithm of the pipeline. See [`tar_backoff()`] for details.
+#'   A numeric argument for `backoff` is still allowed, but deprecated.
 #' @param debug Character vector of names of targets to run in debug mode.
 #'   To use effectively, you must set `callr_function = NULL` and
 #'   restart your R session just before running. You should also
@@ -110,7 +99,7 @@
 #'   target-specific pseudo-random number generator seeds.
 #'   These target-specific seeds are deterministic and depend on
 #'   `tar_option_get("seed")` and the target name. Target-specific seeds
-#'   are applied to each target's command using `withr::with_seed()`,
+#'   are safely and reproducibly applied to each target's command,
 #'   and they are stored in the metadata and retrievable with
 #'   [tar_meta()] or [tar_seed()].
 #'
@@ -131,6 +120,40 @@
 #' @param controller A controller or controller group object
 #'   produced by the `crew` R package. `crew` brings auto-scaled
 #'   distributed computing to [tar_make()].
+#' @param trust_object_timestamps Logical of length 1, whether to use
+#'   file system modification timestamps to check whether the target output
+#'   data files in `_targets/objects/` are up to date. This is an advanced
+#'   setting and usually does not need to be set by the user
+#'   except on old or difficult platforms.
+#'
+#'   If `trust_object_timestamps`
+#'   is `TRUE` (default), then `targets` looks at the timestamp first.
+#'   If it agrees with the timestamp recorded in the metadata, then `targets`
+#'   considers the file unchanged. If the timestamps disagree, then `targets`
+#'   recomputes the hash to make a final determination.
+#'   This practice reduces the number of hash computations
+#'   and thus saves time.
+#'
+#'   However, timestamp precision varies from a few
+#'   nanoseconds at best to 2 entire seconds at worst, and timestamps
+#'   with poor precision should not be fully trusted if there is any
+#'   possibility that you will manually change the file within 2 seconds
+#'   after the pipeline finishes.
+#'   If the data store is on a file system with low-precision timestamps,
+#'   then you may
+#'   consider setting `trust_object_timestamps` to `FALSE` so `targets`
+#'   errs on the safe side and always recomputes the hashes of files in
+#'   `_targets/objects/`.
+#'
+#'   To check if your
+#'   file system has low-precision timestamps, you can run
+#'   `file.create("x"); nanonext::msleep(1); file.create("y");`
+#'   from within the directory containing the `_targets` data store
+#'   and then check
+#'   `difftime(file.mtime("y"), file.mtime("x"), units = "secs")`.
+#'   If the value from `difftime()` is around 0.001 seconds
+#'   (must be strictly above 0 and below 1) then you do not need to set
+#'   `trust_object_timestamps = FALSE`.
 #' @examples
 #' tar_option_get("format") # default format before we set anything
 #' tar_target(x, 1)$settings$format
@@ -172,7 +195,8 @@ tar_option_set <- function(
   workspaces = NULL,
   workspace_on_error = NULL,
   seed = NULL,
-  controller = NULL
+  controller = NULL,
+  trust_object_timestamps = NULL
 ) {
   force(envir)
   if_any(is.null(tidy_eval), NULL, tar_options$set_tidy_eval(tidy_eval))
@@ -206,5 +230,10 @@ tar_option_set <- function(
   )
   if_any(is.null(seed), NULL, tar_options$set_seed(seed))
   if_any(is.null(controller), NULL, tar_options$set_controller(controller))
+  if_any(
+    is.null(trust_object_timestamps),
+    NULL,
+    tar_options$set_trust_object_timestamps(trust_object_timestamps)
+  )
   invisible()
 }

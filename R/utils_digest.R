@@ -13,7 +13,15 @@ digest_chr64 <- function(object, ...) {
 }
 
 digest_file64 <- function(object, ...) {
-  unname(map_chr(object, vdigest64_file, serialize = FALSE, file = TRUE, ...))
+  vapply(
+    X = object,
+    FUN = vdigest64_file,
+    serialize = FALSE,
+    file = TRUE,
+    ...,
+    FUN.VALUE = character(1L),
+    USE.NAMES = FALSE
+  )
 }
 
 digest_obj32 <- function(object, ...) {
@@ -25,10 +33,11 @@ digest_obj64 <- function(object, ...) {
 }
 
 produce_seed <- function(scalar) {
+  seed <- tar_options$get_seed()
   if_any(
-    anyNA(tar_option_get("seed")),
+    anyNA(seed),
     NA_integer_,
-    digest::digest2int(as.character(scalar), seed = tar_option_get("seed"))
+    digest::digest2int(as.character(scalar), seed = seed)
   )
 }
 

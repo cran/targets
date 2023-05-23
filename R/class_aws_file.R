@@ -22,7 +22,7 @@ store_aws_file_stage <- function(path) {
       length(path) <= 2L, # targets 0.4.2 and under
       path_scratch(
         path_store = tempdir(),
-        paste0("targets_aws_file_", store_aws_key(path))
+        paste0("targets_aws_file_", basename(store_aws_key(path)))
       ),
       path[3]
     ),
@@ -56,18 +56,35 @@ store_hash_early.tar_aws_file <- function(store) { # nolint
 #' @export
 store_read_object.tar_aws_file <- function(store) {
   path <- store$file$path
+  key <- store_aws_key(path)
+  bucket <- store_aws_bucket(path)
   scratch <- path_scratch(
     path_store = tempdir(),
-    pattern = "targets_aws_file_"
+    pattern = basename(store_aws_key(path))
   )
   dir_create(dirname(scratch))
-  aws_s3_download(
-    key = store_aws_key(path),
-    bucket = store_aws_bucket(path),
-    file = scratch,
-    region = store_aws_region(path),
-    version = store_aws_version(path),
-    args = store$resources$aws$args
+  seconds_interval <- store$resources$network$seconds_interval %|||% 1
+  seconds_timeout <- store$resources$network$seconds_timeout %|||% 30
+  max_tries <- store$resources$network$max_tries %|||% Inf
+  verbose <- store$resources$network$verbose %|||% TRUE
+  retry_until_true(
+    ~{
+      aws_s3_download(
+        key = key,
+        bucket = bucket,
+        file = scratch,
+        region = store_aws_region(path),
+        version = store_aws_version(path),
+        args = store$resources$aws$args
+      )
+      TRUE
+    },
+    seconds_interval = seconds_interval,
+    seconds_timeout = seconds_timeout,
+    max_tries = max_tries,
+    catch_error = TRUE,
+    message = sprintf("Cannot download object %s from bucket %s", key, bucket),
+    verbose = verbose
   )
   stage <- store_aws_file_stage(path)
   dir_create(dirname(stage))

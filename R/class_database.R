@@ -87,8 +87,8 @@ database_class <- R6::R6Class(
       }
     },
     insert_row = function(row) {
-      self$write_row(row)
       self$set_row(row)
+      self$write_row(row)
     },
     append_data = function(data) {
       self$append_storage(data)
@@ -103,8 +103,9 @@ database_class <- R6::R6Class(
       as.list(data)[self$header]
     },
     enqueue_row = function(row) {
+      self$set_row(row)
       line <- self$produce_line(self$select_cols(row))
-      self$queue <- c(self$queue, line)
+      self$queue[length(self$queue) + 1L] <- line
     },
     dequeue_rows = function() {
       if (length(self$queue)) {
@@ -120,7 +121,8 @@ database_class <- R6::R6Class(
       attempt <- 0L
       # Tested in tests/interactive/test-database.R
       # nocov start
-      while (!is.null(try(self$try_append_lines(lines)))) {
+      while (!is.null(try(self$try_append_lines(lines), silent = in_test()))) {
+        compare_working_directories()
         msg <- paste("Reattempting to append lines to", self$path)
         cli_mark_info(msg)
         Sys.sleep(stats::runif(1, 0.2, 0.25))
@@ -166,8 +168,10 @@ database_class <- R6::R6Class(
       file.rename(from = tmp, to = self$path)
     },
     produce_line = function(row) {
-      withr::local_options(.new = list(OutDec = "."))
-      paste(map_chr(row, self$produce_subline), collapse = database_sep_outer)
+      old <- options(OutDec = ".")
+      on.exit(options(old))
+      sublines <- vapply(row, self$produce_subline, FUN.VALUE = character(1))
+      paste(sublines, collapse = database_sep_outer)
     },
     produce_subline = function(element) {
       element <- replace_na(element, "")
@@ -295,6 +299,26 @@ database_validate_file <- function(database) {
     "either delete the data store with tar_destroy() ",
     "or downgrade the targets package to an earlier version."
   )
+}
+
+compare_working_directories <- function() {
+  current <- getwd()
+  expected <- tar_runtime$working_directory
+  if (!is.null(expected) && (current != expected)) {
+    tar_throw_run(
+      sprintf(
+        paste(
+          "at least one of your targets changed your working directory",
+          "from '%s' to '%s'. A target must not change the working",
+          "directory. If you absolutely must change the working directory,",
+          "then please wrap the relevant R code in withr::with_dir()",
+          "to restore the working directory to its original state."
+        ),
+        expected,
+        current
+      )
+    )
+  }
 }
 
 database_sep_outer <- "|"

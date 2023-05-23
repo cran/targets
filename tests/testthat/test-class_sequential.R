@@ -1,4 +1,4 @@
-tar_test("sequential$dequeue()", {
+tar_test("sequential$dequeue() and sequential$peek()", {
   q <- queue_init("sequential", letters)
   expect_equal(q$dequeue(), "a")
   expect_equal(q$dequeue(), "b")
@@ -9,6 +9,18 @@ tar_test("sequential$prepend()", {
   q <- sequential_init(c("a", "b"))
   q$prepend(c("c", "d"))
   expect_equal(q$data, c("c", "d", "a", "b"))
+})
+
+tar_test("sequential$append()", {
+  q <- sequential_init(c("a", "b"))
+  q$append(c("c", "d"))
+  expect_equal(q$data, c("a", "b", "c", "d"))
+})
+
+tar_test("sequential$append0()", {
+  q <- sequential_init(c("a", "b"))
+  q$append0(name = "c")
+  expect_equal(q$data, c("a", "b", "c"))
 })
 
 tar_test("sequential$increment_ranks()", {

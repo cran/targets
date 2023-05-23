@@ -84,16 +84,18 @@ target_should_run.tar_builder <- function(target, meta) {
 # nolint start
 builder_should_run <- function(target, meta) {
   cue <- target$cue
-  if (cue_record(cue, target, meta)) return(TRUE)
+  if (cue_record_exists(cue, target, meta)) return(TRUE)
+  record <- meta$get_record(target_get_name(target))
+  if (cue_record(cue, target, meta, record)) return(TRUE)
   if (cue_always(cue, target, meta)) return(TRUE)
   if (cue_never(cue, target, meta)) return(FALSE)
-  if (cue_command(cue, target, meta)) return(TRUE)
-  if (cue_depend(cue, target, meta)) return(TRUE)
-  if (cue_format(cue, target, meta)) return(TRUE)
-  if (cue_repository(cue, target, meta)) return(TRUE)
-  if (cue_iteration(cue, target, meta)) return(TRUE)
-  if (cue_seed(cue, target, meta)) return(TRUE)
-  if (cue_file(cue, target, meta)) return(TRUE)
+  if (cue_command(cue, target, meta, record)) return(TRUE)
+  if (cue_depend(cue, target, meta, record)) return(TRUE)
+  if (cue_format(cue, target, meta, record)) return(TRUE)
+  if (cue_repository(cue, target, meta, record)) return(TRUE)
+  if (cue_iteration(cue, target, meta, record)) return(TRUE)
+  if (cue_seed(cue, target, meta, record)) return(TRUE)
+  if (cue_file(cue, target, meta, record)) return(TRUE)
   FALSE
 }
 # nolint end
@@ -114,6 +116,7 @@ target_run.tar_builder <- function(target, envir, path_store) {
     builder_unset_tar_runtime()
     target$subpipeline <- NULL
   })
+  target_gc(target)
   builder_unmarshal_subpipeline(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
@@ -137,11 +140,10 @@ target_run_worker.tar_builder <- function(
 ) {
   envir <- if_any(identical(envir, "globalenv"), globalenv(), envir)
   tar_option_set(envir = envir)
-  tar_runtime$set_store(path_store)
-  tar_runtime$set_fun(fun)
+  tar_runtime$store <- path_store
+  tar_runtime$fun <- fun
   tar_options$import(options)
   set_envvars(envvars)
-  target_gc(target)
   target_run(target, envir, path_store)
   builder_marshal_value(target)
   target
@@ -197,6 +199,7 @@ target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
 
 builder_conclude <- function(target, pipeline, scheduler, meta) {
   builder_wait_correct_hash(target)
+  store_cache_path(target$store, target$store$file$path)
   target_ensure_buds(target, pipeline, scheduler)
   meta$insert_record(target_produce_record(target, pipeline, meta))
   target_patternview_meta(target, pipeline, meta)
@@ -221,7 +224,7 @@ builder_cancel <- function(target, pipeline, scheduler, meta) {
 
 #' @export
 target_debug.tar_builder <- function(target) {
-  debug <- tar_option_get("debug")
+  debug <- tar_options$get_debug()
   should_debug <- length(debug) &&
     (target_get_name(target) %in% debug) &&
     interactive()
@@ -361,9 +364,9 @@ builder_ensure_workspace <- function(target, pipeline, scheduler, meta) {
 
 builder_should_save_workspace <- function(target) {
   names <- c(target_get_name(target), target_get_parent(target))
-  because_named <- any(names %in% tar_option_get("workspaces"))
+  because_named <- any(names %in% tar_options$get_workspaces())
   has_error <- metrics_has_error(target$metrics)
-  if_error <- tar_option_get("workspace_on_error") ||
+  if_error <- tar_options$get_workspace_on_error() ||
     identical(target$settings$error, "workspace")
   because_error <- if_error && has_error
   because_named || because_error
@@ -373,7 +376,7 @@ builder_save_workspace <- function(target, pipeline, scheduler, meta) {
   scheduler$reporter$report_workspace(target)
   workspace_save(
     workspace = workspace_init(target, pipeline),
-    path_store = meta$get_path_store()
+    path_store = meta$store
   )
 }
 
@@ -472,13 +475,13 @@ builder_wait_correct_hash <- function(target) {
 }
 
 builder_set_tar_runtime <- function(target, frames, path_store) {
-  tar_runtime$set_target(target)
-  tar_runtime$set_frames(frames)
+  tar_runtime$target <- target
+  tar_runtime$frames <- frames
 }
 
 builder_unset_tar_runtime <- function() {
-  tar_runtime$unset_target()
-  tar_runtime$unset_frames()
+  tar_runtime$target <- NULL
+  tar_runtime$frames <- NULL
 }
 
 builder_marshal_value <- function(target) {
@@ -495,18 +498,36 @@ builder_unmarshal_value <- function(target) {
 
 builder_sitrep <- function(target, meta) {
   cue <- target$cue
-  record <- cue_record(cue, target, meta)
+  exists <- meta$exists_record(target_get_name(target))
+  record <- if_any(
+    exists,
+    meta$get_record(target_get_name(target)),
+    NA
+  )
+  cue_record <- if_any(
+    exists,
+    cue_record(cue, target, meta, record),
+    TRUE
+  )
   list(
     name = target_get_name(target),
-    record = cue_record(cue, target, meta),
+    record = if_any(exists, cue_record, TRUE),
     always = cue_always(cue, target, meta),
     never = cue_never(cue, target, meta),
-    command = if_any(record, NA, cue_command(cue, target, meta)),
-    depend = if_any(record, NA, cue_depend(cue, target, meta)),
-    format = if_any(record, NA, cue_format(cue, target, meta)),
-    repository = if_any(record, NA, cue_repository(cue, target, meta)),
-    iteration = if_any(record, NA, cue_iteration(cue, target, meta)),
-    file = if_any(record, NA, cue_file(cue, target, meta)),
-    seed = if_any(record, NA, cue_seed(cue, target, meta))
+    command = if_any(cue_record, NA, cue_command(cue, target, meta, record)),
+    depend = if_any(cue_record, NA, cue_depend(cue, target, meta, record)),
+    format = if_any(cue_record, NA, cue_format(cue, target, meta, record)),
+    repository = if_any(
+      cue_record,
+      NA,
+      cue_repository(cue, target, meta, record)
+    ),
+    iteration = if_any(
+      cue_record,
+      NA,
+      cue_iteration(cue, target, meta, record)
+    ),
+    file = if_any(cue_record, NA, cue_file(cue, target, meta, record)),
+    seed = if_any(cue_record, NA, cue_seed(cue, target, meta, record))
   )
 }

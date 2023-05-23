@@ -9,12 +9,14 @@ tar_make_future(
   names = NULL,
   shortcut = targets::tar_config_get("shortcut"),
   reporter = targets::tar_config_get("reporter_make"),
+  seconds_interval = targets::tar_config_get("seconds_interval"),
   workers = targets::tar_config_get("workers"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
   envir = parent.frame(),
   script = targets::tar_config_get("script"),
-  store = targets::tar_config_get("store")
+  store = targets::tar_config_get("store"),
+  garbage_collection = targets::tar_config_get("garbage_collection")
 )
 }
 \arguments{
@@ -58,6 +60,15 @@ steps like data retrieval and output storage.
 \item \code{"verbose_positives"}: same as the \code{"verbose"} reporter
 except without messages for skipped targets.
 }}
+
+\item{seconds_interval}{Positive numeric of length 1 with the minimum
+number of seconds between saves to the metadata and progress data.
+Also controls how often the reporter prints progress messages.
+Higher values generally make the pipeline run faster, but unsaved
+work (in the event of a crash) is not up to date.
+When a target starts or the pipeline ends,
+everything is saved/printed immediately,
+regardless of \code{seconds_interval}.}
 
 \item{workers}{Positive integer, maximum number of transient
 \code{future} workers allowed to run at any given time.}
@@ -108,6 +119,11 @@ is temporarily changed for the current function call.
 See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
 about how to set the data store path persistently
 for a project.}
+
+\item{garbage_collection}{Logical of length 1, whether to run garbage
+collection on the main process before sending a target to a worker.
+Independent from the \code{garbage_collection} argument of \code{\link[=tar_target]{tar_target()}},
+which controls garbage collection on the worker.}
 }
 \value{
 \code{NULL} except if \code{callr_function = callr::r_bg()}, in which case

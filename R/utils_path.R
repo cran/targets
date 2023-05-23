@@ -34,6 +34,18 @@ path_objects <- function(path_store, name) {
   file.path(path_objects_dir(path_store), name)
 }
 
+#' @title Path to directory of saved targets
+#' @export
+#' @keywords internal
+#' @description Internal function. Not for users.
+#' @param path_store Path to the data store.
+#' @param name Target names.
+#' @examples
+#' tar_path_objects_dir("_targets")
+tar_path_objects_dir <- function(path_store) {
+  path_objects_dir(path_store = path_store)
+}
+
 path_objects_dir <- function(path_store) {
   file.path(path_store, "objects")
 }
@@ -66,8 +78,8 @@ path_process <- function(path_store) {
   file.path(path_meta_dir(path_store), "process")
 }
 
-path_scratch <- function(path_store, pattern = "") {
-  tempfile(pattern = pattern, tmpdir = path_scratch_dir(path_store))
+path_scratch <- function(path_store, pattern = "tmp") {
+  file.path(path_scratch_dir(path_store), pattern)
 }
 
 path_scratch_dir <- function(path_store) {

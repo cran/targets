@@ -19,8 +19,8 @@
 #' }
 tar_path_script <- function() {
   if_any(
-    tar_runtime$exists_script(),
-    tar_runtime$get_script(),
+    !is.null(tar_runtime$script),
+    tar_runtime$script,
     tar_config_get("script")
   )
 }

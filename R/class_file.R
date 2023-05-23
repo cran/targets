@@ -4,7 +4,8 @@ file_init <- function(
   hash = NA_character_,
   time = NA_character_,
   size = NA_character_,
-  bytes = 0
+  bytes = 0,
+  trust_timestamps = FALSE
 ) {
   file_new(
     path = path,
@@ -12,7 +13,8 @@ file_init <- function(
     hash = hash,
     time = time,
     size = size,
-    bytes = bytes
+    bytes = bytes,
+    trust_timestamps = trust_timestamps
   )
 }
 
@@ -22,7 +24,8 @@ file_new <- function(
   hash = NULL,
   time = NULL,
   size = NULL,
-  bytes = NULL
+  bytes = NULL,
+  trust_timestamps = NULL
 ) {
   force(path)
   force(stage)
@@ -30,13 +33,14 @@ file_new <- function(
   force(time)
   force(size)
   force(bytes)
+  force(trust_timestamps)
   environment()
 }
 
 file_exists_path <- function(file) {
   length(file$path) > 0L &&
     all(!anyNA(file$path)) &&
-    all(file.exists(file$path))
+    all(file_exists_runtime(file$path))
 }
 
 file_exists_stage <- function(file) {
@@ -55,14 +59,13 @@ file_update_hash <- function(file) {
   invisible()
 }
 
-file_should_rehash <- function(file, time, size, bytes) {
-  small <- bytes < file_small_bytes
-  touched <- !identical(time, file$time)
-  resized <- !identical(size, file$size)
-  small || touched || resized
+file_should_rehash <- function(file, time, size) {
+  if_any(
+    file$trust_timestamps,
+    !identical(time, file$time) || !identical(size, file$size),
+    TRUE
+  )
 }
-
-file_small_bytes <- 1e5
 
 file_ensure_hash <- function(file) {
   files <- file_list_files(file$path)
@@ -70,12 +73,7 @@ file_ensure_hash <- function(file) {
   time <- file_time(info)
   bytes <- file_bytes(info)
   size <- file_size(bytes)
-  do <- file_should_rehash(
-    file = file,
-    time = time,
-    size = size,
-    bytes = bytes
-  )
+  do <- file_should_rehash(file = file, time = time, size = size)
   hash <- if_any(do, file_hash(files), file$hash)
   file$hash <- hash
   file$time <- time
@@ -85,20 +83,12 @@ file_ensure_hash <- function(file) {
 
 file_has_correct_hash <- function(file) {
   files <- file_list_files(file$path)
-  info <- file_info(files)
+  info <- file_info_runtime(files)
   time <- file_time(info)
   bytes <- file_bytes(info)
   size <- file_size(bytes)
-  if_any(
-    file_should_rehash(
-      file = file,
-      time = time,
-      size = size,
-      bytes = bytes
-    ),
-    identical(file$hash, file_hash(files)),
-    TRUE
-  )
+  do <- file_should_rehash(file = file, time = time, size = size)
+  if_any(do, identical(file$hash, file_hash(files)), TRUE)
 }
 
 file_validate_path <- function(path) {
@@ -116,24 +106,36 @@ file_validate <- function(file) {
   tar_assert_chr(file$time)
   tar_assert_chr(file$size)
   tar_assert_dbl(file$bytes)
+  tar_assert_lgl(file$trust_timestamps)
+  tar_assert_none_na(file$trust_timestamps)
   tar_assert_scalar(file$hash)
   tar_assert_scalar(file$time)
   tar_assert_scalar(file$size)
   tar_assert_scalar(file$bytes)
+  tar_assert_scalar(file$trust_timestamps)
 }
 
 file_list_files <- function(path) {
-  if (!any(dir.exists(path))) {
-    return(path[file.exists(path)])
+  cached <- !is.null(tar_runtime$file_exist) &&
+    all(counter_exist_names(tar_runtime$file_exist, path))
+  if (cached) {
+    return(path)
+  }
+  exists <- file_exists_runtime(path)
+  is_dir <- dir.exists(path)
+  existing_files <- path[exists & !is_dir]
+  if (!any(is_dir)) {
+    return(existing_files)
   }
   inner <- list.files(
-    path,
+    path[is_dir],
     all.files = TRUE,
     full.names = TRUE,
-    recursive = TRUE
+    recursive = TRUE,
+    include.dirs = FALSE,
+    no.. = TRUE
   )
-  out <- c(path, inner)
-  out[file.exists(out) & !dir.exists(out)]
+  c(existing_files, inner)
 }
 
 file_hash <- function(files) {
@@ -149,26 +151,27 @@ file_hash <- function(files) {
 }
 
 file_info <- function(files) {
-  file.info(files, extra_cols = FALSE)
+  out <- file.info(files, extra_cols = FALSE)
+  out$mtime_numeric <- file_time_numeric(out$mtime)
+  out
 }
 
 file_time <- function(info) {
-  file_time_impl(info$mtime)
+  file_diff_chr(max(info$mtime_numeric %||% 0))
 }
 
 file_time_now <- function() {
-  file_time_impl(Sys.time())
+  file_diff_chr(file_time_numeric(Sys.time()))
 }
 
-file_time_impl <- function(time) {
-  withr::local_options(.new = list(OutDec = "."))
+file_time_numeric <- function(time) {
   diff <- difftime(
     time1 = time,
     time2 = file_time_reference,
     units = "days",
     tz = "UTC"
   )
-  file_diff_chr(max(replace_na(c(as.numeric(diff), 0), 0)))
+  replace_na(as.numeric(diff), 0)
 }
 
 file_bytes <- function(info) {
@@ -181,6 +184,8 @@ file_size <- function(bytes) {
 }
 
 file_diff_chr <- function(dbl) {
+  old <- options(OutDec = ".")
+  on.exit(options(old))
   sprintf("t%ss", as.character(dbl))
 }
 

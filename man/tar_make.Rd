@@ -8,11 +8,14 @@ tar_make(
   names = NULL,
   shortcut = targets::tar_config_get("shortcut"),
   reporter = targets::tar_config_get("reporter_make"),
+  seconds_interval = targets::tar_config_get("seconds_interval"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
   envir = parent.frame(),
   script = targets::tar_config_get("script"),
-  store = targets::tar_config_get("store")
+  store = targets::tar_config_get("store"),
+  garbage_collection = targets::tar_config_get("garbage_collection"),
+  terminate = TRUE
 )
 }
 \arguments{
@@ -56,6 +59,15 @@ steps like data retrieval and output storage.
 \item \code{"verbose_positives"}: same as the \code{"verbose"} reporter
 except without messages for skipped targets.
 }}
+
+\item{seconds_interval}{Positive numeric of length 1 with the minimum
+number of seconds between saves to the metadata and progress data.
+Also controls how often the reporter prints progress messages.
+Higher values generally make the pipeline run faster, but unsaved
+work (in the event of a crash) is not up to date.
+When a target starts or the pipeline ends,
+everything is saved/printed immediately,
+regardless of \code{seconds_interval}.}
 
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session
@@ -103,6 +115,28 @@ is temporarily changed for the current function call.
 See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
 about how to set the data store path persistently
 for a project.}
+
+\item{garbage_collection}{Logical of length 1. For a \code{crew}-integrated
+pipeline, whether to run garbage collection on the main process
+before sending a target
+to a worker. Ignored if \code{tar_option_get("controller")} is \code{NULL}.
+Independent from the \code{garbage_collection} argument of \code{\link[=tar_target]{tar_target()}},
+which controls garbage collection on the worker.}
+
+\item{terminate}{Logical of length 1. For a \code{crew}-integrated
+pipeline, whether to terminate the controller after stopping
+or finishing the pipeline. This should almost always be set to \code{TRUE},
+but \code{FALSE} combined with \code{callr_function = NULL}
+will allow you to get the running controller using
+\code{tar_option_get("controller")} for debugging purposes.
+For example, \code{tar_option_get("controller")$summary()} produces a
+worker-by-worker summary of the work assigned and completed,
+\code{tar_option_get("controller")$queue} is the list of unresolved tasks,
+and \code{tar_option_get("controller")$results} is the list of
+tasks that completed but were not collected with \code{pop()}.
+You can manually terminate the controller with
+\code{tar_option_get("controller")$summary()} to close down the dispatcher
+and worker processes.}
 }
 \value{
 \code{NULL} except if \code{callr_function = callr::r_bg()}, in which case

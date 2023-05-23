@@ -1,11 +1,15 @@
 meta_init <- function(path_store = path_store_default()) {
   database <- database_meta(path_store = path_store)
   depends <- memory_init()
-  meta_new(database = database, depends = depends)
+  meta_new(
+    database = database,
+    depends = depends,
+    store = path_store
+  )
 }
 
-meta_new <- function(database = NULL, depends = NULL) {
-  meta_class$new(database, depends)
+meta_new <- function(database = NULL, depends = NULL, store = NULL) {
+  meta_class$new(database, depends, store = store)
 }
 
 meta_class <- R6::R6Class(
@@ -16,12 +20,15 @@ meta_class <- R6::R6Class(
   public = list(
     database = NULL,
     depends = NULL,
-    initialize = function(database = NULL, depends = NULL) {
+    store = NULL,
+    initialize = function(
+      database = NULL,
+      depends = NULL,
+      store = NULL
+    ) {
       self$database <- database
       self$depends <- depends
-    },
-    get_path_store = function() {
-      dirname(dirname(self$database$path))
+      self$store <- store
     },
     get_depend = function(name) {
       memory_get_object(self$depends, name)
@@ -29,14 +36,14 @@ meta_class <- R6::R6Class(
     get_record = function(name) {
       record_from_row(
         row = self$database$get_row(name),
-        path_store = self$get_path_store()
+        path_store = self$store
       )
     },
     set_record = function(record) {
       self$database$set_row(record_produce_row(record))
     },
     insert_record = function(record) {
-      self$database$insert_row(record_produce_row(record))
+      self$database$enqueue_row(record_produce_row(record))
     },
     exists_record = function(name) {
       self$database$exists_row(name)
@@ -70,7 +77,12 @@ meta_class <- R6::R6Class(
       )
     },
     hash_deps = function(deps, pipeline) {
-      hashes <- map_chr(sort(deps), self$hash_dep, pipeline = pipeline)
+      hashes <- vapply(
+        X = sort.int(deps),
+        FUN = self$hash_dep,
+        pipeline = pipeline,
+        FUN.VALUE = character(1L)
+      )
       string <- paste(c(names(hashes), hashes), collapse = "")
       digest_chr64(string)
     },

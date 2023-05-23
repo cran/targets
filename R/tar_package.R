@@ -15,7 +15,8 @@
 #' @family help
 #' @importFrom base64url base64_urldecode base64_urlencode
 #' @importFrom callr r r_bg
-#' @importFrom cli col_green col_grey col_none col_red make_spinner symbol
+#' @importFrom cli col_blue col_green col_red col_yellow make_spinner
+#'   num_ansi_colors symbol
 #' @importFrom codetools findGlobals
 #' @importFrom data.table data.table fread fwrite set
 #' @importFrom digest digest digest2int
@@ -24,8 +25,8 @@
 #'   V
 #' @importFrom knitr engine_output knit_engines
 #' @importFrom R6 R6Class
-#' @importFrom rlang abort as_function check_installed enquo inform quo_squash
-#'   warn
+#' @importFrom rlang abort as_function check_installed enquo inform
+#'   is_installed quo_squash warn
 #' @importFrom stats complete.cases runif
 #' @importFrom tibble as_tibble
 #' @importFrom tidyselect all_of any_of contains ends_with everything
@@ -34,8 +35,6 @@
 #' @importFrom utils browseURL capture.output data globalVariables head menu
 #'   packageVersion stack tail
 #' @importFrom vctrs vec_c vec_rbind vec_size vec_slice
-#' @importFrom withr local_dir local_envvar
-#'   local_options with_dir with_seed
 #' @importFrom yaml read_yaml
 NULL
 

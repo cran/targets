@@ -1,3 +1,51 @@
+# targets 1.1.2
+
+* Remove `crew`-related startup messages.
+
+# targets 1.1.1
+
+* Pre-compute `cli` colors and bullets to improve performance in RStudio.
+* Use `packageStartupMessage()` for package startup messages.
+
+# targets 1.1.0
+
+## Bug fixes
+
+* Send targets to the appropriate controller in a controller group when `crew` is used.
+
+## General improvements
+
+* Call `gc()` more appropriately when `garbage_collection` is `TRUE` in `tar_target()`.
+* Add `garbage_collection` arguments to `tar_make()`, `tar_make_clustermq()`, and `tar_make_future()` to add optional garbage collection before targets are sent to workers. This is different and independent from the `garbage_collection` argument of `tar_target()`. In high-performance computing scenarios, the former controls what happens on the main controlling process, whereas the latter controls what happens on the worker.
+* Add `garbage_collection` and `seconds_interval` arguments to `tar_make()`, `tar_make_clustermq()`, `tar_make_future()`, and `tar_config_set()`.
+* Downsize the `tar_runtime` object.
+* Remove the 100 Kb file size cutoff for determining whether to trust the file timestamp or recompute the hash when checking if a file is up to date (#1062). Instate the `"file_fast"` format and the `trust_object_timestamps` option in `tar_option_set()` as safer alternatives.
+* Consolidate store constructors.
+* Allow `crew` controller groups (#1065, @mglev1n).
+* Expose more exponential backoff configuration parameters through `tar_backoff()`. The `backoff` argument of `tar_option_set()` now accepts output from `tar_backoff()`, and supplying a numeric is deprecated.
+* Fix the exponential backoff rules in the `crew` scheduling algorithm.
+* Implement `tar_resources_network()` to configure retries and timeouts for internal HTTP/HTTPS requests in specialized targets with `format = "url"`, `repository = "aws"`, and `repository = "gcp"`. Also applies to syncing target files across network file systems in the case of `storage = "worker"` or `format = "file"`, which previously had a hard-coded `seconds_interval = 0.1` and `seconds_timeout = 60`.
+* Deprecate `seconds_interval` and `seconds_timeout` in `tar_resources_url()` in favor of the new equivalent arguments of `tar_resources_network()`
+* Safely withhold a target from its `crew` controller when the controller is saturated (#1074, @mglev1n).
+* Use exponential backoff when appending a target back to the queue in the case of a saturated `crew` controller.
+
+## Speedups
+
+* Cache info about all of `_targets/objects/` in `tar_callr_inner_try()` and update the cache as targets are saved to `_targets/objects/` to avoid the overhead of repeated calls to `file.exists()` and `file.info()` (#1056).
+* Trust the timestamps by default when checking whether files in `_targets/objects/` are up to date (#1062). `tar_option_set(trust_object_timestamps = FALSE)` ignores the timestamps and recomputes the hashes.
+* Write to `_targets/meta/meta` and `_targets/meta/progress` in timed batches instead of line by line (#1055).
+* Reporters now print progress messages in timed batches instead of line by line (#1055).
+* The summary and forecast reporters are much faster because they avoid going through data frames.
+* Avoid `tempfile()` when working with the scratch directory.
+* Use `nanonext::mclock()` instead of `proc.time()` when there is no risk of forked processes.
+* Replace `withr` with slightly faster/leaner base R alternatives.
+* Efficiently catch changes to the working directory instead of overburdening the pipeline with calls to `setwd()` (#1057).
+* Invoke `tar_options` methods in the internals instead of `tar_option_get()`.
+* Avoid `gsub()` in `store_init()`.
+* Avoid repeated calls to `meta$get_record()` in `builder_should_run()`.
+* Mock the store object when creating a record from a metadata row.
+* Avoid `cli::col_none()` to reduce the number of ANSI characters printed to the R console.
+
 # targets 1.0.0
 
 `targets` is moving to version 1.0.0 because it is significantly more mature than previous versions. Specifically,

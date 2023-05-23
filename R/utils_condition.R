@@ -101,24 +101,32 @@ tar_warn_validate <- function(...) {
 #' @export
 #' @rdname tar_condition
 tar_error <- function(message, class) {
+  old_cli_number_ansi_colors <- getOption("cli.num_colors")
+  on.exit(options(cli.num_colors = old_cli_number_ansi_colors))
+  options(cli.num_colors = cli_number_ansi_colors)
+  old <- options(rlang_backtrace_on_error = "none")
+  on.exit(options(old))
   message <- cli::col_red(message)
-  withr::local_options(list(rlang_backtrace_on_error = "none"))
   rlang::abort(message = message, class = class, call = tar_empty_envir)
 }
 
 #' @export
 #' @rdname tar_condition
 tar_warning <- function(message, class) {
+  old_cli_number_ansi_colors <- getOption("cli.num_colors")
+  on.exit(options(cli.num_colors = old_cli_number_ansi_colors))
+  options(cli.num_colors = cli_number_ansi_colors)
+  old <- options(rlang_backtrace_on_error = "none")
+  on.exit(options(old))
   message <- cli::col_red(message)
-  withr::local_options(list(rlang_backtrace_on_error = "none"))
   rlang::warn(message = message, class = class)
 }
 
 #' @export
 #' @rdname tar_condition
 tar_message <- function(message, class) {
-  message <- cli::col_none(message)
-  withr::local_options(list(rlang_backtrace_on_error = "none"))
+  old <- options(rlang_backtrace_on_error = "none")
+  on.exit(options(old))
   rlang::inform(message = message, class = class)
 }
 

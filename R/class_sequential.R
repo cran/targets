@@ -21,6 +21,12 @@ sequential_class <- R6::R6Class(
     prepend = function(names, ranks = NULL) {
       self$data <- c(names, self$data)
     },
+    append = function(names, ranks = NULL) {
+      self$data <- c(self$data, names)
+    },
+    append0 = function(name) {
+      self$data[length(self$data) + 1L] <- name
+    },
     should_dequeue = function() {
       self$is_nonempty()
     },
