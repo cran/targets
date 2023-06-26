@@ -1,3 +1,18 @@
+# targets 1.2.0
+
+## `crew` integration
+
+* Do not assume S3 classes when validating `crew` controllers.
+* Suggest a crew controller in the `_targets.R` file from `use_targets()`.
+* Make `tar_crew()` compatible with `crew` >= 0.3.0.
+* Rename argument `terminate` to `terminate_controller` in `tar_make()`.
+* Add argument `use_crew` in `tar_make()` and add an option in `tar_config_set()` to make it configurable.
+* Write progress data and metadata in `target_prepare()`.
+
+## Other improvements
+
+* Allow users to set the default `label` and `level_separation` arguments through `tar_config_set()` (#1085, @Moohan).
+
 # targets 1.1.3
 
 * Decide on `nanonext` usage in `time_seconds_local()` at runtime and not installation time. That way, if `nanonext` is removed after `targets` is installed, functions in `targets` still work. Fixes the CRAN issues seen in `tarchetypes`, `jagstargets`, and `gittargets`.

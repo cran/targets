@@ -9,7 +9,7 @@ crew_init <- function(
   garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   controller = NULL,
-  terminate = TRUE
+  terminate_controller = TRUE
 ) {
   backoff <- tar_options$get_backoff()
   backoff_requeue <- backoff_init(
@@ -28,7 +28,7 @@ crew_init <- function(
     garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
-    terminate = terminate,
+    terminate_controller = terminate_controller,
     backoff_requeue = backoff_requeue
   )
 }
@@ -44,7 +44,7 @@ crew_new <- function(
   garbage_collection = NULL,
   envir = NULL,
   controller = NULL,
-  terminate = NULL,
+  terminate_controller = NULL,
   backoff_requeue = NULL
 ) {
   crew_class$new(
@@ -58,7 +58,7 @@ crew_new <- function(
     garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
-    terminate = terminate,
+    terminate_controller = terminate_controller,
     backoff_requeue = backoff_requeue
   )
 }
@@ -70,7 +70,7 @@ crew_class <- R6::R6Class(
   cloneable = FALSE,
   public = list(
     controller = NULL,
-    terminate = NULL,
+    terminate_controller = NULL,
     backoff_requeue = NULL,
     initialize = function(
       pipeline = NULL,
@@ -83,7 +83,7 @@ crew_class <- R6::R6Class(
       garbage_collection = NULL,
       envir = NULL,
       controller = NULL,
-      terminate = NULL,
+      terminate_controller = NULL,
       backoff_requeue = NULL
     ) {
       super$initialize(
@@ -98,7 +98,7 @@ crew_class <- R6::R6Class(
         envir = envir
       )
       self$controller <- controller
-      self$terminate <- terminate
+      self$terminate_controller <- terminate_controller
       self$backoff_requeue <- backoff_requeue
     },
     produce_exports = function(envir, path_store, is_globalenv = NULL) {
@@ -153,16 +153,19 @@ crew_class <- R6::R6Class(
       if (saturated) {
         # Requires a slow test. Covered in the saturation tests in
         # tests/hpc/test-crew_local.R # nolint
-        self$scheduler$queue$append0(name = name) # nocov
-        self$backoff_requeue$wait() # nocov
+        # nocov start
+        self$scheduler$queue$append0(name = name)
+        self$backoff_requeue$wait()
+        # nocov end
       } else {
-        target_prepare(target, self$pipeline, self$scheduler)
+        target_prepare(target, self$pipeline, self$scheduler, self$meta)
         self$controller$push(
           command = command,
           data = data,
           globals = globals,
           substitute = FALSE,
           name = name,
+          seed = 0L,
           controller = resources$controller,
           scale = resources$scale %|||% TRUE,
           seconds_timeout = resources$seconds_timeout
@@ -171,7 +174,7 @@ crew_class <- R6::R6Class(
       }
     },
     run_main = function(target) {
-      target_prepare(target, self$pipeline, self$scheduler)
+      target_prepare(target, self$pipeline, self$scheduler, self$meta)
       target_run(
         target = target,
         envir = self$envir,
@@ -264,7 +267,7 @@ crew_class <- R6::R6Class(
       if (!is.null(summary)) {
         self$record_controller_summary(summary)
       }
-      if (self$terminate) {
+      if (self$terminate_controller) {
         self$controller$terminate()
       }
     },
@@ -289,9 +292,9 @@ crew_class <- R6::R6Class(
     validate = function() {
       super$validate()
       validate_crew_controller(self$controller)
-      tar_assert_lgl(self$terminate)
-      tar_assert_scalar(self$terminate)
-      tar_assert_none_na(self$terminate)
+      tar_assert_lgl(self$terminate_controller)
+      tar_assert_scalar(self$terminate_controller)
+      tar_assert_none_na(self$terminate_controller)
     }
   )
 )
@@ -300,29 +303,21 @@ crew_summary <- function(controller) {
   summary <- controller$summary()
   data_frame(
     controller = summary$controller,
-    worker = summary$worker_index,
-    launches = summary$worker_launches,
-    seconds = summary$popped_seconds,
-    targets = summary$popped_tasks
+    worker = summary$worker,
+    seconds = summary$seconds,
+    targets = summary$tasks
   )
 }
 
 database_crew <- function(path_store) {
   database_init(
     path = file.path(path_meta_dir(path_store), "crew"),
-    header = c("controller", "worker", "launches", "seconds", "targets")
+    header = c("controller", "worker", "seconds", "targets")
   )
 }
 
 validate_crew_controller <- function(controller) {
-  tar_assert_inherits(
-    x = controller,
-    class = c("crew_class_controller_group", "crew_class_controller"),
-    msg = paste(
-      "controller for tar_make() must be a valid",
-      "object of class \"crew_class_controller\" from the",
-      "{crew} R package."
-    )
-  )
+  tar_assert_envir(controller, msg = "invalid crew controller")
+  tar_assert_function(controller$validate, msg = "invalid crew controller")
   controller$validate()
 }

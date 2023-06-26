@@ -45,6 +45,9 @@
 #'   ignored if `tar_option_get("controller")` is `NULL`.
 #'   Independent from the `garbage_collection` argument of [tar_target()],
 #'   which controls garbage collection on the worker.
+#' @param label Argument of [tar_visnetwork()] to control node labels.
+#' @param level_separation Argument of [tar_visnetwork()] and [tar_glimpse()]
+#'   to control the space between hierarchical levels.
 #' @param reporter_make Character of length 1, `reporter` argument to
 #'   [tar_make()] and related functions that run the pipeline.
 #'   If the argument `NULL`, the setting is not modified.
@@ -83,6 +86,10 @@
 #'   with fast read/write access.
 #'   If the argument `NULL`, the setting is not modified.
 #'   Use [tar_config_unset()] to delete a setting.
+#' @param use_crew Logical of length 1, whether to use `crew` in [tar_make()]
+#'   if the `controller` option is set in `tar_option_set()` in the target
+#'   script (`_targets.R`). See <https://books.ropensci.org/targets/crew.html>
+#'   for details.
 #' @param workers Positive numeric of length 1, `workers` argument of
 #'   [tar_make_clustermq()] and related functions that run the pipeline
 #'   with parallel computing among targets.
@@ -132,12 +139,15 @@
 tar_config_set <- function(
   inherits = NULL,
   garbage_collection = NULL,
+  label = NULL,
+  level_separation = NULL,
   reporter_make = NULL,
   reporter_outdated = NULL,
   script = NULL,
   seconds_interval = NULL,
   store = NULL,
   shortcut = NULL,
+  use_crew = NULL,
   workers = NULL,
   config = Sys.getenv("TAR_CONFIG", "_targets.yaml"),
   project = Sys.getenv("TAR_PROJECT", "main")
@@ -150,12 +160,15 @@ tar_config_set <- function(
   tar_assert_scalar(project)
   tar_config_assert_inherits(inherits)
   tar_config_assert_garbage_collection(garbage_collection)
+  tar_config_assert_label(label)
+  tar_config_assert_level_separation(level_separation)
   tar_config_assert_reporter_make(reporter_make)
   tar_config_assert_reporter_outdated(reporter_outdated)
   tar_config_assert_script(script)
   tar_config_assert_seconds_interval(seconds_interval)
   tar_config_assert_shortcut(shortcut)
   tar_config_assert_store(store)
+  tar_config_assert_use_crew(use_crew)
   tar_config_assert_workers(workers)
   yaml <- tar_config_read_yaml(config)
   if (!tar_config_is_multi_project(yaml, config)) {
@@ -164,6 +177,9 @@ tar_config_set <- function(
   yaml[[project]]$inherits <- inherits %|||% yaml[[project]]$inherits
   yaml[[project]]$garbage_collection <- garbage_collection %|||%
     yaml[[project]]$garbage_collection
+  yaml[[project]]$label <- label %|||% yaml[[project]]$label
+  yaml[[project]]$level_separation <- level_separation %|||%
+    yaml[[project]]$level_separation
   yaml[[project]]$reporter_make <- reporter_make %|||%
     yaml[[project]]$reporter_make
   yaml[[project]]$reporter_outdated <- reporter_outdated %|||%
@@ -173,6 +189,7 @@ tar_config_set <- function(
     yaml[[project]]$seconds_interval
   yaml[[project]]$shortcut <- shortcut %|||% yaml[[project]]$shortcut
   yaml[[project]]$store <- store %|||% yaml[[project]]$store
+  yaml[[project]]$use_crew <- use_crew %|||% yaml[[project]]$use_crew
   yaml[[project]]$workers <- if_any(
     is.null(workers),
     yaml[[project]]$workers,
@@ -204,6 +221,24 @@ tar_config_assert_garbage_collection <- function(garbage_collection) {
   tar_assert_lgl(garbage_collection)
   tar_assert_scalar(garbage_collection)
   tar_assert_none_na(garbage_collection)
+}
+
+tar_config_assert_label <- function(label) {
+  if (is.null(label)) {
+    return()
+  }
+  tar_assert_chr(label)
+  tar_assert_none_na(label)
+  tar_assert_nzchar(label)
+}
+
+tar_config_assert_level_separation <- function(level_separation) {
+  if (is.null(level_separation)) {
+    return()
+  }
+  tar_assert_scalar(level_separation)
+  tar_assert_dbl(level_separation)
+  tar_assert_none_na(level_separation)
 }
 
 tar_config_assert_reporter_make <- function(reporter_make) {
@@ -252,6 +287,15 @@ tar_config_assert_store <- function(store) {
   }
   tar_assert_scalar(store)
   tar_assert_chr(store)
+}
+
+tar_config_assert_use_crew <- function(use_crew) {
+  if (is.null(use_crew)) {
+    return()
+  }
+  tar_assert_lgl(use_crew)
+  tar_assert_scalar(use_crew)
+  tar_assert_none_na(use_crew)
 }
 
 tar_config_assert_workers <- function(workers) {

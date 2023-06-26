@@ -28,6 +28,35 @@ tar_test("tar_config_set() garbage_collection", {
   expect_equal(tar_config_get("garbage_collection"), FALSE)
 })
 
+tar_test("tar_config_set() label", {
+  skip_cran()
+  expect_false(file.exists("_targets.yaml"))
+  expect_null(tar_config_get("label"))
+  tar_config_set(label = c("size", "time"))
+  expect_equal(tar_config_get("label"), c("size", "time"))
+  expect_true(file.exists("_targets.yaml"))
+  expect_true(any(grepl("label", readLines("_targets.yaml"))))
+  tar_config_set()
+  expect_equal(tar_config_get("label"), c("size", "time"))
+  expect_true(file.exists("_targets.yaml"))
+  unlink("_targets.yaml")
+  expect_null(tar_config_get("label"))
+})
+
+tar_test("tar_config_set() level_separation", {
+  skip_cran()
+  expect_false(file.exists("_targets.yaml"))
+  expect_null(tar_config_get("level_separation"))
+  tar_config_set(level_separation = 3L)
+  expect_equal(tar_config_get("level_separation"), 3L)
+  expect_true(file.exists("_targets.yaml"))
+  expect_true(any(grepl("level_separation", readLines("_targets.yaml"))))
+  tar_config_set()
+  expect_equal(tar_config_get("level_separation"), 3L)
+  expect_true(file.exists("_targets.yaml"))
+  unlink("_targets.yaml")
+  expect_null(tar_config_get("level_separation"))
+})
 
 tar_test("tar_config_set() reporter_make", {
   skip_cran()
@@ -154,6 +183,21 @@ tar_test("tar_config_set() with store and different yaml file", {
   expect_false(file.exists("_targets.yaml"))
   unlink(path)
   expect_equal(tar_config_get("store", config = path), path_store_default())
+})
+
+tar_test("tar_config_set() use_crew", {
+  skip_cran()
+  expect_false(file.exists("_targets.yaml"))
+  expect_equal(tar_config_get("use_crew"), TRUE)
+  tar_config_set(use_crew = FALSE)
+  expect_equal(tar_config_get("use_crew"), FALSE)
+  expect_true(file.exists("_targets.yaml"))
+  expect_true(any(grepl("use_crew", readLines("_targets.yaml"))))
+  tar_config_set()
+  expect_equal(tar_config_get("use_crew"), FALSE)
+  expect_true(file.exists("_targets.yaml"))
+  unlink("_targets.yaml")
+  expect_equal(tar_config_get("use_crew"), TRUE)
 })
 
 tar_test("tar_config_set() workers", {

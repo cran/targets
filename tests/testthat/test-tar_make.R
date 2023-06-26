@@ -15,10 +15,9 @@ tar_test("tar_make() works", {
 })
 
 tar_test("tar_make() works with crew", {
-  skip_if_low_dep_versions()
   skip_on_os("windows")
   skip_on_os("solaris")
-  skip_if_not_installed("crew")
+  skip_if_not_installed("crew", minimum_version = "0.3.0")
   skip_if_not_installed("R.utils")
   should_skip <- identical(tolower(Sys.info()[["sysname"]]), "windows") &&
     isTRUE(as.logical(Sys.getenv("CI")))
@@ -27,7 +26,10 @@ tar_test("tar_make() works with crew", {
   }
   tar_script({
     tar_option_set(
-      controller = crew::crew_controller_local(seconds_interval = 0.5),
+      controller = crew::crew_controller_local(
+        host = "127.0.0.1",
+        seconds_interval = 0.5
+      ),
       backoff = tar_backoff(min = 0.5, max = 0.5)
     )
     tar_target(
@@ -128,14 +130,10 @@ tar_test("tar_make() handles callr errors", {
       tar_target(y, stop(x))
     )
   })
-  # TODO: when https://github.com/r-lib/callr/issues/196 and
-  # https://github.com/r-lib/callr/issues/197 are fixed,
-  # go back to expecting forwarded errors of class "tar_condition_validate".
-  try(
+  expect_error(
     tar_make(reporter = "silent", callr_arguments = list(show = FALSE)),
-    silent = TRUE
+    class = "tar_condition_run"
   )
-  expect_null(NULL)
 })
 
 tar_test("priorities apply to tar_make() (#437)", {
