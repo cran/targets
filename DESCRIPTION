@@ -12,7 +12,7 @@ Description: Pipeline tools coordinate the pieces of computationally
   The methodology in this package
   borrows from GNU 'Make' (2015, ISBN:978-9881443519)
   and 'drake' (2018, <doi:10.21105/joss.00550>).
-Version: 1.2.0
+Version: 1.2.2
 License: MIT + file LICENSE
 URL: https://docs.ropensci.org/targets/,
         https://github.com/ropensci/targets
@@ -65,19 +65,19 @@ Suggests: arrow (>= 3.0.0), bs4Dash (>= 2.0.0), clustermq (>=
         future.batchtools (>= 0.9.0), future.callr (>= 0.6.0), gargle
         (>= 1.2.0), googleCloudStorageR (>= 0.7.0), gt (>= 0.2.2),
         keras (>= 2.2.5.0), markdown (>= 1.1), nanonext (>= 0.9.0),
-        rmarkdown (>= 2.4), parallelly (>= 1.35.0), paws (>= 0.1.11),
-        pingr (>= 2.0.1), pkgload (>= 1.1.0), processx (>= 3.4.3), qs
-        (>= 0.24.1), reprex (>= 2.0.0), rstudioapi (>= 0.11), R.utils
-        (>= 2.6.0), shiny (>= 1.5.0), shinybusy (>= 0.2.2),
-        shinyWidgets (>= 0.5.4), testthat (>= 3.0.0), torch (>= 0.1.0),
-        usethis (>= 1.6.3), visNetwork (>= 2.0.9)
+        rmarkdown (>= 2.4), parallelly (>= 1.35.0), paws.storage (>=
+        0.2.0), pingr (>= 2.0.1), pkgload (>= 1.1.0), processx (>=
+        3.4.3), qs (>= 0.24.1), reprex (>= 2.0.0), rstudioapi (>=
+        0.11), R.utils (>= 2.6.0), shiny (>= 1.5.0), shinybusy (>=
+        0.2.2), shinyWidgets (>= 0.5.4), testthat (>= 3.0.0), torch (>=
+        0.1.0), usethis (>= 1.6.3), visNetwork (>= 2.0.9)
 Encoding: UTF-8
 Language: en-US
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-06-26 15:12:11 UTC; C240390
+Packaged: 2023-08-10 17:56:49 UTC; C240390
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Matthew T. Warkentin [ctb],
@@ -87,4 +87,4 @@ Author: William Michael Landau [aut, cre]
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-06-26 16:10:02 UTC
+Date/Publication: 2023-08-10 18:40:02 UTC

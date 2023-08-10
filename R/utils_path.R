@@ -39,7 +39,6 @@ path_objects <- function(path_store, name) {
 #' @keywords internal
 #' @description Internal function. Not for users.
 #' @param path_store Path to the data store.
-#' @param name Target names.
 #' @examples
 #' tar_path_objects_dir("_targets")
 tar_path_objects_dir <- function(path_store) {
@@ -88,6 +87,10 @@ path_scratch_dir <- function(path_store) {
 
 path_scratch_del <- function(path_store) {
   unlink(path_scratch_dir(path_store), recursive = TRUE)
+}
+
+path_scratch_dir_cloud <- function() {
+  tools::R_user_dir(package = "targets", which = "cache")
 }
 
 path_user_dir <- function(path_store) {
