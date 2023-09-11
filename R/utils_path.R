@@ -77,6 +77,10 @@ path_process <- function(path_store) {
   file.path(path_meta_dir(path_store), "process")
 }
 
+path_crew <- function(path_store) {
+  file.path(path_meta_dir(path_store), "crew")
+}
+
 path_scratch <- function(path_store, pattern = "tmp") {
   file.path(path_scratch_dir(path_store), pattern)
 }
@@ -89,8 +93,12 @@ path_scratch_del <- function(path_store) {
   unlink(path_scratch_dir(path_store), recursive = TRUE)
 }
 
-path_scratch_dir_cloud <- function() {
-  tools::R_user_dir(package = "targets", which = "cache")
+path_scratch_dir_network <- function() {
+  file.path(tempdir(), path_scratch_dir(path_store_default()))
+}
+
+path_scratch_temp_network <- function(pattern = "tmp") {
+  tempfile(tmpdir = path_scratch_dir_network(), pattern = pattern)
 }
 
 path_user_dir <- function(path_store) {

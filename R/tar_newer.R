@@ -48,6 +48,7 @@ tar_newer <- function(
   inclusive = FALSE,
   store = targets::tar_config_get("store")
 ) {
+  tar_assert_allow_meta("tar_newer")
   tar_assert_scalar(time)
   tar_assert_inherits(time, "POSIXct")
   tar_assert_scalar(inclusive)
@@ -57,6 +58,7 @@ tar_newer <- function(
   tar_assert_nzchar(store)
   meta <- meta_init(path_store = store)
   meta <- tibble::as_tibble(meta$database$read_condensed_data())
+  tar_message_meta(meta)
   meta <- meta[!is.na(meta$time), ]
   meta$time <- file_time_posixct(meta$time)
   names_quosure <- rlang::enquo(names)

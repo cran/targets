@@ -17,6 +17,7 @@ tar_visnetwork(
   degree_to = 1L,
   zoom_speed = 1,
   reporter = targets::tar_config_get("reporter_outdated"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function),
   envir = parent.frame(),
@@ -106,6 +107,10 @@ Controls how messages are printed as targets are checked. Choices:
 targets found so far.
 }}
 
+\item{seconds_reporter}{Positive numeric of length 1 with the minimum
+number of seconds between times when the reporter prints progress
+messages to the R console.}
+
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session
 instead of an external process (but restart your R session just before
@@ -174,6 +179,32 @@ does not matter. However, targets does not support self-referential
 loops or other cycles. For more information on the dependency graph,
 please read
 \url{https://books.ropensci.org/targets/targets.html#dependencies}.
+}
+
+\section{Storage access}{
+
+Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
+\code{tar_meta()}, and \code{tar_progress()} read or modify
+the local data store of the pipeline.
+The local data store is in flux while a pipeline is running,
+and depending on how distributed computing or cloud computing is set up,
+not all targets can even reach it. So please do not call these
+functions from inside a target as part of a running
+pipeline. The only exception is literate programming
+target factories in the \code{tarchetypes} package such as \code{tar_render()}
+and \code{tar_quarto()}.
+
+
+Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
+\code{tar_meta()}, and \code{tar_progress()} read or modify
+the local data store of the pipeline.
+The local data store is in flux while a pipeline is running,
+and depending on how distributed computing or cloud computing is set up,
+not all targets can even reach it. So please do not call these
+functions from inside a target as part of a running
+pipeline. The only exception is literate programming
+target factories in the \code{tarchetypes} package such as \code{tar_render()}
+and \code{tar_quarto()}.
 }
 
 \examples{

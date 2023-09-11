@@ -5,7 +5,9 @@ future_init <- function(
   shortcut = FALSE,
   queue = "parallel",
   reporter = "verbose",
-  seconds_interval = 0.5,
+  seconds_meta_append = 0,
+  seconds_meta_upload = 15,
+  seconds_reporter = 0,
   garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   workers = 1L
@@ -17,7 +19,9 @@ future_init <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     workers = as.integer(workers)
@@ -32,7 +36,9 @@ future_new <- function(
   queue = NULL,
   reporter = NULL,
   envir = NULL,
-  seconds_interval = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   garbage_collection = NULL,
   workers = NULL
 ) {
@@ -43,7 +49,9 @@ future_new <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     workers = workers
@@ -65,7 +73,9 @@ future_class <- R6::R6Class(
       shortcut = NULL,
       queue = NULL,
       reporter = NULL,
-      seconds_interval = NULL,
+      seconds_meta_append = NULL,
+      seconds_meta_upload = NULL,
+      seconds_reporter = NULL,
       garbage_collection = NULL,
       envir = NULL,
       workers = NULL
@@ -77,7 +87,9 @@ future_class <- R6::R6Class(
         shortcut = shortcut,
         queue = queue,
         reporter = reporter,
-        seconds_interval = seconds_interval,
+        seconds_meta_append = seconds_meta_append,
+        seconds_meta_upload = seconds_meta_upload,
+        seconds_reporter = seconds_reporter,
         garbage_collection = garbage_collection,
         envir = envir
       )
@@ -150,6 +162,7 @@ future_class <- R6::R6Class(
     run_target = function(name) {
       target <- pipeline_get_target(self$pipeline, name)
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
+      self$sync_meta_time()
       if_any(
         target_should_run_worker(target),
         self$run_worker(target),
@@ -210,7 +223,7 @@ future_class <- R6::R6Class(
       lapply(names, self$process_worker)
     },
     iterate = function() {
-      self$poll_meta()
+      self$sync_meta_time()
       self$process_workers()
       self$try_submit(wait = TRUE)
     },

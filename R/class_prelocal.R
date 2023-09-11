@@ -4,7 +4,9 @@ prelocal_new <- function(
   names = NULL,
   queue = NULL,
   reporter = NULL,
-  seconds_interval = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   garbage_collection = NULL,
   envir = NULL,
   scheduler = NULL
@@ -15,7 +17,9 @@ prelocal_new <- function(
     names = names,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     scheduler = scheduler
@@ -34,7 +38,9 @@ prelocal_class <- R6::R6Class(
       names = NULL,
       queue = NULL,
       reporter = NULL,
-      seconds_interval = NULL,
+      seconds_meta_append = NULL,
+      seconds_meta_upload = NULL,
+      seconds_reporter = NULL,
       garbage_collection = NULL,
       envir = NULL,
       scheduler = NULL
@@ -45,7 +51,9 @@ prelocal_class <- R6::R6Class(
         names = names,
         queue = queue,
         reporter = reporter,
-        seconds_interval = seconds_interval,
+        seconds_meta_append = seconds_meta_append,
+        seconds_meta_upload = seconds_meta_upload,
+        seconds_reporter = seconds_reporter,
         garbage_collection = garbage_collection,
         envir = envir
       )

@@ -54,17 +54,6 @@ Nothing.
 Shorthand for \code{tar_load(everything())} to load all
 targets with entries in the metadata.
 }
-\section{Limited scope}{
-
-\code{tar_read()} and \code{tar_load()}
-are only for exploratory analysis and literate programming,
-and \code{tar_read_raw()} and \code{tar_load_raw()} are only
-for exploratory analysis. \code{targets} automatically
-loads the correct dependencies into memory when the pipeline
-is running, so invoking these functions
-from inside a target is rarely advisable.
-}
-
 \examples{
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
@@ -87,7 +76,6 @@ Other data:
 \code{\link{tar_crew}()},
 \code{\link{tar_load_raw}()},
 \code{\link{tar_load}()},
-\code{\link{tar_meta}()},
 \code{\link{tar_objects}()},
 \code{\link{tar_pid}()},
 \code{\link{tar_process}()},

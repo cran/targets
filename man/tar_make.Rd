@@ -8,6 +8,9 @@ tar_make(
   names = NULL,
   shortcut = targets::tar_config_get("shortcut"),
   reporter = targets::tar_config_get("reporter_make"),
+  seconds_meta_append = targets::tar_config_get("seconds_meta_append"),
+  seconds_meta_upload = targets::tar_config_get("seconds_meta_upload"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter"),
   seconds_interval = targets::tar_config_get("seconds_interval"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
@@ -61,14 +64,32 @@ steps like data retrieval and output storage.
 except without messages for skipped targets.
 }}
 
-\item{seconds_interval}{Positive numeric of length 1 with the minimum
-number of seconds between saves to the metadata and progress data.
-Also controls how often the reporter prints progress messages.
+\item{seconds_meta_append}{Positive numeric of length 1 with the minimum
+number of seconds between saves to the local metadata and progress files
+in the data store.
 Higher values generally make the pipeline run faster, but unsaved
 work (in the event of a crash) is not up to date.
-When a target starts or the pipeline ends,
-everything is saved/printed immediately,
-regardless of \code{seconds_interval}.}
+When the pipeline ends,
+all the metadata and progress data is saved immediately,
+regardless of \code{seconds_meta_append}.}
+
+\item{seconds_meta_upload}{Positive numeric of length 1 with the minimum
+number of seconds between uploads of the metadata and progress data
+to the cloud
+(see \url{https://books.ropensci.org/targets/cloud-storage.html}).
+Higher values generally make the pipeline run faster, but unsaved
+work (in the event of a crash) may not be backed up to the cloud.
+When the pipeline ends,
+all the metadata and progress data is uploaded immediately,
+regardless of \code{seconds_meta_upload}.}
+
+\item{seconds_reporter}{Positive numeric of length 1 with the minimum
+number of seconds between times when the reporter prints progress
+messages to the R console.}
+
+\item{seconds_interval}{Deprecated on 2023-08-24 (version 1.2.2.9001).
+Use \code{seconds_meta_append}, \code{seconds_meta_upload},
+and \code{seconds_reporter} instead.}
 
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session
@@ -158,6 +179,32 @@ back into R, and see
 \url{https://docs.ropensci.org/targets/reference/index.html#clean}
 to manage output files.
 }
+\section{Storage access}{
+
+Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
+\code{tar_meta()}, and \code{tar_progress()} read or modify
+the local data store of the pipeline.
+The local data store is in flux while a pipeline is running,
+and depending on how distributed computing or cloud computing is set up,
+not all targets can even reach it. So please do not call these
+functions from inside a target as part of a running
+pipeline. The only exception is literate programming
+target factories in the \code{tarchetypes} package such as \code{tar_render()}
+and \code{tar_quarto()}.
+
+
+Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
+\code{tar_meta()}, and \code{tar_progress()} read or modify
+the local data store of the pipeline.
+The local data store is in flux while a pipeline is running,
+and depending on how distributed computing or cloud computing is set up,
+not all targets can even reach it. So please do not call these
+functions from inside a target as part of a running
+pipeline. The only exception is literate programming
+target factories in the \code{tarchetypes} package such as \code{tar_render()}
+and \code{tar_quarto()}.
+}
+
 \examples{
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.

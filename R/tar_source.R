@@ -8,6 +8,7 @@
 #'   `tar_source()` recursively looks for files ending
 #'   in `.R` or `.r`, and it runs each with
 #'   `eval(parse(text = readLines(script_file, warn = FALSE)), envir)`.
+#' @inheritSection tar_meta Storage access
 #' @return `NULL` (invisibly)
 #' @param files Character vector of file and directory paths
 #'   to look for R scripts to run. Paths must either be absolute
@@ -37,6 +38,7 @@ tar_source <- function(
   envir = targets::tar_option_get("envir"),
   change_directory = FALSE
 ) {
+  tar_assert_allow_meta("tar_source")
   tar_assert_lgl(change_directory)
   tar_assert_scalar(change_directory)
   tar_assert_chr(files)
@@ -60,13 +62,15 @@ tar_source <- function(
   lapply(
     r_scripts,
     function(script) {
-      lines <- readLines(script, warn = FALSE)
       if (change_directory) {
         dir <- dirname(script)
         old <- eval(parse(text = "setwd(dir)"))
         on.exit(eval(parse(text = "setwd(old)")))
+        expr <- parse(file = basename(script), keep.source = TRUE)
+      } else {
+        expr <- parse(file = script, keep.source = TRUE)
       }
-      eval(parse(text = lines), envir = envir)
+      eval(expr = expr, envir = envir)
       invisible()
     }
   )

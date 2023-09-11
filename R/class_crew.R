@@ -5,7 +5,9 @@ crew_init <- function(
   shortcut = FALSE,
   queue = "parallel",
   reporter = "verbose",
-  seconds_interval = 0.5,
+  seconds_meta_append = 0,
+  seconds_meta_upload = 15,
+  seconds_reporter = 0,
   garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   controller = NULL,
@@ -24,7 +26,9 @@ crew_init <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
@@ -40,7 +44,9 @@ crew_new <- function(
   shortcut = NULL,
   queue = NULL,
   reporter = NULL,
-  seconds_interval = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   garbage_collection = NULL,
   envir = NULL,
   controller = NULL,
@@ -54,7 +60,9 @@ crew_new <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
@@ -79,7 +87,9 @@ crew_class <- R6::R6Class(
       shortcut = NULL,
       queue = NULL,
       reporter = NULL,
-      seconds_interval = NULL,
+      seconds_meta_append = NULL,
+      seconds_meta_upload = NULL,
+      seconds_reporter = NULL,
       garbage_collection = NULL,
       envir = NULL,
       controller = NULL,
@@ -93,7 +103,9 @@ crew_class <- R6::R6Class(
         shortcut = shortcut,
         queue = queue,
         reporter = reporter,
-        seconds_interval = seconds_interval,
+        seconds_meta_append = seconds_meta_append,
+        seconds_meta_upload = seconds_meta_upload,
+        seconds_reporter = seconds_reporter,
         garbage_collection = garbage_collection,
         envir = envir
       )
@@ -159,13 +171,13 @@ crew_class <- R6::R6Class(
         # nocov end
       } else {
         target_prepare(target, self$pipeline, self$scheduler, self$meta)
+        self$sync_meta_time()
         self$controller$push(
           command = command,
           data = data,
           globals = globals,
           substitute = FALSE,
           name = name,
-          seed = 0L,
           controller = resources$controller,
           scale = resources$scale %|||% TRUE,
           seconds_timeout = resources$seconds_timeout
@@ -175,6 +187,7 @@ crew_class <- R6::R6Class(
     },
     run_main = function(target) {
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
+      self$sync_meta_time()
       target_run(
         target = target,
         envir = self$envir,
@@ -207,7 +220,7 @@ crew_class <- R6::R6Class(
       target_sync_file_meta(target, self$meta)
     },
     iterate = function() {
-      self$poll_meta()
+      self$sync_meta_time()
       queue <- self$scheduler$queue
       should_dequeue <- queue$should_dequeue()
       if (should_dequeue) {
@@ -249,7 +262,9 @@ crew_class <- R6::R6Class(
         queue = self$queue,
         reporter = self$reporter,
         garbage_collection = self$garbage_collection,
-        seconds_interval = self$seconds_interval,
+        seconds_meta_append = self$seconds_meta_append,
+        seconds_meta_upload = self$seconds_meta_upload,
+        seconds_reporter = self$seconds_reporter,
         envir = self$envir,
         scheduler = self$scheduler
       )
@@ -261,6 +276,7 @@ crew_class <- R6::R6Class(
     record_controller_summary = function(summary) {
       database <- database_crew(self$meta$store)
       database$overwrite_storage(summary)
+      database$upload(verbose = FALSE)
     },
     finalize_crew = function() {
       summary <- crew_summary(self$controller)
@@ -312,6 +328,7 @@ crew_summary <- function(controller) {
 database_crew <- function(path_store) {
   database_init(
     path = file.path(path_meta_dir(path_store), "crew"),
+    subkey = file.path(basename(path_meta("")), "crew"),
     header = c("controller", "worker", "seconds", "targets")
   )
 }

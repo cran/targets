@@ -25,15 +25,16 @@
 #'   input/output files tracked with `tar_target(..., format = "file")`).
 #'   The next run of the pipeline will start from scratch,
 #'   and it will not skip any targets.
+#' @inheritSection tar_meta Storage access
 #' @return `NULL` (invisibly).
 #' @inheritParams tar_validate
 #' @param destroy Character of length 1, what to destroy. Choices:
 #'   * `"all"`: entire data store (default: `_targets/`)
 #'     including cloud data, as well as download/upload scratch files.
-#'   * `"cloud"`: cloud data, e.g. target data
+#'   * `"cloud"`: cloud data, including metadata as well as target object data
 #'     from targets with `tar_target(..., repository = "aws")`.
 #'     Also deletes temporary staging files in
-#'     `tools::R_user_dir(package = "targets", which = "cache")`
+#'     `file.path(tempdir(), "targets")`
 #'     that may have been accidentally left over from incomplete
 #'     uploads or downloads.
 #'   * `"local"`: all the local files in the data store but nothing
@@ -61,6 +62,10 @@
 #'   before deleting files. To disable this menu, set the `TAR_ASK`
 #'   environment variable to `"false"`. `usethis::edit_r_environ()`
 #'   can help set environment variables.
+#' @param script Character of length 1, path to the
+#'   target script file. Defaults to `tar_config_get("script")`,
+#'   which in turn defaults to `_targets.R`. If the script does not exist,
+#'   then cloud metadata will not be deleted.
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
@@ -84,8 +89,10 @@ tar_destroy <- function(
     "user"
   ),
   ask = NULL,
+  script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
 ) {
+  tar_assert_allow_meta("tar_destroy")
   if (!file.exists(store)) {
     return(invisible())
   }
@@ -94,7 +101,7 @@ tar_destroy <- function(
     destroy,
     all = store,
     local = store,
-    cloud = path_scratch_dir_cloud(),
+    cloud = path_scratch_dir_network(),
     meta = path_meta(store),
     process = path_process(store),
     progress = path_progress(store),
@@ -104,11 +111,44 @@ tar_destroy <- function(
     user = path_user_dir(store)
   )
   if (destroy %in% c("all", "cloud")) {
-    meta <- tar_meta(store = store)
-    tar_delete_cloud(names = meta$name, meta = meta, path_store = store)
+    meta <- suppressMessages(tar_meta(store = store))
+    tar_delete_cloud_objects(
+      names = meta$name,
+      meta = meta,
+      path_store = store
+    )
+    tar_delete_cloud_meta(script = script)
+    unlink(path_scratch_dir_network(), recursive = TRUE)
   }
   if (tar_should_delete(path = path, ask = ask)) {
     unlink(path, recursive = TRUE)
   }
   invisible()
 }
+
+# Covered in AWS and GCP tests.
+# nocov start
+tar_delete_cloud_meta <- function(script) {
+  if (!file.exists(script)) {
+    return()
+  }
+  options <- tar_option_script(script = script)
+  old_repository_meta <- tar_options$get_repository_meta()
+  old_resources <- tar_options$get_resources()
+  on.exit({
+    tar_options$set_repository_meta(old_repository_meta)
+    tar_options$set_resources(old_resources)
+  })
+  tar_option_set(repository_meta = options$repository_meta)
+  tar_option_set(resources = options$resources)
+  meta <- database_meta(path_store = tempfile())
+  progress <- database_progress(path_store = tempfile())
+  process <- database_process(path_store = tempfile())
+  crew <- database_crew(path_store = tempfile())
+  meta$delete_cloud(verbose = FALSE)
+  progress$delete_cloud(verbose = FALSE)
+  process$delete_cloud(verbose = FALSE)
+  crew$delete_cloud(verbose = FALSE)
+  invisible()
+}
+# nocov end

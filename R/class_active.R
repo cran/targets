@@ -5,7 +5,9 @@ active_new <- function(
   shortcut = NULL,
   queue = NULL,
   reporter = NULL,
-  seconds_interval = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   garbage_collection = NULL,
   envir = NULL
 ) {
@@ -16,7 +18,9 @@ active_new <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir
   )
@@ -33,7 +37,8 @@ active_class <- R6::R6Class(
     exports = NULL,
     process = NULL,
     seconds_start = NULL,
-    seconds_dequeued = NULL,
+    seconds_meta_appended = NULL,
+    seconds_meta_uploaded = NULL,
     initialize = function(
       pipeline = NULL,
       meta = NULL,
@@ -41,7 +46,9 @@ active_class <- R6::R6Class(
       shortcut = NULL,
       queue = NULL,
       reporter = NULL,
-      seconds_interval = NULL,
+      seconds_meta_append = NULL,
+      seconds_meta_upload = NULL,
+      seconds_reporter = NULL,
       envir = NULL,
       garbage_collection = NULL
     ) {
@@ -52,14 +59,16 @@ active_class <- R6::R6Class(
         shortcut = shortcut,
         queue = queue,
         reporter = reporter,
-        seconds_interval = seconds_interval
+        seconds_meta_append = seconds_meta_append,
+        seconds_meta_upload = seconds_meta_upload,
+        seconds_reporter = seconds_reporter
       )
       self$garbage_collection <- garbage_collection
-      self$seconds_interval <- seconds_interval
       self$envir <- envir
     },
     ensure_meta = function() {
       new_store <- !file.exists(self$meta$store)
+      self$meta$database$sync(prefer_local = TRUE, verbose = FALSE)
       self$meta$migrate_database()
       self$meta$validate()
       self$meta$database$preprocess(write = TRUE)
@@ -74,12 +83,34 @@ active_class <- R6::R6Class(
       self$meta$database$dequeue_rows()
       self$scheduler$progress$database$dequeue_rows()
     },
-    poll_meta = function() {
-      self$seconds_dequeued <- self$seconds_dequeued %|||% -Inf
+    upload_meta = function() {
+      self$meta$database$upload_staged()
+      self$scheduler$progress$database$upload_staged()
+    },
+    sync_meta_time = function() {
+      self$dequeue_meta_time()
+      self$upload_meta_time()
+    },
+    dequeue_meta_time = function() {
+      self$seconds_meta_appended <- self$seconds_meta_appended %|||% -Inf
       now <- time_seconds_local()
-      if ((now - self$seconds_dequeued) > self$seconds_interval) {
+      if ((now - self$seconds_meta_appended) >= self$seconds_meta_append) {
         self$dequeue_meta()
-        self$seconds_dequeued <- time_seconds_local()
+        self$seconds_meta_appended <- time_seconds_local()
+      }
+    },
+    upload_meta_time = function() {
+      self$seconds_meta_uploaded <- self$seconds_meta_uploaded %|||% -Inf
+      now <- time_seconds_local()
+      if ((now - self$seconds_meta_uploaded) >= self$seconds_meta_upload) {
+        self$upload_meta()
+        self$seconds_meta_uploaded <- time_seconds_local()
+      }
+    },
+    dequeue_upload_meta_file = function(target) {
+      if (target_allow_meta(target)) {
+        self$dequeue_meta()
+        self$upload_meta()
       }
     },
     write_gitignore = function() {
@@ -94,6 +125,7 @@ active_class <- R6::R6Class(
     ensure_process = function() {
       self$process <- process_init(path_store = self$meta$store)
       self$process$record_process()
+      self$process$database$upload(verbose = FALSE)
     },
     produce_exports = function(envir, path_store, is_globalenv = NULL) {
       map(names(envir), ~force(envir[[.x]])) # try to nix high-mem promises
@@ -145,6 +177,7 @@ active_class <- R6::R6Class(
       target_debug(target)
       target_update_depend(target, self$pipeline, self$meta)
       if (target_should_run(target, self$meta)) {
+        self$dequeue_upload_meta_file(target)
         self$run_target(name)
       } else {
         self$skip_target(target)
@@ -164,15 +197,16 @@ active_class <- R6::R6Class(
       self$scheduler$reporter$report_start()
     },
     end = function() {
-      self$dequeue_meta()
-      pipeline_unload_loaded(self$pipeline)
-      seconds_elapsed <- time_seconds() - self$seconds_start
       scheduler <- self$scheduler
-      scheduler$reporter$report_end(scheduler$progress, seconds_elapsed)
-      path_scratch_del(path_store = self$meta$store)
+      pipeline_unload_loaded(self$pipeline)
+      self$dequeue_meta()
       self$meta$database$deduplicate_storage()
+      self$upload_meta()
+      path_scratch_del(path_store = self$meta$store)
       compare_working_directories()
       tar_assert_objects_files(self$meta$store)
+      seconds_elapsed <- time_seconds() - self$seconds_start
+      scheduler$reporter$report_end(scheduler$progress, seconds_elapsed)
     },
     validate = function() {
       super$validate()
@@ -182,9 +216,6 @@ active_class <- R6::R6Class(
       tar_assert_lgl(self$garbage_collection)
       tar_assert_scalar(self$garbage_collection)
       tar_assert_none_na(self$garbage_collection)
-      tar_assert_dbl(self$seconds_interval)
-      tar_assert_scalar(self$seconds_interval)
-      tar_assert_none_na(self$seconds_interval)
     }
   )
 )

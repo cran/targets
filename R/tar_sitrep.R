@@ -101,6 +101,7 @@ tar_sitrep <- function(
   script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
 ) {
+  tar_assert_allow_meta("tar_sitrep")
   force(envir)
   names_quosure <- rlang::enquo(names)
   fields_quosure <- rlang::enquo(fields)
@@ -109,6 +110,7 @@ tar_sitrep <- function(
   tar_assert_flag(reporter, tar_reporters_outdated())
   tar_assert_callr_function(callr_function)
   tar_assert_list(callr_arguments)
+  tar_message_meta(store = store)
   targets_arguments <- list(
     path_store = store,
     names_quosure = rlang::enquo(names),

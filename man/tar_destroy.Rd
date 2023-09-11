@@ -8,6 +8,7 @@ tar_destroy(
   destroy = c("all", "cloud", "local", "meta", "process", "progress", "objects",
     "scratch", "workspaces", "user"),
   ask = NULL,
+  script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
 )
 }
@@ -16,10 +17,10 @@ tar_destroy(
 \itemize{
 \item \code{"all"}: entire data store (default: \verb{_targets/})
 including cloud data, as well as download/upload scratch files.
-\item \code{"cloud"}: cloud data, e.g. target data
+\item \code{"cloud"}: cloud data, including metadata as well as target object data
 from targets with \code{tar_target(..., repository = "aws")}.
 Also deletes temporary staging files in
-\code{tools::R_user_dir(package = "targets", which = "cache")}
+\code{file.path(tempdir(), "targets")}
 that may have been accidentally left over from incomplete
 uploads or downloads.
 \item \code{"local"}: all the local files in the data store but nothing
@@ -49,6 +50,11 @@ data store.
 before deleting files. To disable this menu, set the \code{TAR_ASK}
 environment variable to \code{"false"}. \code{usethis::edit_r_environ()}
 can help set environment variables.}
+
+\item{script}{Character of length 1, path to the
+target script file. Defaults to \code{tar_config_get("script")},
+which in turn defaults to \verb{_targets.R}. If the script does not exist,
+then cloud metadata will not be deleted.}
 
 \item{store}{Character of length 1, path to the
 \code{targets} data store. Defaults to \code{tar_config_get("store")},
@@ -90,6 +96,32 @@ input/output files tracked with \code{tar_target(..., format = "file")}).
 The next run of the pipeline will start from scratch,
 and it will not skip any targets.
 }
+\section{Storage access}{
+
+Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
+\code{tar_meta()}, and \code{tar_progress()} read or modify
+the local data store of the pipeline.
+The local data store is in flux while a pipeline is running,
+and depending on how distributed computing or cloud computing is set up,
+not all targets can even reach it. So please do not call these
+functions from inside a target as part of a running
+pipeline. The only exception is literate programming
+target factories in the \code{tarchetypes} package such as \code{tar_render()}
+and \code{tar_quarto()}.
+
+
+Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
+\code{tar_meta()}, and \code{tar_progress()} read or modify
+the local data store of the pipeline.
+The local data store is in flux while a pipeline is running,
+and depending on how distributed computing or cloud computing is set up,
+not all targets can even reach it. So please do not call these
+functions from inside a target as part of a running
+pipeline. The only exception is literate programming
+target factories in the \code{tarchetypes} package such as \code{tar_render()}
+and \code{tar_quarto()}.
+}
+
 \examples{
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.

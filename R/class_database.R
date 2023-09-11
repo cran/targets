@@ -1,25 +1,51 @@
 database_init <- function(
   path = tempfile(),
+  subkey = basename(tempfile()),
   header = "name",
-  list_columns = character(0)
+  list_columns = character(0L),
+  list_column_modes = character(0L),
+  repository = tar_options$get_repository_meta(),
+  resources = tar_options$get_resources()
 ) {
   memory <- memory_init()
-  database_new(memory, path, header, list_columns)
-}
-
-database_new <- function(
-  memory = NULL,
-  path = NULL,
-  header = NULL,
-  list_columns = NULL,
-  queue = NULL
-) {
-  database_class$new(
-    memory = memory,
-    path = path,
-    header = header,
-    list_columns = list_columns,
-    queue = queue
+  key <- file.path(
+    resources[[repository]]$prefix %|||% path_store_default(),
+    subkey
+  )
+  switch(
+    repository,
+    local = database_local_new(
+      memory = memory,
+      path = path,
+      key = key,
+      header = header,
+      list_columns = list_columns,
+      list_column_modes = list_column_modes,
+      resources = resources
+    ),
+    aws = database_aws_new(
+      memory = memory,
+      path = path,
+      key = key,
+      header = header,
+      list_columns = list_columns,
+      list_column_modes = list_column_modes,
+      resources = resources
+    ),
+    gcp = database_gcp_new(
+      memory = memory,
+      path = path,
+      key = key,
+      header = header,
+      list_columns = list_columns,
+      list_column_modes = list_column_modes,
+      resources = resources
+    ),
+    tar_throw_validate(
+      "unsupported repository \"",
+      repository,
+      "\" for {targets} database class."
+    )
   )
 }
 
@@ -29,24 +55,34 @@ database_class <- R6::R6Class(
   portable = FALSE,
   cloneable = FALSE,
   public = list(
+    memory = NULL,
+    path = NULL,
+    key = NULL,
+    header = NULL,
+    list_columns = NULL,
+    list_column_modes = NULL,
+    resources = NULL,
+    queue = NULL,
+    staged = NULL,
     initialize = function(
       memory = NULL,
       path = NULL,
+      key = NULL,
       header = NULL,
       list_columns = NULL,
+      list_column_modes = NULL,
+      resources = NULL,
       queue = NULL
     ) {
       self$memory <- memory
       self$path <- path
+      self$key <- key
       self$header <- header
       self$list_columns <- list_columns
+      self$list_column_modes <- list_column_modes
+      self$resources <- resources
       self$queue <- queue
     },
-    memory = NULL,
-    path = NULL,
-    header = NULL,
-    list_columns = NULL,
-    queue = NULL,
     get_row = function(name) {
       memory_get_object(self$memory, name)
     },
@@ -59,8 +95,20 @@ database_class <- R6::R6Class(
     },
     get_data = function() {
       rows <- self$list_rows()
-      out <- map(rows, ~as_data_frame(self$get_row(.x)))
-      do.call(rbind, out)
+      list_columns <- self$list_columns
+      list_column_mode_list <- as.list(self$list_column_modes)
+      names(list_column_mode_list) <- list_columns
+      out <- map(
+        rows,
+        ~database_repair_list_columns(
+          .subset2(self, "get_row")(.x),
+          list_columns,
+          list_column_mode_list
+        )
+      )
+      out <- as_data_frame(data.table::rbindlist(out, fill = TRUE))
+      columns <- base::union(self$header, setdiff(colnames(out), self$header))
+      out[, columns, drop = FALSE]
     },
     set_data = function(data) {
       list <- lapply(data, as.list)
@@ -109,8 +157,15 @@ database_class <- R6::R6Class(
     },
     dequeue_rows = function() {
       if (length(self$queue)) {
-        on.exit(self$queue <- NULL)
         self$append_lines(self$queue)
+        self$queue <- NULL
+        self$staged <- TRUE
+      }
+    },
+    upload_staged = function() {
+      if (!is.null(self$staged) && self$staged) {
+        self$upload(verbose = FALSE)
+        self$staged <- FALSE
       }
     },
     write_row = function(row) {
@@ -204,7 +259,6 @@ database_class <- R6::R6Class(
     read_existing_data = function() {
       # TODO: use sep2 once implemented:
       # https://github.com/Rdatatable/data.table/issues/1162
-      # We can also delete the list_columns arg then.
       encoding <- getOption("encoding")
       encoding <- if_any(
         identical(tolower(encoding), "latin1"),
@@ -242,10 +296,67 @@ database_class <- R6::R6Class(
       out
     },
     deduplicate_storage = function() {
-      if (file.exists(self$path)) {
-        data <- self$condense_data(self$read_data())
+      exists <- file.exists(self$path)
+      overwrite <- !exists
+      if (exists) {
+        old <- self$read_data()
+        data <- self$condense_data(old)
+        overwrite <- (nrow(data) != nrow(old))
+      }
+      if (overwrite) {
         data <- data[order(data$name),, drop = FALSE] # nolint
         self$overwrite_storage(data)
+      }
+      invisible()
+    },
+    upload = function(verbose = TRUE) {
+      "upload"
+    },
+    download = function(verbose = TRUE) {
+      "download"
+    },
+    head = function() {
+      file <- file_init(path = "path_cloud")
+      file_ensure_hash(file)
+      list(
+        exists = file.exists("path_cloud"),
+        hash = file$hash,
+        size = file$size,
+        time = file$time
+      )
+    },
+    sync = function(prefer_local = TRUE, verbose = TRUE) {
+      head <- self$head()
+      file <- file_init(path = self$path)
+      file_ensure_hash(file)
+      exists_file <- all(file.exists(self$path))
+      exists_object <- head$exists %|||% FALSE
+      changed <- !all(file$hash == head$hash)
+      if (exists_file && (!exists_object)) {
+        self$upload(verbose = verbose)
+      } else if ((!exists_file) && exists_object) {
+        self$download(verbose = verbose)
+      } else if (exists_file && exists_object && changed) {
+        time_file <- file_time_posixct(file$time)
+        time_head <- file_time_posixct(head$time)
+        file_newer <- time_file > time_head
+        file_same <- file$time == head$time
+        do_upload <- file_newer || (prefer_local && file_same)
+        if (do_upload) {
+          self$upload(verbose = verbose)
+        } else {
+          self$download(verbose = verbose)
+        }
+      } else {
+        if (verbose) {
+          tar_print(
+            "Skipped syncing ",
+            self$path,
+            " with cloud object ",
+            self$key
+          )
+        }
+        invisible()
       }
     },
     validate_columns = function(header, list_columns) {
@@ -281,6 +392,12 @@ database_class <- R6::R6Class(
       self$validate_file()
       tar_assert_chr(self$path)
       tar_assert_scalar(self$path)
+      tar_assert_none_na(self$path)
+      tar_assert_nzchar(self$path)
+      tar_assert_chr(self$key)
+      tar_assert_scalar(self$key)
+      tar_assert_none_na(self$key)
+      tar_assert_nzchar(self$key)
       tar_assert_chr(self$header)
       tar_assert_chr(self$list_columns)
     }
@@ -305,6 +422,15 @@ compare_working_directories <- function() {
       )
     )
   }
+}
+
+database_repair_list_columns <- function(x, columns, list_column_mode_list) {
+  for (column in columns) {
+    na <- NA
+    mode(na) <- list_column_mode_list[[column]]
+    x[[column]] <- list(.subset2(x, column) %|||% na)
+  }
+  x
 }
 
 database_sep_outer <- "|"

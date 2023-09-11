@@ -1,7 +1,7 @@
 resources_network_init <- function(
-  seconds_interval = 1,
-  seconds_timeout = 10,
-  max_tries = 1L,
+  seconds_interval = 0.25,
+  seconds_timeout = 60,
+  max_tries = Inf,
   verbose = TRUE
 ) {
   resources_network_new(

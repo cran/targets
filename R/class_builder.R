@@ -52,8 +52,6 @@ target_read_value.tar_builder <- function(target, pipeline = NULL) {
 target_prepare.tar_builder <- function(target, pipeline, scheduler, meta) {
   target_patternview_started(target, pipeline, scheduler)
   scheduler$progress$register_started(target)
-  meta$database$dequeue_rows()
-  scheduler$progress$database$dequeue_rows()
   scheduler$reporter$report_started(target, scheduler$progress)
   builder_ensure_deps(target, pipeline, "main")
   builder_update_subpipeline(target, pipeline)
@@ -253,7 +251,7 @@ target_sync_file_meta.tar_builder <- function(target, meta) {
 target_get_packages.tar_builder <- function(target) {
   packages_command <- target$command$packages
   packages_store <- store_get_packages(target$store)
-  sort(unique(c(packages_command, packages_store)))
+  sort_chr(unique(c(packages_command, packages_store)))
 }
 
 #' @export

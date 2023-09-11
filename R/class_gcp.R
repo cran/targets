@@ -30,9 +30,10 @@ store_produce_gcp_path <- function(store, name, object, path_store) {
   tar_assert_chr(bucket)
   tar_assert_scalar(bucket)
   tar_assert_nzchar(bucket)
-  prefix <- store$resources$gcp$prefix %|||%
+  root_prefix <- store$resources$gcp$prefix %|||%
     store$resources$prefix %|||%
-    tar_path_objects_dir_cloud()
+    path_store_default()
+  prefix <- path_objects_dir(path_store = root_prefix)
   tar_assert_nonempty(prefix)
   tar_assert_chr(prefix)
   tar_assert_scalar(prefix)
@@ -71,33 +72,16 @@ store_read_object.tar_gcp <- function(store) {
   path <- store$file$path
   key <- store_gcp_key(path)
   bucket <- store_gcp_bucket(path)
-  scratch <- path_scratch(
-    path_store = path_scratch_dir_cloud(),
-    pattern = basename(store_gcp_key(path))
-  )
+  scratch <- path_scratch_temp_network(pattern = basename(store_gcp_key(path)))
   on.exit(unlink(scratch))
   dir_create(dirname(scratch))
-  seconds_interval <- store$resources$network$seconds_interval %|||% 1
-  seconds_timeout <- store$resources$network$seconds_timeout %|||% 30
-  max_tries <- store$resources$network$max_tries %|||% Inf
-  verbose <- store$resources$network$verbose %|||% TRUE
-  retry_until_true(
-    fun = ~{
-      gcp_gcs_download(
-        key = key,
-        bucket = bucket,
-        file = scratch,
-        version = store_gcp_version(path),
-        verbose = store$resources$gcp$verbose %|||% FALSE
-      )
-      TRUE
-    },
-    seconds_interval = seconds_interval,
-    seconds_timeout = seconds_timeout,
-    max_tries = max_tries,
-    catch_error = TRUE,
-    message = sprintf("Cannot download object %s from bucket %s", key, bucket),
-    verbose = verbose
+  gcp_gcs_download(
+    key = key,
+    bucket = bucket,
+    file = scratch,
+    version = store_gcp_version(path),
+    verbose = store$resources$gcp$verbose,
+    max_tries = store$resources$gcp$max_tries
   )
   store_convert_object(store, store_read_path(store, scratch))
 }
@@ -109,7 +93,8 @@ store_exist_object.tar_gcp <- function(store, name = NULL) {
     key = store_gcp_key(path),
     bucket = store_gcp_bucket(path),
     version = store_gcp_version(path),
-    verbose = store$resources$gcp$verbose %|||% FALSE
+    verbose = store$resources$gcp$verbose %|||% FALSE,
+    max_tries = store$resources$gcp$max_tries %|||% 5L
   )
 }
 
@@ -131,7 +116,8 @@ store_delete_object.tar_gcp <- function(store, name = NULL) {
       key = key,
       bucket =  bucket,
       version = version,
-      verbose = store$resources$gcp$verbose %|||% FALSE
+      verbose = store$resources$gcp$verbose %|||% FALSE,
+      max_tries = store$resources$gcp$max_tries %|||% 5L
     ),
     error = function(condition) {
       tar_throw_validate(message, conditionMessage(condition))
@@ -150,31 +136,16 @@ store_upload_object.tar_gcp <- function(store) {
 store_upload_object_gcp <- function(store) {
   key <- store_gcp_key(store$file$path)
   bucket <- store_gcp_bucket(store$file$path)
-  seconds_interval <- store$resources$network$seconds_interval %|||% 1
-  seconds_timeout <- store$resources$network$seconds_timeout %|||% 30
-  max_tries <- store$resources$network$max_tries %|||% Inf
-  verbose <- store$resources$network$verbose %|||% TRUE
-  envir <- new.env(parent = emptyenv())
-  if_any(
+  head <- if_any(
     file_exists_stage(store$file),
-    retry_until_true(
-      ~{
-        envir$head <- gcp_gcs_upload(
-          file = store$file$stage,
-          key = key,
-          bucket = bucket,
-          metadata = list("targets-hash" = store$file$hash),
-          predefined_acl = store$resources$gcp$predefined_acl %|||% "private",
-          verbose = store$resources$gcp$verbose %|||% FALSE
-        )
-        TRUE
-      },
-      seconds_interval = seconds_interval,
-      seconds_timeout = seconds_timeout,
-      max_tries = max_tries,
-      catch_error = TRUE,
-      message = sprintf("Cannot upload to object %s bucket %s", key, bucket),
-      verbose = verbose
+    gcp_gcs_upload(
+      file = store$file$stage,
+      key = key,
+      bucket = bucket,
+      metadata = list("targets-hash" = store$file$hash),
+      predefined_acl = store$resources$gcp$predefined_acl %|||% "private",
+      verbose = store$resources$gcp$verbose %|||% FALSE,
+      max_tries = store$resources$gcp$max_tries %|||% 5L
     ),
     tar_throw_file(
       "Cannot upload non-existent gcp staging file ",
@@ -190,7 +161,7 @@ store_upload_object_gcp <- function(store) {
     value = TRUE,
     invert = TRUE
   )
-  store$file$path <- c(path, paste0("version=", envir$head$generation))
+  store$file$path <- c(path, paste0("version=", head$generation))
   invisible()
 }
 
@@ -200,25 +171,18 @@ store_ensure_correct_hash.tar_gcp <- function(store, storage, deployment) {
 
 #' @export
 store_has_correct_hash.tar_gcp <- function(store) {
-  path <- store$file$path
-  bucket <- store_gcp_bucket(path)
-  key <- store_gcp_key(path)
-  version <- store_gcp_version(path)
-  hash <- store_gcp_hash(
-    key = key,
-    bucket = bucket,
-    version = version,
-    verbose = store$resources$gcp$verbose %|||% FALSE
-  )
+  hash <- store_gcp_hash(store = store)
   !is.null(hash) && identical(hash, store$file$hash)
 }
 
-store_gcp_hash <- function(key, bucket, version, verbose) {
+store_gcp_hash <- function(store) {
+  path <- store$file$path
   head <- gcp_gcs_head(
-    key = key,
-    bucket = bucket,
-    version = version,
-    verbose = verbose
+    key = store_gcp_key(path),
+    bucket = store_gcp_bucket(path),
+    version = store_gcp_version(path),
+    verbose = store$resources$gcp$verbose %|||% FALSE,
+    max_tries = store$resources$gcp$max_tries %|||% 5L
   )
   head$metadata[["targets-hash"]]
 }

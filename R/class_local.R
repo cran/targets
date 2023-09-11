@@ -5,7 +5,9 @@ local_init <- function(
   shortcut = FALSE,
   queue = "parallel",
   reporter = "verbose",
-  seconds_interval = 0.5,
+  seconds_meta_append = 0,
+  seconds_meta_upload = 15,
+  seconds_reporter = 0,
   envir = tar_option_get("envir")
 ) {
   local_new(
@@ -15,7 +17,9 @@ local_init <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = FALSE,
     envir = envir
   )
@@ -28,7 +32,9 @@ local_new <- function(
   shortcut = NULL,
   queue = NULL,
   reporter = NULL,
-  seconds_interval = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   garbage_collection = NULL,
   envir = NULL
 ) {
@@ -39,7 +45,9 @@ local_new <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir
   )
@@ -57,6 +65,7 @@ local_class <- R6::R6Class(
       target <- pipeline_get_target(self$pipeline, name)
       self$tar_assert_deployment(target)
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
+      self$sync_meta_time()
       target_run(
         target = target,
         envir = self$envir,
@@ -71,7 +80,7 @@ local_class <- R6::R6Class(
       self$unload_transient()
     },
     process_next = function() {
-      self$poll_meta()
+      self$sync_meta_time()
       self$process_target(self$scheduler$queue$dequeue())
     },
     run = function() {

@@ -15,6 +15,8 @@ client <- function() {
 }
 
 tar_test("aws_s3_exists()", {
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -23,7 +25,8 @@ tar_test("aws_s3_exists()", {
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   tmp <- tempfile()
@@ -34,12 +37,15 @@ tar_test("aws_s3_exists()", {
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
 })
 
 tar_test("aws_s3_head()", {
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -50,7 +56,8 @@ tar_test("aws_s3_head()", {
     key = "x",
     bucket = bucket,
     region = region,
-    endpoint = endpoint
+    endpoint = endpoint,
+    max_tries = 5L
   )
   expect_true(is.list(head))
   expect_true(is.character(head$ETag))
@@ -58,6 +65,8 @@ tar_test("aws_s3_head()", {
 })
 
 tar_test("aws_s3_download()", {
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -71,12 +80,15 @@ tar_test("aws_s3_download()", {
     key = "x",
     bucket = bucket,
     region = region,
-    endpoint = endpoint
+    endpoint = endpoint,
+    max_tries = 5L
   )
   expect_equal(readLines(tmp2), "x")
 })
 
 tar_test("aws_s3_upload() without headers", {
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -85,7 +97,8 @@ tar_test("aws_s3_upload() without headers", {
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   tmp <- tempfile()
@@ -95,19 +108,23 @@ tar_test("aws_s3_upload() without headers", {
     key = "x",
     bucket = bucket,
     region = region,
-    endpoint = endpoint
+    endpoint = endpoint,
+    max_tries = 5L
   )
   expect_true(
     aws_s3_exists(
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
 })
 
 tar_test("aws_s3_upload() and download with metadata", {
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -116,7 +133,8 @@ tar_test("aws_s3_upload() and download with metadata", {
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   tmp <- tempfile()
@@ -127,21 +145,24 @@ tar_test("aws_s3_upload() and download with metadata", {
     bucket = bucket,
     metadata = list("custom" = "custom_metadata"),
     region = region,
-    endpoint = endpoint
+    endpoint = endpoint,
+    max_tries = 5L
   )
   expect_true(
     aws_s3_exists(
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   head <- aws_s3_head(
     key = "x",
     bucket = bucket,
     region = region,
-    endpoint = endpoint
+    endpoint = endpoint,
+    max_tries = 5L
   )
   expect_equal(head$Metadata$custom, "custom_metadata")
   tmp2 <- tempfile()
@@ -151,7 +172,8 @@ tar_test("aws_s3_upload() and download with metadata", {
     key = "x",
     bucket = bucket,
     region = region,
-    endpoint = endpoint
+    endpoint = endpoint,
+    max_tries = 5L
   )
   expect_equal(readLines(tmp2), "x")
 })
@@ -159,6 +181,8 @@ tar_test("aws_s3_upload() and download with metadata", {
 # Go through this one fully manually.
 tar_test("upload twice, get the correct version", {
   skip("not working because GCP S3 interoperability does not get versions.")
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -172,7 +196,8 @@ tar_test("upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    metadata = list("custom" = "first-meta")
+    metadata = list("custom" = "first-meta"),
+    max_tries = 5L
   )
   v1 <- head_first$VersionId
   writeLines("second", tmp)
@@ -182,7 +207,8 @@ tar_test("upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    metadata = list("custom" = "second-meta")
+    metadata = list("custom" = "second-meta"),
+    max_tries = 5L
   )
   v2 <- head_second$VersionId
   expect_true(
@@ -190,7 +216,8 @@ tar_test("upload twice, get the correct version", {
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   expect_true(
@@ -199,7 +226,8 @@ tar_test("upload twice, get the correct version", {
       bucket = bucket,
       region = region,
       endpoint = endpoint,
-      version = v1
+      version = v1,
+      max_tries = 5L
     )
   )
   expect_true(
@@ -208,7 +236,8 @@ tar_test("upload twice, get the correct version", {
       bucket = bucket,
       version = v2,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   expect_false(
@@ -217,7 +246,8 @@ tar_test("upload twice, get the correct version", {
       bucket = bucket,
       region = region,
       endpoint = endpoint,
-      version = "v3"
+      version = "v3",
+      max_tries = 5L
     )
   )
   h1 <- aws_s3_head(
@@ -225,14 +255,16 @@ tar_test("upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v1
+    version = v1,
+    max_tries = 5L
   )
   h2 <- aws_s3_head(
     key = "x",
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v2
+    version = v2,
+    max_tries = 5L
   )
   expect_equal(h1$VersionId, v1)
   expect_equal(h2$VersionId, v2)
@@ -245,7 +277,8 @@ tar_test("upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v1
+    version = v1,
+    max_tries = 5L
   )
   expect_equal(readLines(tmp), "first")
   aws_s3_download(
@@ -254,13 +287,16 @@ tar_test("upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v2
+    version = v2,
+    max_tries = 5L
   )
   expect_equal(readLines(tmp), "second")
 })
 
 tar_test("multipart: upload twice, get the correct version", {
   skip("not working because GCP S3 interoperability does not get versions.")
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -275,7 +311,8 @@ tar_test("multipart: upload twice, get the correct version", {
     multipart = TRUE,
     region = region,
     endpoint = endpoint,
-    metadata = list("custom" = "first-meta")
+    metadata = list("custom" = "first-meta"),
+    max_tries = 5L
   )
   v1 <- head_first$VersionId
   writeLines("second", tmp)
@@ -286,7 +323,8 @@ tar_test("multipart: upload twice, get the correct version", {
     multipart = TRUE,
     region = region,
     endpoint = endpoint,
-    metadata = list("custom" = "second-meta")
+    metadata = list("custom" = "second-meta"),
+    max_tries = 5L
   )
   v2 <- head_second$VersionId
   expect_true(
@@ -294,7 +332,8 @@ tar_test("multipart: upload twice, get the correct version", {
       key = "x",
       bucket = bucket,
       region = region,
-      endpoint = endpoint
+      endpoint = endpoint,
+      max_tries = 5L
     )
   )
   expect_true(
@@ -303,7 +342,8 @@ tar_test("multipart: upload twice, get the correct version", {
       bucket = bucket,
       region = region,
       endpoint = endpoint,
-      version = v1
+      version = v1,
+      max_tries = 5L
     )
   )
   expect_true(
@@ -312,7 +352,8 @@ tar_test("multipart: upload twice, get the correct version", {
       bucket = bucket,
       region = region,
       endpoint = endpoint,
-      version = v2
+      version = v2,
+      max_tries = 5L
     )
   )
   expect_false(
@@ -321,7 +362,8 @@ tar_test("multipart: upload twice, get the correct version", {
       bucket = bucket,
       region = region,
       endpoint = endpoint,
-      version = "v3"
+      version = "v3",
+      max_tries = 5L
     )
   )
   h1 <- aws_s3_head(
@@ -329,14 +371,16 @@ tar_test("multipart: upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v1
+    version = v1,
+    max_tries = 5L
   )
   h2 <- aws_s3_head(
     key = "x",
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v2
+    version = v2,
+    max_tries = 5L
   )
   expect_equal(h1$VersionId, v1)
   expect_equal(h2$VersionId, v2)
@@ -349,7 +393,8 @@ tar_test("multipart: upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v1
+    version = v1,
+    max_tries = 5L
   )
   expect_equal(readLines(tmp), "first")
   aws_s3_download(
@@ -358,12 +403,15 @@ tar_test("multipart: upload twice, get the correct version", {
     bucket = bucket,
     region = region,
     endpoint = endpoint,
-    version = v2
+    version = v2,
+    max_tries = 5L
   )
   expect_equal(readLines(tmp), "second")
 })
 
 tar_test("graceful error on multipart upload", {
+  skip_if_no_aws()
+  skip_if_no_gcp()
   bucket <- random_bucket_name()
   client()$create_bucket(Bucket = bucket)
   on.exit(aws_s3_delete_bucket(bucket, client()))
@@ -377,7 +425,8 @@ tar_test("graceful error on multipart upload", {
       multipart = TRUE,
       region = region,
       endpoint = endpoint,
-      part_size = 5e3
+      part_size = 5e3,
+      max_tries = 5L
     ),
     class = "tar_condition_file"
   )

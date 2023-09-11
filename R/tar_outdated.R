@@ -8,7 +8,9 @@
 #' @details Requires that you define a pipeline
 #'   with a target script file (default: `_targets.R`).
 #'   (See [tar_script()] for details.)
+#' @inheritSection tar_meta Storage access
 #' @return Names of the outdated targets.
+#' @inheritParams tar_make
 #' @param names Names of the targets. `tar_outdated()` will check
 #'   these targets and all upstream ancestors in the dependency graph.
 #'   Set `names` to `NULL` to check/build all the targets (default).
@@ -38,8 +40,6 @@
 #'   * `"silent"`: print nothing.
 #'   * `"forecast"`: print running totals of the checked and outdated
 #'     targets found so far.
-#' @param seconds_interval Positive numeric of length 1, how often
-#'   (in seconds) the reporter prints progress messages.
 #' @inheritParams tar_validate
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
@@ -62,6 +62,7 @@ tar_outdated <- function(
   branches = FALSE,
   targets_only = TRUE,
   reporter = targets::tar_config_get("reporter_outdated"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter"),
   seconds_interval = targets::tar_config_get("seconds_interval"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
@@ -69,15 +70,17 @@ tar_outdated <- function(
   script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
 ) {
+  tar_assert_allow_meta("tar_outdated")
   force(envir)
   tar_assert_scalar(shortcut)
   tar_assert_lgl(shortcut)
   tar_assert_lgl(branches)
   tar_assert_flag(reporter, tar_reporters_outdated())
-  tar_assert_dbl(seconds_interval)
-  tar_assert_scalar(seconds_interval)
-  tar_assert_none_na(seconds_interval)
-  tar_assert_ge(seconds_interval, 0)
+  tar_assert_dbl(seconds_reporter)
+  tar_assert_scalar(seconds_reporter)
+  tar_assert_none_na(seconds_reporter)
+  tar_assert_ge(seconds_reporter, 0)
+  tar_deprecate_seconds_interval(seconds_interval)
   tar_assert_callr_function(callr_function)
   tar_assert_list(callr_arguments)
   targets_arguments <- list(
@@ -87,7 +90,7 @@ tar_outdated <- function(
     branches = branches,
     targets_only = targets_only,
     reporter = reporter,
-    seconds_interval = seconds_interval
+    seconds_reporter = seconds_reporter
   )
   callr_outer(
     targets_function = tar_outdated_inner,
@@ -109,7 +112,7 @@ tar_outdated_inner <- function(
   branches,
   targets_only,
   reporter,
-  seconds_interval
+  seconds_reporter
 ) {
   names_all <- pipeline_get_names(pipeline)
   names <- tar_tidyselect_eval(names_quosure, names_all)
@@ -126,7 +129,7 @@ tar_outdated_inner <- function(
     shortcut = shortcut,
     queue = "sequential",
     reporter = reporter,
-    seconds_interval = seconds_interval
+    seconds_reporter = seconds_reporter
   )
   outdated$run()
   outdated_targets <- counter_get_names(outdated$outdated)

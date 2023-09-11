@@ -2,7 +2,7 @@ tar_test("tar_resources_aws()", {
   skip_cran()
   skip_on_os("windows")
   skip_if_not_installed("paws.storage")
-  out <- tar_resources_aws(bucket = "bucket123")
+  out <- tar_resources_aws(bucket = "bucket123", prefix = "x")
   expect_equal(out$bucket, "bucket123")
   expect_null(out$region)
   expect_silent(resources_validate(out))
@@ -12,7 +12,11 @@ tar_test("tar_resources_aws() with region", {
   skip_cran()
   skip_on_os("windows")
   skip_if_not_installed("paws.storage")
-  out <- tar_resources_aws(bucket = "bucket123", region = "us-east-1")
+  out <- tar_resources_aws(
+    bucket = "bucket123",
+    region = "us-east-1",
+    prefix = "x"
+  )
   expect_equal(out$region, "us-east-1")
   expect_silent(resources_validate(out))
 })
@@ -21,7 +25,11 @@ tar_test("tar_resources_aws() with part_size", {
   skip_cran()
   skip_on_os("windows")
   skip_if_not_installed("paws.storage")
-  out <- tar_resources_aws(bucket = "bucket123", part_size = 1e8)
+  out <- tar_resources_aws(
+    bucket = "bucket123",
+    part_size = 1e8,
+    prefix = "x"
+  )
   expect_equal(out$part_size, 1e8)
   expect_silent(resources_validate(out))
 })
@@ -33,7 +41,8 @@ tar_test("tar_resources_aws() default bucket", {
   tar_option_set(
     resources = tar_resources(
       aws = tar_resources_aws(
-        bucket = "bucket123"
+        bucket = "bucket123",
+        prefix = "x"
       )
     )
   )
@@ -49,6 +58,7 @@ tar_test("tar_resources_aws() default prefix", {
   tar_option_set(
     resources = tar_resources(
       aws = tar_resources_aws(
+        bucket = "x",
         prefix = "my_prefix"
       )
     )
@@ -64,7 +74,9 @@ tar_test("tar_resources_aws() default part_size", {
   tar_option_set(
     resources = tar_resources(
       aws = tar_resources_aws(
-        part_size = 1e2
+        part_size = 1e2,
+        prefix = "x",
+        bucket = "x"
       )
     )
   )
@@ -79,7 +91,9 @@ tar_test("tar_resources_aws() default region", {
   tar_option_set(
     resources = tar_resources(
       aws = tar_resources_aws(
-        region = "the_moon"
+        region = "the_moon",
+        prefix = "x",
+        bucket = "x"
       )
     )
   )
@@ -94,7 +108,9 @@ tar_test("tar_resources_aws() default endpoint", {
   tar_option_set(
     resources = tar_resources(
       aws = tar_resources_aws(
-        endpoint = "google"
+        endpoint = "google",
+        prefix = "x",
+        bucket = "x"
       )
     )
   )
@@ -109,10 +125,73 @@ tar_test("tar_resources_aws() default SSECustomerKey", {
   tar_option_set(
     resources = tar_resources(
       aws = tar_resources_aws(
-        SSECustomerKey = "x"
+        SSECustomerKey = "x",
+        prefix = "x",
+        bucket = "x"
       )
     )
   )
   out <- tar_resources_aws()
   expect_equal(out$args$SSECustomerKey, "x")
+})
+
+tar_test("tar_resources_aws() default seconds_timeout", {
+  skip_cran()
+  skip_on_os("windows")
+  skip_if_not_installed("paws.storage")
+  tar_option_set(
+    resources = tar_resources(
+      aws = tar_resources_aws(
+        seconds_timeout = 2.1,
+        prefix = "x",
+        bucket = "x"
+      )
+    )
+  )
+  out <- tar_resources_aws()
+  expect_equal(out$seconds_timeout, 2.1)
+})
+
+tar_test("tar_resources_aws() default close_connection", {
+  skip_cran()
+  skip_on_os("windows")
+  skip_if_not_installed("paws.storage")
+  tar_option_set(
+    resources = tar_resources(
+      aws = tar_resources_aws(
+        close_connection = FALSE,
+        prefix = "x",
+        bucket = "x"
+      )
+    )
+  )
+  out <- tar_resources_aws()
+  expect_equal(out$close_connection, FALSE)
+})
+
+tar_test("tar_resources_aws() default s3_force_path_style", {
+  skip_cran()
+  skip_on_os("windows")
+  skip_if_not_installed("paws.storage")
+  tar_option_set(
+    resources = tar_resources(
+      aws = tar_resources_aws(
+        s3_force_path_style = TRUE,
+        prefix = "x",
+        bucket = "x"
+      )
+    )
+  )
+  out <- tar_resources_aws()
+  expect_equal(out$s3_force_path_style, TRUE)
+})
+
+tar_test("tar_resources_aws() wants a prefix", {
+  skip_cran()
+  skip_on_os("windows")
+  skip_if_not_installed("paws.storage")
+  expect_warning(
+    tar_resources_aws(bucket = "bucket123", prefix = NULL),
+    class = "tar_condition_deprecate"
+  )
 })

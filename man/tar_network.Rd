@@ -12,6 +12,7 @@ tar_network(
   exclude = NULL,
   outdated = TRUE,
   reporter = targets::tar_config_get("reporter_outdated"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
   envir = parent.frame(),
@@ -73,6 +74,10 @@ Controls how messages are printed as targets are checked. Choices:
 \item \code{"forecast"}: print running totals of the checked and outdated
 targets found so far.
 }}
+
+\item{seconds_reporter}{Positive numeric of length 1 with the minimum
+number of seconds between times when the reporter prints progress
+messages to the R console.}
 
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session

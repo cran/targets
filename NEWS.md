@@ -1,3 +1,37 @@
+# targets 1.3.0
+
+## Invalidating changes
+
+Because of these changes, upgrading to this version of `targets` will unavoidably invalidate previously built targets in existing pipelines. Your pipeline code should still work, but any targets you ran before will most likely need to rerun after the upgrade.
+
+* In the `hash_deps()` method of the metadata class, exclude symbols which are not actually dependencies, rather than just giving them empty strings. This change decouples the dependency hash from the hash of the target's command (#1108).
+
+## Cloud metadata
+
+* Continuously upload metadata files to the cloud during `tar_make()`, `tar_make_clustermq()`, and `tar_make_future()` (#1109). Upload them to the repository specified in the `repository_meta` `tar_option_set()` option, and use the bucket and prefix set in the `resources` `tar_option_set()` option. `repository_meta` defaults to the existing `repository` `tar_option_set()` option.
+* Add new functions `tar_meta_download()`, `tar_meta_upload()`, `tar_meta_sync()`, and `tar_meta_delete()` to directly manage cloud metadata outside the pipeline (#1109).
+
+## Other changes
+
+* Fix solution of #1103 so the copy fallback actually runs (@jds485, #1102, #1103).
+* Switch back to `tempdir()` for #1103.
+* Move `path_scratch_dir_network()` to `file.path(tempdir(), "targets")` and make sure `tar_destroy("all")` and `tar_destroy("cloud")` delete it.
+* Display `tar_mermaid()` subgraphs with transparent fills and black borders.
+* Allow `database$get_data()` to work with list columns.
+* Disallow functions that access the local data store (including metadata) from inside a target while the pipeline is running (#1055, #1063). The only exception to this is local file targets such as `tarchetypes` literate programming target factories like `tar_render()` and `tar_quarto()`.
+* In the `hash_deps()` method of the metadata class, use a new custom `sort_chr()` function which temporarily sets the `LC_COLLATE` locale to `"C"` for sorting. This ensures lexicographic comparisons  are consistent across platforms (#1108).
+* In `tar_source()`, use the `file` argument and `keep.source = TRUE` to help with interactive debugging (#1120).
+* Deprecated `seconds_interval` in `tar_config_get()`, `tar_make()`, `tar_make_clustermq()` and `tar_make_future()`. Replace it with `seconds_meta` (to control how often metadata gets saved) and `seconds_reporter` (to control how often to print messages to the R console) (#1119).
+* Respect `seconds_meta` and `seconds_reporter` for writing metadata and console messages even for currently building targets (#1055).
+* Retry all cloud REST API calls with HTTP error codes (429, 500-599) with the exponential backoff algorithm from `googleAuthR` (#1112).
+* For `format = "url"`, only retry on the HTTP error codes above.
+* Make cloud temp file instances unique in order to avoid file conflicts with the same target.
+* Un-deprecate `seconds_interval` and `seconds_timeout` from `tar_resources_url()`, and implement `max_tries` arguments in `tar_resources_aws()` and `tar_resources_gcp()` (#1127).
+* Use `file` and `keep.source` in `parse()` in `callr` utils and target Markdown.
+* Automatically convert `"file_fast"` format to `"file"` format for cloud targets.
+* In `tar_prune()` and `tar_delete()`, do not try to delete pattern targets which have no cloud storage.
+* Add new arguments `seconds_timeout`, `close_connection`, `s3_force_path_style` to `tar_resources_aws()` to support the analogous arguments in `paws.storage::s3()` (#1134, @snowpong).
+
 # targets 1.2.2
 
 * Fix a documentation issue for CRAN.
@@ -58,6 +92,7 @@
 * Deprecate `seconds_interval` and `seconds_timeout` in `tar_resources_url()` in favor of the new equivalent arguments of `tar_resources_network()`
 * Safely withhold a target from its `crew` controller when the controller is saturated (#1074, @mglev1n).
 * Use exponential backoff when appending a target back to the queue in the case of a saturated `crew` controller.
+* Use native retries in `paws.common` (@DyfanJones).
 
 ## Speedups
 

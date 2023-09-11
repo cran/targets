@@ -61,6 +61,7 @@ tar_test("tar_path() does not create dir if create_dir is FALSE", {
 
 tar_test("tar_path() returns non-cloud path for non-cloud storage formats", {
   skip_cran()
+  skip_on_os("windows")
   x <- tar_target(x, 1, format = "parquet")
   on.exit({
     tar_runtime$store <- NULL
@@ -77,6 +78,7 @@ tar_test("tar_path() returns non-cloud path for non-cloud storage formats", {
 
 tar_test("tar_path() returns stage for cloud formats", {
   skip_cran()
+  skip_on_os("windows")
   x <- tar_target(x, 1, format = "parquet", repository = "aws")
   store_update_stage_early(x$store, x$settings$name, path_store_default())
   dir <- dirname(x$store$file$stage)
@@ -88,12 +90,13 @@ tar_test("tar_path() returns stage for cloud formats", {
   expect_false(file.exists(dirname(out)))
   out <- suppressWarnings(tar_path(create_dir = TRUE))
   expect_true(file.exists(dirname(out)))
-  expect_equal(dirname(out), file.path(path_scratch_dir_cloud(), "scratch"))
+  expect_equal(dirname(out), file.path(path_scratch_dir_network()))
   expect_equal(out, x$store$file$stage)
 })
 
 tar_test("tar_path() with alternative data store in tar_make()", {
   skip_cran()
+  skip_on_os("windows")
   tar_script(tar_target(x, suppressWarnings(tar_path())))
   store <- "example_store"
   tar_make(callr_function = NULL, store = store)

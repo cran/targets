@@ -8,6 +8,7 @@
 #'   or the default value if the setting is not available.
 #'   The data type of the return value depends on your choice
 #'   of `name`.
+#' @inheritSection tar_meta Storage access
 #' @inheritSection tar_config_set Configuration
 #' @inheritParams tar_config_set
 #' @param name Character of length 1, name of the specific
@@ -91,7 +92,10 @@ tar_config_get_project <- function(name, yaml) {
     reporter_make = yaml$reporter_make %|||% "verbose",
     reporter_outdated = yaml$reporter_outdated %|||% "silent",
     script = yaml$script %|||% path_script_default(),
-    seconds_interval = yaml$seconds_interval %|||% 0.5,
+    seconds_meta_append = yaml$seconds_meta_append %|||% 0,
+    seconds_meta_upload = yaml$seconds_meta_upload %|||% 15,
+    seconds_reporter = yaml$seconds_reporter %|||% 0,
+    seconds_interval = yaml$seconds_interval,
     shortcut = yaml$shortcut %|||% FALSE,
     store = yaml$store %|||% path_store_default(),
     use_crew = yaml$use_crew %|||% TRUE,
@@ -109,7 +113,10 @@ tar_config_get_convert <- function(name, value) {
     reporter_make = as.character(value),
     reporter_outdated = as.character(value),
     script = as.character(value),
-    seconds_interval = as.numeric(value),
+    seconds_meta_append = as.numeric(value),
+    seconds_meta_upload = as.numeric(value),
+    seconds_reporter = as.numeric(value),
+    seconds_interval = if_any(is.null(value), NULL, as.numeric(value)),
     shortcut = as.logical(value),
     store = as.character(value),
     use_crew = as.logical(value),

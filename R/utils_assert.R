@@ -58,8 +58,8 @@ tar_assert_chr_no_delim <- function(x, msg = NULL) {
 
 tar_assert_correct_fields <- function(object, constructor) {
   tar_assert_identical_chr(
-    sort(names(object)),
-    sort(names(formals(constructor)))
+    sort_chr(names(object)),
+    sort_chr(names(formals(constructor)))
   )
 }
 
@@ -730,3 +730,98 @@ tar_assert_watch_packages <- function() {
   tar_assert_package(pkgs)
 }
 # nocov end
+
+tar_assert_allow_meta <- function(fun) {
+  target <- tar_runtime$target
+  if (is.null(target)) {
+    return()
+  }
+  if (!target_allow_meta(target)) {
+    message <- paste0(
+      "target ",
+      target$settings$name,
+      " attempted to run targets::",
+      fun,
+      "() during a pipeline, which is unsupported ",
+      "except when format %in% c(\"file\", \"file_fast\") and ",
+      "repository == \"local\". This is because functions like ",
+      fun,
+      "() attempt to access or modify the local data store, ",
+      "which may not exist or be properly synced in certain situations. ",
+      "Also, please be aware that some functions like ",
+      "tar_make() and tar_destroy() ",
+      "should never run inside a target. ",
+      "Please find a different workaround ",
+      "for your use case."
+    )
+    tar_throw_validate(message)
+  }
+}
+
+tar_deprecate_seconds_interval <- function(seconds_interval) {
+  if (!is.null(seconds_interval)) {
+    tar_warn_deprecate(
+      "The seconds_interval argument of tar_make() and tar_config_set() ",
+      "is deprecated (2023-08-24, version 1.2.2.9001). Instead, use arguments",
+      "seconds_meta_append, seconds_meta_upload, and seconds_reporter."
+    )
+  }
+}
+
+tar_warn_prefix <- function() {
+  tar_warn_deprecate(
+    "Please supply an explicit prefix for you target object data ",
+    "and metadata. The prefix should be unique to your {targets} project. ",
+    "In the future, {targets} will begin requiring explicitly ",
+    "user-supplied prefixes. This warning was added on 2023-08-24 ",
+    "({targets} version 1.2.2.9000)."
+  )
+}
+
+tar_message_meta <- function(store) {
+  message <- paste(
+    "No local metadata. Did you remember to run tar_meta_download()?",
+    "Details: https://books.ropensci.org/targets/cloud-storage.html.",
+    "(Or maybe you need to run the pipeline with tar_make()?)",
+    "Silence this message with Sys.setenv(TAR_WARN = \"false\").",
+    sep = "\n"
+  )
+  show_message <- !identical(Sys.getenv("TAR_WARN"), "false") &&
+    (length(store) < 1L || !all(file.exists(path_meta(store))))
+  if (show_message) {
+    rlang::inform(
+      message = message,
+      class = c("tar_condition_validate", "tar_condition_targets")
+    )
+  }
+}
+
+tar_warn_meta <- function(store) {
+  message <- paste(
+    "No local metadata. Did you remember to run tar_meta_download()?",
+    "Details: https://books.ropensci.org/targets/cloud-storage.html.",
+    "(Or maybe you need to run the pipeline with tar_make()?)",
+    "Silence this warning with Sys.setenv(TAR_WARN = \"false\").",
+    sep = "\n"
+  )
+  throw_warning <- !identical(Sys.getenv("TAR_WARN"), "false") &&
+    (length(store) < 1L || !all(file.exists(path_meta(store))))
+  if (throw_warning) {
+    tar_warning(
+      message = message,
+      class = c("tar_condition_validate", "tar_condition_targets")
+    )
+  }
+}
+
+tar_assert_meta <- function(store) {
+  message <- paste(
+    "No local metadata. Did you remember to run tar_meta_download()?",
+    "Details: https://books.ropensci.org/targets/cloud-storage.html.",
+    "(Or maybe you need to run the pipeline with tar_make()?)",
+    sep = "\n"
+  )
+  if ((length(store) < 1L || !all(file.exists(path_meta(store))))) {
+    tar_throw_validate(message = message)
+  }
+}

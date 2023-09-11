@@ -415,7 +415,14 @@ target_get_packages.default <- function(target) {
   packages_command <- target$command$packages
   store <- settings_produce_store(target$settings)
   packages_store <- store_get_packages(store)
-  sort(unique(c(packages_command, packages_store)))
+  sort_chr(unique(c(packages_command, packages_store)))
+}
+
+target_allow_meta <- function(target) {
+  settings <- .subset2(target, "settings")
+  format <- .subset2(settings, "format")
+  repository <- .subset2(settings, "repository")
+  (format == "file" || format == "file_fast") && (repository == "local")
 }
 
 target_validate <- function(target) {

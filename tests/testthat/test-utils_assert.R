@@ -249,7 +249,7 @@ tar_test("tar_assert_resources()", {
     tar_assert_resources(list(aws = 1)),
     class = "tar_condition_deprecate"
   )
-  aws <- tar_resources_aws(bucket = "bucket")
+  aws <- tar_resources_aws(bucket = "bucket", prefix = "x")
   expect_silent(tar_assert_resources(tar_resources(aws = aws)))
 })
 
@@ -382,4 +382,57 @@ tar_test("tar_assert_objects_files()", {
     tar_assert_objects_files(path_store_default()),
     class = "tar_condition_run"
   )
+})
+
+tar_test("tar_assert_allow_meta()", {
+  old_target <- tar_runtime$target
+  on.exit(tar_runtime$target <- old_target)
+  tar_runtime$target <- NULL
+  expect_null(tar_assert_allow_meta("fun"))
+  tar_runtime$target <- tar_target(x, 1, format = "file", repository = "local")
+  expect_null(tar_assert_allow_meta("fun"))
+  tar_runtime$target <- tar_target(x, 1, format = "rds", repository = "aws")
+  expect_error(
+    tar_assert_allow_meta("fun"),
+    class = "tar_condition_validate"
+  )
+})
+
+tar_test("tar_message_meta()", {
+  skip_cran()
+  expect_message(
+    tar_message_meta(tempfile()),
+    class = "tar_condition_validate"
+  )
+  store <- tempfile()
+  meta <- path_meta(store)
+  dir_create(dirname(meta))
+  file.create(meta)
+  expect_silent(tar_message_meta(store))
+})
+
+tar_test("tar_warn_meta()", {
+  skip_cran()
+  expect_warning(
+    tar_warn_meta(tempfile()),
+    class = "tar_condition_validate"
+  )
+  store <- tempfile()
+  meta <- path_meta(store)
+  dir_create(dirname(meta))
+  file.create(meta)
+  expect_silent(tar_warn_meta(store))
+})
+
+tar_test("tar_assert_meta()", {
+  skip_cran()
+  expect_error(
+    tar_assert_meta(tempfile()),
+    class = "tar_condition_validate"
+  )
+  store <- tempfile()
+  meta <- path_meta(store)
+  dir_create(dirname(meta))
+  file.create(meta)
+  expect_silent(tar_assert_meta(store))
 })

@@ -4,7 +4,7 @@ tar_test("gcp + HPC", {
   skip_if_no_gcp()
   bucket_name <- random_bucket_name()
   # needs to be a GCP project the tester auth has access to
-  gcp_gcs_auth()
+  gcp_gcs_auth(max_tries = 5L)
   project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
   googleCloudStorageR::gcs_create_bucket(bucket_name, projectId = project)
   on.exit(gcp_gcs_delete_bucket(bucket_name))
@@ -17,7 +17,8 @@ tar_test("gcp + HPC", {
       repository = "gcp",
       resources = tar_resources(
         gcp = tar_resources_gcp(
-          bucket = bucket_name
+          bucket = bucket_name,
+          prefix = "_targets"
         )
       ),
       storage = "worker",

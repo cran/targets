@@ -5,7 +5,9 @@ clustermq_init <- function(
   shortcut = FALSE,
   queue = "parallel",
   reporter = "verbose",
-  seconds_interval = 0.5,
+  seconds_meta_append = 0,
+  seconds_meta_upload = 15,
+  seconds_reporter = 0,
   garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   workers = 1L,
@@ -18,7 +20,9 @@ clustermq_init <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     workers = as.integer(workers),
@@ -33,7 +37,9 @@ clustermq_new <- function(
   shortcut = NULL,
   queue = NULL,
   reporter = NULL,
-  seconds_interval = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   garbage_collection = NULL,
   envir = NULL,
   workers = NULL,
@@ -46,7 +52,9 @@ clustermq_new <- function(
     shortcut = shortcut,
     queue = queue,
     reporter = reporter,
-    seconds_interval = seconds_interval,
+    seconds_meta_append = seconds_meta_append,
+    seconds_meta_upload = seconds_meta_upload,
+    seconds_reporter = seconds_reporter,
     garbage_collection = garbage_collection,
     envir = envir,
     workers = workers,
@@ -70,7 +78,9 @@ clustermq_class <- R6::R6Class(
       shortcut = NULL,
       queue = NULL,
       reporter = NULL,
-      seconds_interval = NULL,
+      seconds_meta_append = NULL,
+      seconds_meta_upload = NULL,
+      seconds_reporter = NULL,
       garbage_collection = NULL,
       envir = NULL,
       workers = NULL,
@@ -83,7 +93,9 @@ clustermq_class <- R6::R6Class(
         shortcut = shortcut,
         queue = queue,
         reporter = reporter,
-        seconds_interval = seconds_interval,
+        seconds_meta_append = seconds_meta_append,
+        seconds_meta_upload = seconds_meta_upload,
+        seconds_reporter = seconds_reporter,
         garbage_collection = garbage_collection,
         envir = envir
       )
@@ -166,6 +178,7 @@ clustermq_class <- R6::R6Class(
     run_target = function(name) {
       target <- pipeline_get_target(self$pipeline, name)
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
+      self$sync_meta_time()
       if_any(
         target_should_run_worker(target),
         self$run_worker(target),
@@ -233,7 +246,7 @@ clustermq_class <- R6::R6Class(
       self$scheduler$backoff$reset()
     },
     iterate = function() {
-      self$poll_meta()
+      self$sync_meta_time()
       message <- if_any(
         self$workers > 0L,
         self$worker_list$receive_data(),
@@ -257,7 +270,9 @@ clustermq_class <- R6::R6Class(
         queue = self$queue,
         reporter = self$reporter,
         garbage_collection = self$garbage_collection,
-        seconds_interval = self$seconds_interval,
+        seconds_meta_append = self$seconds_meta_append,
+        seconds_meta_upload = self$seconds_meta_upload,
+        seconds_reporter = self$seconds_reporter,
         envir = self$envir,
         scheduler = self$scheduler
       )

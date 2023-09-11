@@ -3,6 +3,7 @@
 #' @family configuration
 #' @description `tar_config_set()` writes special custom settings
 #'   for the current project to an optional YAML configuration file.
+#' @inheritSection tar_meta Storage access
 #' @section Configuration:
 #'   For several key functions like [tar_make()], the
 #'   default values of arguments are controlled though
@@ -64,12 +65,34 @@
 #'   run the script from the current working directory.
 #'   If the argument `NULL`, the setting is not modified.
 #'   Use [tar_config_unset()] to delete a setting.
-#' @param seconds_interval Positive numeric of length 1 with the minimum
-#'   number of seconds between saves to the metadata and progress data
-#'   in [tar_make()], [tar_make_future()], and [tar_make_clustermq()].
-#'   Also controls how often reporters print progress messages.
+#' @param seconds_interval Deprecated on 2023-08-24 (version 1.2.2.9001).
+#'   Use `seconds_meta_append`, `seconds_meta_upload`,
+#'   and `seconds_reporter` instead.
+#' @param seconds_meta_append Argument of [tar_make()], [tar_make_clustermq()],
+#'   and [tar_make_future()].
+#'   Positive numeric of length 1 with the minimum
+#'   number of seconds between saves to the local metadata and progress files
+#'   in the data store.
 #'   Higher values generally make the pipeline run faster, but unsaved
 #'   work (in the event of a crash) is not up to date.
+#'   When the pipeline ends,
+#'   all the metadata and progress data is saved immediately,
+#'   regardless of `seconds_meta_append`.
+#' @param seconds_meta_upload Argument of [tar_make()], [tar_make_clustermq()],
+#'   and [tar_make_future()].
+#'   Positive numeric of length 1 with the minimum
+#'   number of seconds between uploads of the metadata and progress data
+#'   to the cloud
+#'   (see <https://books.ropensci.org/targets/cloud-storage.html>).
+#'   Higher values generally make the pipeline run faster, but unsaved
+#'   work (in the event of a crash) may not be backed up to the cloud.
+#'   When the pipeline ends,
+#'   all the metadata and progress data is uploaded immediately,
+#'   regardless of `seconds_meta_upload`.
+#' @param seconds_reporter Argument of [tar_make()], [tar_make_clustermq()],
+#'   and [tar_make_future()]. Positive numeric of length 1 with the minimum
+#'   number of seconds between times when the reporter prints progress
+#'   messages to the R console.
 #' @param shortcut logical of length 1, default `shortcut` argument
 #'   to [tar_make()] and related functions.
 #'   If the argument `NULL`, the setting is not modified.
@@ -144,6 +167,9 @@ tar_config_set <- function(
   reporter_make = NULL,
   reporter_outdated = NULL,
   script = NULL,
+  seconds_meta_append = NULL,
+  seconds_meta_upload = NULL,
+  seconds_reporter = NULL,
   seconds_interval = NULL,
   store = NULL,
   shortcut = NULL,
@@ -154,6 +180,7 @@ tar_config_set <- function(
 ) {
   # TODO: remove single-project format, which was deprecated on
   # 2021-09-03 (version 0.7.0.9001).
+  tar_assert_allow_meta("tar_config_set")
   tar_assert_chr(config)
   tar_assert_scalar(config)
   tar_assert_chr(project)
@@ -165,6 +192,9 @@ tar_config_set <- function(
   tar_config_assert_reporter_make(reporter_make)
   tar_config_assert_reporter_outdated(reporter_outdated)
   tar_config_assert_script(script)
+  tar_config_assert_seconds_meta_append(seconds_meta_append)
+  tar_config_assert_seconds_meta_upload(seconds_meta_upload)
+  tar_config_assert_seconds_reporter(seconds_reporter)
   tar_config_assert_seconds_interval(seconds_interval)
   tar_config_assert_shortcut(shortcut)
   tar_config_assert_store(store)
@@ -185,6 +215,12 @@ tar_config_set <- function(
   yaml[[project]]$reporter_outdated <- reporter_outdated %|||%
     yaml[[project]]$reporter_outdated
   yaml[[project]]$script <- script %|||% yaml[[project]]$script
+  yaml[[project]]$seconds_meta_append <- seconds_meta_append %|||%
+    yaml[[project]]$seconds_meta_append
+  yaml[[project]]$seconds_meta_upload <- seconds_meta_upload %|||%
+    yaml[[project]]$seconds_meta_upload
+  yaml[[project]]$seconds_reporter <- seconds_reporter %|||%
+    yaml[[project]]$seconds_reporter
   yaml[[project]]$seconds_interval <- seconds_interval %|||%
     yaml[[project]]$seconds_interval
   yaml[[project]]$shortcut <- shortcut %|||% yaml[[project]]$shortcut
@@ -267,10 +303,41 @@ tar_config_assert_seconds_interval <- function(seconds_interval) {
   if (is.null(seconds_interval)) {
     return()
   }
+  tar_deprecate_seconds_interval(seconds_interval)
   tar_assert_dbl(seconds_interval)
   tar_assert_scalar(seconds_interval)
   tar_assert_none_na(seconds_interval)
   tar_assert_ge(seconds_interval, 0)
+}
+
+tar_config_assert_seconds_meta_append <- function(seconds_meta_append) {
+  if (is.null(seconds_meta_append)) {
+    return()
+  }
+  tar_assert_dbl(seconds_meta_append)
+  tar_assert_scalar(seconds_meta_append)
+  tar_assert_none_na(seconds_meta_append)
+  tar_assert_ge(seconds_meta_append, 0)
+}
+
+tar_config_assert_seconds_meta_upload <- function(seconds_meta_upload) {
+  if (is.null(seconds_meta_upload)) {
+    return()
+  }
+  tar_assert_dbl(seconds_meta_upload)
+  tar_assert_scalar(seconds_meta_upload)
+  tar_assert_none_na(seconds_meta_upload)
+  tar_assert_ge(seconds_meta_upload, 0)
+}
+
+tar_config_assert_seconds_reporter <- function(seconds_reporter) {
+  if (is.null(seconds_reporter)) {
+    return()
+  }
+  tar_assert_dbl(seconds_reporter)
+  tar_assert_scalar(seconds_reporter)
+  tar_assert_none_na(seconds_reporter)
+  tar_assert_ge(seconds_reporter, 0)
 }
 
 tar_config_assert_shortcut <- function(shortcut) {

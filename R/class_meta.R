@@ -78,16 +78,18 @@ meta_class <- R6::R6Class(
     },
     hash_deps = function(deps, pipeline) {
       hashes <- vapply(
-        X = sort.int(deps),
+        X = sort_chr(deps),
         FUN = self$hash_dep,
         pipeline = pipeline,
-        FUN.VALUE = character(1L)
+        FUN.VALUE = character(1L),
+        USE.NAMES = TRUE
       )
+      hashes <- hashes[nzchar(hashes)]
       string <- paste(c(names(hashes), hashes), collapse = "")
       digest_chr64(string)
     },
     produce_depend = function(target, pipeline) {
-      self$hash_deps(sort(target$command$deps), pipeline)
+      self$hash_deps(target$command$deps, pipeline)
     },
     handle_error = function(record) {
       if (!self$exists_record(record$name)) {
@@ -156,8 +158,10 @@ meta_class <- R6::R6Class(
 database_meta <- function(path_store) {
   database_init(
     path = path_meta(path_store = path_store),
+    subkey = file.path(basename(path_meta("")), "meta"),
     header = header_meta(),
-    list_columns = c("path", "children")
+    list_columns = c("path", "children"),
+    list_column_modes = c("character", "character")
   )
 }
 

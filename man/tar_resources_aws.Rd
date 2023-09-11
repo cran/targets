@@ -10,6 +10,10 @@ tar_resources_aws(
   region = targets::tar_option_get("resources")$aws$region,
   part_size = targets::tar_option_get("resources")$aws$part_size,
   endpoint = targets::tar_option_get("resources")$aws$endpoint,
+  max_tries = targets::tar_option_get("resources")$aws$max_tries,
+  seconds_timeout = targets::tar_option_get("resources")$aws$seconds_timeout,
+  close_connection = targets::tar_option_get("resources")$aws$close_connection,
+  s3_force_path_style = targets::tar_option_get("resources")$aws$s3_force_path_style,
   ...
 )
 }
@@ -19,8 +23,12 @@ bucket to upload and download the return values
 of the affected targets during the pipeline.}
 
 \item{prefix}{Character of length 1, "directory path"
-in the bucket where the target return values are stored.
-Defaults to \code{targets::tar_path_objects_dir_cloud()}.}
+in the bucket where your target object and metadata will go.
+Please supply an explicit prefix
+unique to your {targets} project.
+In the future, {targets} will begin requiring
+explicitly user-supplied prefixes. (This last note
+was added on 2023-08-24: {targets} version 1.2.2.9000.)}
 
 \item{region}{Character of length 1, AWS region containing the S3 bucket.
 Set to \code{NULL} to use the default region.}
@@ -35,7 +43,10 @@ argument is \code{5 * (2 ^ 20)}.}
 Defaults to the Amazon AWS endpoint if \code{NULL}. Example:
 To use the S3 protocol with Google Cloud Storage,
 set \code{endpoint = "https://storage.googleapis.com"}
-and \code{region = "auto"}. Also make sure to create
+and \code{region = "auto"}. (A custom endpoint may require that you
+explicitly set a custom region directly in \code{tar_resources_aws()}.
+\code{region = "auto"} happens to work with Google Cloud.)
+Also make sure to create
 HMAC access keys in the Google Cloud Storage console
 (under Settings => Interoperability) and set the
 \code{AWS_ACCESS_KEY_ID} and \code{AWS_SECRET_ACCESS_KEY} environment
@@ -45,6 +56,18 @@ There is one limitation, however: even if your bucket has
 object versioning turned on, \code{targets} may fail to record object
 versions. Google Cloud Storage in particular has this
 incompatibility.}
+
+\item{max_tries}{Positive integer of length 1, maximum number of attempts
+to access a network resource on AWS.}
+
+\item{seconds_timeout}{Positive numeric of length 1,
+number of seconds until an HTTP connection times out.}
+
+\item{close_connection}{Logical of length 1, whether to close HTTP
+connections immediately.}
+
+\item{s3_force_path_style}{Logical of length 1, whether to use path-style
+addressing for S3 requests.}
 
 \item{...}{Named arguments to functions in \code{paws.storage::s3()} to manage
 S3 storage. The documentation of these specific functions
