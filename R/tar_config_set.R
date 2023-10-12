@@ -180,7 +180,6 @@ tar_config_set <- function(
 ) {
   # TODO: remove single-project format, which was deprecated on
   # 2021-09-03 (version 0.7.0.9001).
-  tar_assert_allow_meta("tar_config_set")
   tar_assert_chr(config)
   tar_assert_scalar(config)
   tar_assert_chr(project)
@@ -200,10 +199,7 @@ tar_config_set <- function(
   tar_config_assert_store(store)
   tar_config_assert_use_crew(use_crew)
   tar_config_assert_workers(workers)
-  yaml <- tar_config_read_yaml(config)
-  if (!tar_config_is_multi_project(yaml, config)) {
-    yaml <- tar_config_convert_multi_project(yaml, config)
-  }
+  yaml <- tar_config_yaml(config = config)
   yaml[[project]]$inherits <- inherits %|||% yaml[[project]]$inherits
   yaml[[project]]$garbage_collection <- garbage_collection %|||%
     yaml[[project]]$garbage_collection

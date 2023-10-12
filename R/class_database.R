@@ -44,7 +44,7 @@ database_init <- function(
     tar_throw_validate(
       "unsupported repository \"",
       repository,
-      "\" for {targets} database class."
+      "\" for `targets` database class."
     )
   )
 }
@@ -309,10 +309,38 @@ database_class <- R6::R6Class(
       }
       invisible()
     },
+    nice_upload = function(verbose = TRUE, strict = FALSE) {
+      if (all(file.exists(self$path))) {
+        return(self$upload(verbose = verbose))
+      }
+      message <- paste("Path does not exist:", self$path)
+      if (strict) {
+        tar_throw_run(message)
+      } else if (verbose) {
+        tar_message_run(message)
+      }
+    },
+    nice_download = function(verbose = TRUE, strict = FALSE) {
+      if (self$head()$exists) {
+        return(self$download(verbose = verbose))
+      }
+      message <- paste("Path", self$path, "is not in your cloud bucket.")
+      if (strict) {
+        tar_throw_run(message)
+      } else if (verbose) {
+        tar_message_run(message)
+      }
+    },
     upload = function(verbose = TRUE) {
+      if (verbose) {
+        tar_message_run("uploading")
+      }
       "upload"
     },
     download = function(verbose = TRUE) {
+      if (verbose) {
+        tar_message_run("downloading")
+      }
       "download"
     },
     head = function() {

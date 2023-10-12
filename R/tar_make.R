@@ -138,7 +138,7 @@ tar_make <- function(
   use_crew = targets::tar_config_get("use_crew"),
   terminate_controller = TRUE
 ) {
-  tar_assert_allow_meta("tar_make")
+  tar_assert_allow_meta("tar_make", store)
   force(envir)
   tar_assert_scalar(shortcut)
   tar_assert_lgl(shortcut)
@@ -224,7 +224,7 @@ tar_make_inner <- function(
       envir = tar_option_get("envir")
     )$run()
   } else {
-    tar_assert_package("crew (>= 0.3.0)")
+    tar_assert_package("crew (>= 0.5.0.9003)")
     crew_init(
       pipeline = pipeline,
       meta = meta_init(path_store = path_store),

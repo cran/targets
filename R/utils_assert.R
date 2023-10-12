@@ -639,13 +639,13 @@ tar_assert_script <- function(script) {
   tar_assert_not_in(vars, choices, msg)
   msg <- paste(
     "Do not use %s() from {devtools} or {pkgload} to load",
-    "packages or custom functions/globals for {targets}. If you do,",
-    "custom functions will go to a package environment where {targets}",
+    "packages or custom functions/globals for `targets`. If you do,",
+    "custom functions will go to a package environment where `targets`",
     "may not track them, and the loaded data will not be available in",
     "parallel workers created by tar_make_clustermq() or tar_make_future().",
     "Read https://books.ropensci.org/targets/packages.html#loading-and-configuring-r-packages", # nolint
     "and https://books.ropensci.org/targets/packages.html#package-based-invalidation", # nolint
-    "for the correct way to load packages for {targets} pipelines.",
+    "for the correct way to load packages for `targets` pipelines.",
     "Warnings like this one are important, but if you must suppress them, ",
     "you can do so with Sys.setenv(TAR_WARN = \"false\")."
   )
@@ -731,9 +731,15 @@ tar_assert_watch_packages <- function() {
 }
 # nocov end
 
-tar_assert_allow_meta <- function(fun) {
+tar_assert_allow_meta <- function(fun, store) {
   target <- tar_runtime$target
-  if (is.null(target)) {
+  safe <- is.null(target) ||
+    is.null(tar_runtime$store) ||
+    !identical(
+      normalizePath(as.character(store), mustWork = FALSE),
+      normalizePath(as.character(tar_runtime$store), mustWork = FALSE)
+    )
+  if (safe) {
     return()
   }
   if (!target_allow_meta(target)) {
@@ -742,9 +748,11 @@ tar_assert_allow_meta <- function(fun) {
       target$settings$name,
       " attempted to run targets::",
       fun,
-      "() during a pipeline, which is unsupported ",
+      "() to during a pipeline, which is unsupported ",
       "except when format %in% c(\"file\", \"file_fast\") and ",
-      "repository == \"local\". This is because functions like ",
+      "repository == \"local\", or if you are reading from a data store ",
+      "that does not belong to the current pipeline. ",
+      "This is because functions like ",
       fun,
       "() attempt to access or modify the local data store, ",
       "which may not exist or be properly synced in certain situations. ",
@@ -771,10 +779,10 @@ tar_deprecate_seconds_interval <- function(seconds_interval) {
 tar_warn_prefix <- function() {
   tar_warn_deprecate(
     "Please supply an explicit prefix for you target object data ",
-    "and metadata. The prefix should be unique to your {targets} project. ",
-    "In the future, {targets} will begin requiring explicitly ",
+    "and metadata. The prefix should be unique to your `targets` project. ",
+    "In the future, `targets` will begin requiring explicitly ",
     "user-supplied prefixes. This warning was added on 2023-08-24 ",
-    "({targets} version 1.2.2.9000)."
+    "(`targets` version 1.2.2.9000)."
   )
 }
 

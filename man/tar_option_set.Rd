@@ -461,7 +461,8 @@ and available by the time the target's command finishes running.
 it is the user's responsibility to provide methods for (un)serialization
 and (un)marshaling the return value of the target.
 \item The formats starting with \code{"aws_"} are deprecated as of 2022-03-13
-(\verb{targets version > 0.10.0). For cloud storage integration, use the }repository` argument instead.
+(\code{targets} version > 0.10.0). For cloud storage integration, use the
+\code{repository} argument instead.
 }
 }
 
@@ -487,8 +488,10 @@ tar_make()
 \seealso{
 Other configuration: 
 \code{\link{tar_config_get}()},
+\code{\link{tar_config_projects}()},
 \code{\link{tar_config_set}()},
 \code{\link{tar_config_unset}()},
+\code{\link{tar_config_yaml}()},
 \code{\link{tar_envvars}()},
 \code{\link{tar_option_get}()},
 \code{\link{tar_option_reset}()}
