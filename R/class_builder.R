@@ -49,10 +49,20 @@ target_read_value.tar_builder <- function(target, pipeline = NULL) {
 }
 
 #' @export
-target_prepare.tar_builder <- function(target, pipeline, scheduler, meta) {
-  target_patternview_started(target, pipeline, scheduler)
-  scheduler$progress$register_started(target)
-  scheduler$reporter$report_started(target, scheduler$progress)
+target_prepare.tar_builder <- function(
+  target,
+  pipeline,
+  scheduler,
+  meta,
+  pending = FALSE
+) {
+  target_patternview_dispatched(target, pipeline, scheduler)
+  scheduler$progress$register_dispatched(target)
+  scheduler$reporter$report_dispatched(
+    target = target,
+    progress = scheduler$progress,
+    pending = pending
+  )
   builder_ensure_deps(target, pipeline, "main")
   builder_update_subpipeline(target, pipeline)
   builder_marshal_subpipeline(target)
@@ -193,19 +203,19 @@ target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
     metrics_outcome(target$metrics),
     cancel = builder_cancel(target, pipeline, scheduler, meta),
     error = builder_error(target, pipeline, scheduler, meta),
-    built = builder_built(target, pipeline, scheduler, meta)
+    completed = builder_completed(target, pipeline, scheduler, meta)
   )
   NextMethod()
 }
 
-builder_built <- function(target, pipeline, scheduler, meta) {
+builder_completed <- function(target, pipeline, scheduler, meta) {
   store_cache_path(target$store, target$store$file$path)
   target_ensure_buds(target, pipeline, scheduler)
   meta$insert_record(target_produce_record(target, pipeline, meta))
   target_patternview_meta(target, pipeline, meta)
   pipeline_register_loaded(pipeline, target_get_name(target))
-  scheduler$progress$register_built(target)
-  scheduler$reporter$report_built(target, scheduler$progress)
+  scheduler$progress$register_completed(target)
+  scheduler$reporter$report_completed(target, scheduler$progress)
 }
 
 builder_error <- function(target, pipeline, scheduler, meta) {
@@ -334,6 +344,7 @@ builder_error_continue <- function(target, scheduler) {
 }
 
 builder_error_exit <- function(target, pipeline, scheduler, meta) {
+  tar_runtime$traceback <- target$metrics$traceback
   tar_throw_run(target$metrics$error, class = target$metrics$error_class)
 }
 
@@ -364,11 +375,11 @@ builder_should_save_workspace <- function(target) {
 }
 
 builder_save_workspace <- function(target, pipeline, scheduler, meta) {
-  scheduler$reporter$report_workspace(target)
   workspace_save(
     workspace = workspace_init(target, pipeline),
     path_store = meta$store
   )
+  scheduler$reporter$report_workspace(target)
 }
 
 builder_record_error_meta <- function(target, pipeline, meta) {

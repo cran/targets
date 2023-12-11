@@ -168,38 +168,54 @@ store_exist_object.tar_aws <- function(store, name = NULL) {
 }
 
 #' @export
-store_delete_object.tar_aws <- function(store, name = NULL) {
-  path <- store$file$path
-  key <- store_aws_key(path)
-  bucket <- store_aws_bucket(path)
-  region <- store_aws_region(path)
-  endpoint <- store_aws_endpoint(path)
-  version <- store_aws_version(path)
+store_delete_objects.tar_aws <- function(store, meta, batch_size, verbose) {
   aws <- store$resources$aws
-  message <- paste(
-    "could not delete target %s from AWS bucket %s key %s.",
-    "Either delete the object manually in the AWS web console",
-    "or call tar_invalidate(%s) to prevent the targets package",
-    "from trying to delete it.\nMessage: "
+  meta$bucket_group <- map_chr(
+    x = meta$path,
+    f = ~paste(
+      store_aws_bucket(.x),
+      store_aws_region(.x),
+      store_aws_endpoint(.x),
+      sep = "|"
+    )
   )
-  message <- sprintf(message, name, bucket, key, name)
-  tryCatch(
-    aws_s3_delete(
-      key = key,
-      bucket =  bucket,
-      region = region,
-      endpoint = endpoint,
-      version = version,
-      args = aws$args,
-      max_tries = aws$max_tries,
-      seconds_timeout = aws$seconds_timeout,
-      close_connection = aws$close_connection,
-      s3_force_path_style = aws$s3_force_path_style
-    ),
-    error = function(condition) {
-      tar_throw_validate(message, conditionMessage(condition))
-    }
-  )
+  for (group in unique(meta$bucket_group)) {
+    subset <- meta[meta$bucket_group == group,, drop = FALSE] # nolint
+    example_path <- subset$path[[1L]]
+    bucket <- store_aws_bucket(example_path)
+    region <- store_aws_region(example_path)
+    endpoint <- store_aws_endpoint(example_path)
+    objects <- map(
+      subset$path,
+      ~list(
+        Key = store_aws_key(.x),
+        VersionId = store_aws_version(.x)
+      )
+    )
+    message <- paste(
+      "could not delete one or more objects from AWS bucket %s.",
+      "You may need to delete them manually.\nMessage: "
+    )
+    message <- sprintf(message, bucket)
+    tryCatch(
+      aws_s3_delete_objects(
+        objects = objects,
+        bucket =  bucket,
+        batch_size = batch_size,
+        region = region,
+        endpoint = endpoint,
+        args = aws$args,
+        max_tries = aws$max_tries,
+        seconds_timeout = aws$seconds_timeout,
+        close_connection = aws$close_connection,
+        s3_force_path_style = aws$s3_force_path_style,
+        verbose = verbose
+      ),
+      error = function(condition) {
+        tar_throw_validate(message, conditionMessage(condition))
+      }
+    )
+  }
 }
 
 #' @export
@@ -220,7 +236,6 @@ store_upload_object_aws <- function(store) {
       bucket = bucket,
       region = store_aws_region(store$file$path),
       endpoint = store_aws_endpoint(store$file$path),
-      metadata = list("targets-hash" = store$file$hash),
       part_size = aws$part_size,
       args = aws$args,
       max_tries = aws$max_tries,
@@ -243,11 +258,8 @@ store_upload_object_aws <- function(store) {
     invert = TRUE
   )
   store$file$path <- c(path, paste0("version=", head$VersionId))
+  store$file$hash <- digest_chr64(head$ETag)
   invisible()
-}
-
-#' @export
-store_ensure_correct_hash.tar_aws <- function(store, storage, deployment) {
 }
 
 #' @export
@@ -257,25 +269,13 @@ store_has_correct_hash.tar_aws <- function(store) {
 }
 
 store_aws_hash <- function(store) {
-  path <- store$file$path
-  aws <- store$resources$aws
-  head <- aws_s3_head(
-    key = store_aws_key(path),
-    bucket = store_aws_bucket(path),
-    region = store_aws_region(path),
-    endpoint = store_aws_endpoint(path),
-    version = store_aws_version(path),
-    args = aws$args,
-    max_tries = aws$max_tries,
-    seconds_timeout = aws$seconds_timeout,
-    close_connection = aws$close_connection,
-    s3_force_path_style = aws$s3_force_path_style
-  )
-  head$Metadata[["targets-hash"]]
+  tar_runtime$inventories$aws <- tar_runtime$inventories$aws %|||%
+    inventory_aws_init()
+  tar_runtime$inventories$aws$get_cache(store = store)
 }
 # nocov end
 
 #' @export
 store_get_packages.tar_aws <- function(store) {
-  c("paws.storage", NextMethod())
+  c("paws.common", "paws.storage", NextMethod())
 }

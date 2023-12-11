@@ -19,7 +19,7 @@ target_init <- function(
   retrieval = "main",
   cue = NULL
 ) {
-  seed <- produce_seed(name)
+  seed <- tar_seed_create(name)
   command <- command_init(expr, packages, library, seed, deps, string)
   cue <- cue %|||% cue_init()
   if (any(grepl("^aws_", format))) {
@@ -209,12 +209,24 @@ target_skip <- function(target, pipeline, scheduler, meta, active) {
   UseMethod("target_skip")
 }
 
-target_prepare <- function(target, pipeline, scheduler, meta) {
+target_prepare <- function(
+  target,
+  pipeline,
+  scheduler,
+  meta,
+  pending = FALSE
+) {
   UseMethod("target_prepare")
 }
 
 #' @export
-target_prepare.default <- function(target, pipeline, scheduler, meta) {
+target_prepare.default <- function(
+  target,
+  pipeline,
+  scheduler,
+  meta,
+  pending = FALSE
+) {
 }
 
 target_should_run <- function(target, meta) {
@@ -354,12 +366,16 @@ target_patternview_meta <- function(target, pipeline, meta) {
 target_patternview_meta.default <- function(target, pipeline, meta) {
 }
 
-target_patternview_started <- function(target, pipeline, scheduler) {
-  UseMethod("target_patternview_started")
+target_patternview_dispatched <- function(target, pipeline, scheduler) {
+  UseMethod("target_patternview_dispatched")
 }
 
 #' @export
-target_patternview_started.default <- function(target, pipeline, scheduler) {
+target_patternview_dispatched.default <- function(
+  target,
+  pipeline,
+  scheduler
+) {
 }
 
 target_patternview_canceled <- function(target, pipeline, scheduler) {

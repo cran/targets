@@ -1,5 +1,5 @@
 tar_test("crew$validate()", {
-  skip_if_not_installed("crew", minimum_version = "0.6.0")
+  skip_if_not_installed("crew", minimum_version = "0.7.0")
   controller <- crew::crew_controller_local(
     host = "127.0.0.1",
     seconds_interval = 0.5
@@ -15,7 +15,7 @@ tar_test("crew database subkey", {
 
 tar_test("workerless deployment works", {
   skip_on_os("solaris")
-  skip_if_not_installed("crew", minimum_version = "0.6.0")
+  skip_if_not_installed("crew", minimum_version = "0.7.0")
   skip_if_not_installed("R.utils")
   tar_runtime$fun <- "tar_make"
   tar_option_set(backoff = tar_backoff(min = 0.5, max = 0.5))
@@ -90,15 +90,15 @@ tar_test("workerless deployment works", {
     crew_test_sleep()
   })
   R.utils::withTimeout(out$run(), timeout = 360)
-  built <- names(out$scheduler$progress$built$envir)
-  expect_equal(built, character(0))
+  completed <- names(out$scheduler$progress$completed$envir)
+  expect_equal(completed, character(0))
 })
 
 tar_test("semi-workerless deployment works", {
   skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
-  skip_if_not_installed("crew", minimum_version = "0.6.0")
+  skip_if_not_installed("crew", minimum_version = "0.7.0")
   skip_if_not_installed("R.utils")
   crew_test_sleep()
   tar_runtime$fun <- "tar_make"
@@ -175,15 +175,15 @@ tar_test("semi-workerless deployment works", {
   })
   out <- crew_init(pipeline, controller = controller)
   R.utils::withTimeout(out$run(), timeout = 360)
-  built <- names(out$scheduler$progress$built$envir)
-  expect_equal(built, character(0))
+  completed <- names(out$scheduler$progress$completed$envir)
+  expect_equal(completed, character(0))
 })
 
 tar_test("some targets up to date, some not", {
   skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
-  skip_if_not_installed("crew", minimum_version = "0.6.0")
+  skip_if_not_installed("crew", minimum_version = "0.7.0")
   skip_if_not_installed("R.utils")
   tar_runtime$fun <- "tar_make"
   tar_option_set(backoff = tar_backoff(min = 0.5, max = 0.5))
@@ -228,7 +228,7 @@ tar_test("some targets up to date, some not", {
   })
   algo <- crew_init(pipeline, controller = controller)
   R.utils::withTimeout(algo$run(), timeout = 360)
-  out <- names(algo$scheduler$progress$built$envir)
+  out <- names(algo$scheduler$progress$completed$envir)
   expect_equal(out, "y")
   value <- target_read_value(pipeline_get_target(pipeline, "y"))
   expect_equal(value$object, 2L)
@@ -238,7 +238,7 @@ tar_test("crew algo can skip targets", {
   skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
-  skip_if_not_installed("crew", minimum_version = "0.6.0")
+  skip_if_not_installed("crew", minimum_version = "0.7.0")
   skip_if_not_installed("R.utils")
   tar_runtime$fun <- "tar_make"
   tar_option_set(backoff = tar_backoff(min = 0.5, max = 0.5))
@@ -284,7 +284,7 @@ tar_test("crew algo can skip targets", {
   })
   algo <- crew_init(pipeline, controller = controller)
   R.utils::withTimeout(algo$run(), timeout = 360)
-  out <- names(algo$scheduler$progress$built$envir)
+  out <- names(algo$scheduler$progress$completed$envir)
   expect_equal(out, "x")
   expect_equal(tar_read(x), 1L)
 })
@@ -293,7 +293,7 @@ tar_test("nontrivial common data", {
   skip_cran()
   skip_on_os("windows")
   skip_on_os("solaris")
-  skip_if_not_installed("crew", minimum_version = "0.6.0")
+  skip_if_not_installed("crew", minimum_version = "0.7.0")
   skip_if_not_installed("R.utils")
   tar_runtime$fun <- "tar_make"
   tar_option_set(backoff = tar_backoff(min = 0.5, max = 0.5))

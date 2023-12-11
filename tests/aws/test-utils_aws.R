@@ -211,6 +211,122 @@ tar_test("aws_s3_delete() version", {
   )
 })
 
+tar_test("aws_s3_delete_objects()", {
+  bucket <- random_bucket_name()
+  client <- paws.storage::s3()
+  client$create_bucket(Bucket = bucket)
+  on.exit(aws_s3_delete_bucket(bucket))
+  for (key in letters) {
+    client$put_object(
+      Bucket = bucket,
+      Key = key,
+      Body = charToRaw("contents")
+    )
+  }
+  for (key in letters) {
+    expect_true(aws_s3_exists(key = key, bucket = bucket))
+  }
+  objects <- lapply(letters, function(x) list(Key = x))
+  expect_error(
+    aws_s3_delete_objects(
+      objects = objects,
+      bucket = bucket,
+      args = list(ExpectedBucketOwner = "phantom_f4acd87c52d4e62b"),
+      max_tries = 1L
+    ),
+    class = "http_400"
+  )
+  for (key in letters) {
+    expect_true(aws_s3_exists(key = key, bucket = bucket))
+  }
+  aws_s3_delete_objects(
+    objects = objects,
+    bucket = bucket,
+    batch_size = 10L
+  )
+  for (key in letters) {
+    expect_false(aws_s3_exists(key = key, bucket = bucket))
+  }
+})
+
+tar_test("aws_s3_delete_objects() versioned", {
+  bucket <- random_bucket_name()
+  client <- paws.storage::s3()
+  client$create_bucket(Bucket = bucket)
+  on.exit(aws_s3_delete_bucket(bucket))
+  client$put_bucket_versioning(
+    Bucket = bucket,
+    VersioningConfiguration = list(
+      Status = "Enabled"
+    )
+  )
+  objects <- list()
+  index <- 1L
+  for (key in letters) {
+    head <- client$put_object(
+      Bucket = bucket,
+      Key = key,
+      Body = charToRaw("contents")
+    )
+    objects[[index]] <- list(Key = key, VersionId = head$VersionId)
+    index <- index + 1L
+  }
+  for (key in letters) {
+    client$put_object(
+      Bucket = bucket,
+      Key = key,
+      Body = charToRaw("contents_version2")
+    )
+  }
+  for (index in seq_along(letters)) {
+    expect_true(
+      aws_s3_exists(
+        key = objects[[index]]$Key,
+        bucket = bucket,
+        version = objects[[index]]$VersionId
+      )
+    )
+  }
+  expect_error(
+    aws_s3_delete_objects(
+      objects = objects,
+      bucket = bucket,
+      args = list(ExpectedBucketOwner = "phantom_f4acd87c52d4e62b"),
+      max_tries = 1L
+    ),
+    class = "http_400"
+  )
+  for (index in seq_along(letters)) {
+    expect_true(
+      aws_s3_exists(
+        key = objects[[index]]$Key,
+        bucket = bucket,
+        version = objects[[index]]$VersionId
+      )
+    )
+  }
+  aws_s3_delete_objects(
+    objects = objects,
+    bucket = bucket,
+    batch_size = 10L
+  )
+  for (index in seq_along(letters)) {
+    expect_false(
+      aws_s3_exists(
+        key = objects[[index]]$Key,
+        bucket = bucket,
+        version = objects[[index]]$VersionId
+      )
+    )
+    expect_true(
+      aws_s3_exists(
+        key = objects[[index]]$Key,
+        bucket = bucket
+      )
+    )
+  }
+})
+
 tar_test("aws_s3_upload() without headers", {
   bucket <- random_bucket_name()
   paws.storage::s3()$create_bucket(Bucket = bucket)
@@ -525,4 +641,32 @@ tar_test("graceful error on multipart upload", {
     ),
     class = "tar_condition_file"
   )
+})
+
+tar_test("aws_s3_list_etags()", {
+  bucket <- random_bucket_name()
+  paws.storage::s3()$create_bucket(Bucket = bucket)
+  on.exit(aws_s3_delete_bucket(bucket))
+  expect_equal(
+    aws_s3_list_etags(prefix = "/", bucket = bucket),
+    list()
+  )
+  for (key in c("w", "x", "y", "z")) {
+    paws.storage::s3()$put_object(
+      Body = charToRaw(key),
+      Key = key,
+      Bucket = bucket
+    )
+  }
+  out <- aws_s3_list_etags(prefix = "", bucket = bucket)
+  out2 <- aws_s3_list_etags(prefix = "", bucket = bucket, page_size = 2L)
+  expect_equal(out, out2)
+  expect_equal(length(out), 4L)
+  expect_equal(sort(names(out)), sort(c("w", "x", "y", "z")))
+  for (etag in out) {
+    expect_true(is.character(etag))
+    expect_true(!anyNA(etag))
+    expect_equal(length(etag), 1L)
+    expect_gt(nchar(etag), 10L)
+  }
 })

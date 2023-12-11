@@ -5,7 +5,7 @@
 \title{Summarize target progress.}
 \usage{
 tar_progress_summary(
-  fields = c("skipped", "started", "built", "errored", "canceled", "since"),
+  fields = c("skipped", "dispatched", "completed", "errored", "canceled", "since"),
   store = targets::tar_config_get("store")
 )
 }
@@ -27,8 +27,11 @@ A data frame with one row and the following
 optional columns that can be selected with \code{fields}.
 (\code{time} is omitted by default.)
 \itemize{
-\item \code{started}: number of targets that started and did not (yet) finish.
-\item \code{built}: number of targets that completed without error or cancellation.
+\item \code{dispatched}: number of targets that were sent off to run and
+did not (yet) finish. These targets may not actually be running,
+depending on the status and workload of parallel workers.
+\item \code{completed}: number of targets that completed without
+error or cancellation.
 \item \code{errored}: number of targets that threw an error.
 \item \code{canceled}: number of canceled targets (see \code{\link[=tar_cancel]{tar_cancel()}}).
 \item \code{since}: how long ago progress last changed (\code{Sys.time() - time}).
@@ -56,14 +59,14 @@ tar_progress_summary()
 }
 \seealso{
 Other progress: 
-\code{\link{tar_built}()},
 \code{\link{tar_canceled}()},
+\code{\link{tar_completed}()},
+\code{\link{tar_dispatched}()},
 \code{\link{tar_errored}()},
 \code{\link{tar_poll}()},
 \code{\link{tar_progress_branches}()},
 \code{\link{tar_progress}()},
 \code{\link{tar_skipped}()},
-\code{\link{tar_started}()},
 \code{\link{tar_watch_server}()},
 \code{\link{tar_watch_ui}()},
 \code{\link{tar_watch}()}

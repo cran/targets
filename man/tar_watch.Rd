@@ -56,7 +56,7 @@ targets from up-to-date targets. (Global functions and objects
 still show these colors.) Looking for outdated targets
 takes a lot of time for large pipelines with lots of branches,
 and setting \code{outdated} to \code{FALSE} is a nice way to speed up the graph
-if you only want to see dependency relationships and build progress.}
+if you only want to see dependency relationships and pipeline progress.}
 
 \item{label}{Label argument to \code{\link[=tar_visnetwork]{tar_visnetwork()}}.}
 
@@ -193,15 +193,15 @@ tar_make()
 }
 \seealso{
 Other progress: 
-\code{\link{tar_built}()},
 \code{\link{tar_canceled}()},
+\code{\link{tar_completed}()},
+\code{\link{tar_dispatched}()},
 \code{\link{tar_errored}()},
 \code{\link{tar_poll}()},
 \code{\link{tar_progress_branches}()},
 \code{\link{tar_progress_summary}()},
 \code{\link{tar_progress}()},
 \code{\link{tar_skipped}()},
-\code{\link{tar_started}()},
 \code{\link{tar_watch_server}()},
 \code{\link{tar_watch_ui}()}
 }

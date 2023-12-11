@@ -121,8 +121,8 @@ tar_test("aws_qs format invalidation", {
   expr <- tar_tidy_eval(expr, environment(), TRUE)
   eval(as.call(list(`tar_script`, expr, ask = FALSE)))
   tar_make(callr_function = NULL)
-  expect_equal(tar_progress(x)$progress, "built")
-  expect_equal(tar_progress(y)$progress, "built")
+  expect_equal(tar_progress(x)$progress, "completed")
+  expect_equal(tar_progress(y)$progress, "completed")
   tar_make(callr_function = NULL)
   progress <- tar_progress()
   progress <- progress[progress$progress != "skipped", ]
@@ -141,8 +141,8 @@ tar_test("aws_qs format invalidation", {
   expr <- tar_tidy_eval(expr, environment(), TRUE)
   eval(as.call(list(`tar_script`, expr, ask = FALSE)))
   tar_make(callr_function = NULL)
-  expect_equal(tar_progress(x)$progress, "built")
-  expect_equal(tar_progress(y)$progress, "built")
+  expect_equal(tar_progress(x)$progress, "completed")
+  expect_equal(tar_progress(y)$progress, "completed")
   expect_equal(tar_read(x), "x_value2")
   expect_equal(tar_read(y), c("x_value2", "y_value"))
 })
@@ -473,7 +473,10 @@ tar_test("aws_qs format versioning", {
   expr <- quote({
     tar_option_set(
       resources = tar_resources(
-        aws = tar_resources_aws(bucket = !!bucket_name, prefix = "_targets")
+        aws = tar_resources_aws(
+          bucket = !!bucket_name,
+          prefix = "_targets"
+        )
       )
     )
     list(
@@ -484,7 +487,7 @@ tar_test("aws_qs format versioning", {
   eval(as.call(list(`tar_script`, expr, ask = FALSE)))
   expect_equal(targets::tar_outdated(callr_function = NULL), "x")
   tar_make(callr_function = NULL)
-  expect_equal(tar_progress(x)$progress, "built")
+  expect_equal(tar_progress(x)$progress, "completed")
   first_meta <- tempfile()
   file.copy(path_meta(path_store_default()), first_meta)
   expect_equal(targets::tar_outdated(callr_function = NULL), character(0))
@@ -495,7 +498,10 @@ tar_test("aws_qs format versioning", {
   expr <- quote({
     tar_option_set(
       resources = tar_resources(
-        aws = tar_resources_aws(bucket = !!bucket_name, prefix = "_targets")
+        aws = tar_resources_aws(
+          bucket = !!bucket_name,
+          prefix = "_targets"
+        )
       )
     )
     list(
@@ -506,7 +512,7 @@ tar_test("aws_qs format versioning", {
   eval(as.call(list(`tar_script`, expr, ask = FALSE)))
   expect_equal(targets::tar_outdated(callr_function = NULL), "x")
   tar_make(callr_function = NULL)
-  expect_equal(tar_progress(x)$progress, "built")
+  expect_equal(tar_progress(x)$progress, "completed")
   expect_equal(targets::tar_outdated(callr_function = NULL), character(0))
   tar_make(callr_function = NULL)
   expect_equal(tar_progress(x)$progress, "skipped")
@@ -519,7 +525,10 @@ tar_test("aws_qs format versioning", {
   expr <- quote({
     tar_option_set(
       resources = tar_resources(
-        aws = tar_resources_aws(bucket = !!bucket_name, prefix = "_targets")
+        aws = tar_resources_aws(
+          bucket = !!bucket_name,
+          prefix = "_targets"
+        )
       )
     )
     list(
@@ -528,9 +537,9 @@ tar_test("aws_qs format versioning", {
   })
   expr <- tar_tidy_eval(expr, environment(), TRUE)
   eval(as.call(list(`tar_script`, expr, ask = FALSE)))
-  expect_equal(targets::tar_outdated(callr_function = NULL), character(0))
+  expect_equal(targets::tar_outdated(callr_function = NULL), "x")
   tar_make(callr_function = NULL)
-  expect_equal(tar_progress(x)$progress, "skipped")
+  expect_equal(tar_progress(x)$progress, "completed")
 })
 
 tar_test("cloud target paths are not in the file path cache", {

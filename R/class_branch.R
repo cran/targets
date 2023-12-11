@@ -10,7 +10,7 @@ branch_init <- function(
   command <- command_clone(command)
   deps <- union(command$deps, deps)
   command$deps <- setdiff(deps, settings$dimensions)
-  command$seed <- produce_seed(child)
+  command$seed <- tar_seed_create(child)
   pedigree <- pedigree_new(settings$name, child, index)
   settings <- settings_clone(settings)
   settings$name <- child
@@ -106,13 +106,13 @@ target_patternview_meta.tar_branch <- function(target, pipeline, meta) {
 }
 
 #' @export
-target_patternview_started.tar_branch <- function(
+target_patternview_dispatched.tar_branch <- function(
   target,
   pipeline,
   scheduler
 ) {
   parent <- pipeline_get_target(pipeline, target_get_parent(target))
-  patternview_register_started(parent$patternview, parent, scheduler)
+  patternview_register_dispatched(parent$patternview, parent, scheduler)
 }
 
 #' @export

@@ -34,7 +34,7 @@ for global objects, and \code{"stem"}, \code{"branch"},
 \item \code{data}: hash of the output data.
 \item \code{command}: hash of the target's deparsed command.
 \item \code{depend}: hash of the immediate upstream dependencies of the target.
-\item \code{seed}: random number generator seed with which the target was built.
+\item \code{seed}: random number generator seed with which the target ran.
 A target's random number generator seed
 is a deterministic function of its name. In this way,
 each target runs with a reproducible seed so someone else
@@ -42,7 +42,7 @@ running the same pipeline should get the same results,
 and no two targets in the same pipeline share the same seed.
 (Even dynamic branches have different names and thus different seeds.)
 You can recover the seed of a completed target
-with \code{tar_meta(your_target, seed)} and run \code{set.seed()}
+with \code{tar_meta(your_target, seed)} and run \code{\link[=tar_seed_set]{tar_seed_set()}}
 on the result to locally recreate the target's initial RNG state.
 \item \code{path}: A list column of paths to target data. Usually, each element
 is a single path, but there could be multiple paths per target
@@ -95,7 +95,7 @@ A data frame with one row per target/object and the selected fields.
 Read the metadata of all recorded targets and global objects.
 }
 \details{
-A metadata row only updates when the target is built.
+A metadata row only updates when the target completes.
 \code{\link[=tar_progress]{tar_progress()}} shows information on targets that are running.
 That is why the number of branches may disagree between \code{\link[=tar_meta]{tar_meta()}}
 and \code{\link[=tar_progress]{tar_progress()}} for actively running pipelines.

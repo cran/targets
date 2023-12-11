@@ -270,8 +270,8 @@ pattern_conclude_final <- function(target, pipeline, scheduler, meta) {
   pattern_begin_final(target, pipeline, scheduler, meta)
   pattern_record_meta(target, pipeline, meta)
   patternview_register_final(target$patternview, target, scheduler)
-  if (identical(target$patternview$progress, "built")) {
-    scheduler$reporter$report_built(target, scheduler$progress)
+  if (identical(target$patternview$progress, "completed")) {
+    scheduler$reporter$report_completed(target, scheduler$progress)
   } else if (identical(target$patternview$progress, "skipped")) {
     scheduler$reporter$report_skipped(target, scheduler$progress)
   }
@@ -369,14 +369,7 @@ pattern_produce_grid <- function(
   seed,
   methods = dynamic_methods
 ) {
-  if (!anyNA(seed)) {
-    # Borrowed from https://github.com/r-lib/withr/blob/main/R/seed.R
-    # under the MIT license. See the NOTICE file
-    # in the targets package source.
-    old_seed <- .GlobalEnv[[".Random.seed"]]
-    set.seed(seed)
-    on.exit(restore_seed(old_seed))
-  }
+  tar_seed_set(seed)
   out <- eval(pattern, envir = niblings, enclos = dynamic_methods$self)
   rownames(out) <- NULL
   out

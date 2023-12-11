@@ -13,12 +13,6 @@ crew_init <- function(
   controller = NULL,
   terminate_controller = TRUE
 ) {
-  backoff <- tar_options$get_backoff()
-  backoff_requeue <- backoff_init(
-    min = backoff$min,
-    max = backoff$max,
-    rate = backoff$rate
-  )
   crew_new(
     pipeline = pipeline,
     meta = meta,
@@ -32,8 +26,7 @@ crew_init <- function(
     garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
-    terminate_controller = terminate_controller,
-    backoff_requeue = backoff_requeue
+    terminate_controller = terminate_controller
   )
 }
 
@@ -50,8 +43,7 @@ crew_new <- function(
   garbage_collection = NULL,
   envir = NULL,
   controller = NULL,
-  terminate_controller = NULL,
-  backoff_requeue = NULL
+  terminate_controller = NULL
 ) {
   crew_class$new(
     pipeline = pipeline,
@@ -66,8 +58,7 @@ crew_new <- function(
     garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
-    terminate_controller = terminate_controller,
-    backoff_requeue = backoff_requeue
+    terminate_controller = terminate_controller
   )
 }
 
@@ -79,7 +70,6 @@ crew_class <- R6::R6Class(
   public = list(
     controller = NULL,
     terminate_controller = NULL,
-    backoff_requeue = NULL,
     initialize = function(
       pipeline = NULL,
       meta = NULL,
@@ -93,8 +83,7 @@ crew_class <- R6::R6Class(
       garbage_collection = NULL,
       envir = NULL,
       controller = NULL,
-      terminate_controller = NULL,
-      backoff_requeue = NULL
+      terminate_controller = NULL
     ) {
       super$initialize(
         pipeline = pipeline,
@@ -111,7 +100,6 @@ crew_class <- R6::R6Class(
       )
       self$controller <- controller
       self$terminate_controller <- terminate_controller
-      self$backoff_requeue <- backoff_requeue
     },
     produce_exports = function(envir, path_store, is_globalenv = NULL) {
       map(names(envir), ~force(envir[[.x]])) # try to nix high-mem promises
@@ -157,29 +145,25 @@ crew_class <- R6::R6Class(
       globals <- self$exports$globals
       resources <- target$settings$resources$crew
       name <- target_get_name(target)
-      saturated <- self$controller$saturated(controller = resources$controller)
-      if (saturated) {
-        # Requires a slow test. Covered in the saturation tests in
-        # tests/hpc/test-crew_local.R # nolint
-        # nocov start
-        self$scheduler$queue$append0(name = name)
-        self$backoff_requeue$wait()
-        # nocov end
-      } else {
-        target_prepare(target, self$pipeline, self$scheduler, self$meta)
-        self$sync_meta_time()
-        self$controller$push(
-          command = command,
-          data = data,
-          globals = globals,
-          substitute = FALSE,
-          name = name,
-          controller = resources$controller,
-          scale = TRUE,
-          seconds_timeout = resources$seconds_timeout
-        )
-        self$backoff_requeue$reset()
-      }
+      target_prepare(
+        target = target,
+        pipeline = self$pipeline,
+        scheduler = self$scheduler,
+        meta = self$meta,
+        pending = self$controller$saturated(controller = resources$controller)
+      )
+      self$sync_meta_time()
+      self$controller$push(
+        command = command,
+        data = data,
+        globals = globals,
+        substitute = FALSE,
+        name = name,
+        controller = resources$controller,
+        scale = TRUE,
+        throttle = TRUE,
+        seconds_timeout = resources$seconds_timeout
+      )
     },
     run_main = function(target) {
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
@@ -218,19 +202,22 @@ crew_class <- R6::R6Class(
     iterate = function() {
       self$sync_meta_time()
       queue <- self$scheduler$queue
-      should_dequeue <- queue$should_dequeue()
-      if (should_dequeue) {
-        self$process_target(queue$dequeue())
-      }
-      result <- self$controller$pop(scale = TRUE)
-      self$conclude_worker_task(result)
+      interval <- self$controller$launcher$seconds_interval
       if_any(
-        should_dequeue || (!is.null(result)),
-        self$scheduler$backoff$reset(),
-        self$backoff()
+        queue$should_dequeue(),
+        self$process_target(queue$dequeue()),
+        self$controller$wait(
+          mode = "one",
+          seconds_interval = interval,
+          seconds_timeout = interval,
+          scale = TRUE,
+          throttle = TRUE
+        )
       )
+      self$conclude_worker_task()
     },
-    conclude_worker_task = function(result) {
+    conclude_worker_task = function() {
+      result <- self$controller$pop(scale = TRUE, throttle = TRUE)
       if (is.null(result)) {
         return()
       }

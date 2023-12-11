@@ -33,8 +33,8 @@ A data frame with one row per target per progress status
 and the following columns.
 \itemize{
 \item \code{name}: name of the pattern.
-\item \code{progress}: progress status: \code{"started"}, \code{"built"}, \code{"cancelled"},
-or \code{"errored"}.
+\item \code{progress}: progress status: \code{"dispatched"}, \code{"completed"},
+\code{"cancelled"}, or \code{"errored"}.
 \item \code{branches}: number of branches in the progress category.
 \item \code{total}: total number of branches planned for the whole pattern.
 Values within the same pattern should all be equal.
@@ -62,14 +62,14 @@ tar_progress_branches()
 }
 \seealso{
 Other progress: 
-\code{\link{tar_built}()},
 \code{\link{tar_canceled}()},
+\code{\link{tar_completed}()},
+\code{\link{tar_dispatched}()},
 \code{\link{tar_errored}()},
 \code{\link{tar_poll}()},
 \code{\link{tar_progress_summary}()},
 \code{\link{tar_progress}()},
 \code{\link{tar_skipped}()},
-\code{\link{tar_started}()},
 \code{\link{tar_watch_server}()},
 \code{\link{tar_watch_ui}()},
 \code{\link{tar_watch}()}

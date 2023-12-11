@@ -40,8 +40,11 @@ name of the associated pattern. For other targets, the pattern
 is just itself.
 \item \code{branches}: number of dynamic branches of a pattern. 0 for non-patterns.
 \item \code{progress}: the most recent progress update of that target.
-Could be \code{"started"}, \code{"built"}, "\code{skipped}", \code{"canceled"},
-or \code{"errored"}.
+Could be \code{"dispatched"}, \code{"completed"}, "\code{skipped}", \code{"canceled"},
+or \code{"errored"}. \code{"dispatched"} means the target was sent off
+to be run, but in the case of \code{tar_make()} with a \code{crew} controller,
+the target might not actually start running right away if the \code{crew}
+workers are all busy.
 }
 }
 \description{
@@ -91,14 +94,14 @@ tar_progress(starts_with("y_")) # see also any_of()
 }
 \seealso{
 Other progress: 
-\code{\link{tar_built}()},
 \code{\link{tar_canceled}()},
+\code{\link{tar_completed}()},
+\code{\link{tar_dispatched}()},
 \code{\link{tar_errored}()},
 \code{\link{tar_poll}()},
 \code{\link{tar_progress_branches}()},
 \code{\link{tar_progress_summary}()},
 \code{\link{tar_skipped}()},
-\code{\link{tar_started}()},
 \code{\link{tar_watch_server}()},
 \code{\link{tar_watch_ui}()},
 \code{\link{tar_watch}()}

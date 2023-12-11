@@ -1,3 +1,41 @@
+# targets 1.4.0
+
+## Invalidating changes
+
+Because of the changes below, upgrading to this version of `targets` will unavoidably invalidate previously built targets in existing pipelines. Your pipeline code should still work, but any targets you ran before will most likely need to rerun after the upgrade.
+
+* Use SHA512 during the creation of target-specific pseudo-random number generator seeds (#1139). This change decreases the risk of overlapping/correlated random number generator streams. See the "RNG overlap" section of the `tar_seed_create()` help file for details and justification. Unfortunately, this change will invalidate all currently built targets because the seeds will be different. To avoid rerunning your whole pipeline, set `cue = tar_cue(seed = FALSE)` in `tar_target()`.
+* For cloud storage: instead of the hash of the local file, use the ETag for AWS S3 targets and the MD5 hash for GCP GCS targets (#1172). Sanitize with `targets:::digest_chr64()` in both cases before storing the result in the metadata.
+* For a cloud target to be truly up to date, the hash in the metadata now needs to match the *current* object in the bucket, not the version recorded in the metadata (#1172). In other words, `targets` now tries to ensure that the up-to-date data objects in the cloud are in their newest versions. So if you roll back the metadata to an older version, you will still be able to access historical data versions with e.g. `tar_read()`, but the pipeline will no longer be up to date.
+
+## Other changes to seeds
+
+* Add a new exported function `tar_seed_create()` which creates target-specific pseudo-random number generator seeds.
+* Add an "RNG overlap" section in the `tar_seed_create()` help file to justify and defend how `targets` and `tarchetypes` approach pseudo-random numbers.
+* Add function `tar_seed_set()` which sets a seed and sets all the RNG algorithms to their defaults in the R installation of the user. Each target now uses `tar_seed_set()` function to set its seed before running its R command (#1139).
+* Deprecate `tar_seed()` in favor of the new `tar_seed_get()` function.
+
+## Other cloud storage improvements
+
+* For all cloud targets, check hashes in batched LIST requests instead of individual HEAD requests (#1172). Dramatically speeds up the process of checking if cloud targets are up to date.
+* For AWS S3 targets, `tar_delete()`, `tar_destroy()`, and `tar_prune()` now use efficient batched calls to `delete_objects()` instead of costly individual calls to `delete_object()` (#1171).
+* Add a new `verbose` argument to `tar_delete()`, `tar_destroy()`, and `tar_prune()`.
+* Add a new `batch_size` argument to `tar_delete()`, `tar_destroy()`, and `tar_prune()`.
+* Add new arguments `page_size` and `verbose` to `tar_resources_aws()` (#1172).
+* Add a new `tar_unversion()` function to remove version IDs from the metadata of cloud targets. This makes it easier to interact with just the current version of each target, as opposed to the version ID recorded in the local metadata.
+
+## Other improvements
+
+* Migrate to the changes in `clustermq` 0.9.0 (@mschubert).
+* In progress statuses, change "started" to "dispatched" and change "built" to "completed" (#1192).
+* Deprecate `tar_started()` in favor of `tar_dispatched()` (#1192).
+* Deprecate `tar_built()` in favor of `tar_completed()` (#1192).
+* Console messages from reporters say "dispatched" and "completed" instead of "started" and "built" (#1192).
+* The `crew` scheduling algorithm no longer waits on saturated controllers, and targets that are ready are greedily dispatched to `crew` even if all workers are busy (#1182, #1192). To appropriately set expectations for users, reporters print "dispatched (pending)" instead of "dispatched" if the task load is backlogged at the moment.
+* In the `crew` scheduling algorithm, waiting for tasks is now a truly event-driven process and consumes 5-10x less CPU resources (#1183). Only the auto-scaling of workers uses polling (with an inexpensive default polling interval of 0.5 seconds, configurable through `seconds_interval` in the controller).
+* Simplify stored target tracebacks.
+* Print the traceback on error.
+
 # targets 1.3.2
 
 * Try to fix function help files for CRAN.

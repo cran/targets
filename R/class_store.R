@@ -141,7 +141,7 @@ store_cache_path <- function(store, path) {
   UseMethod("store_cache_path")
 }
 
-# @export
+#' @export
 store_cache_path.default <- function(store, path) {
   cache <- tar_runtime$file_exist
   if (!is.null(cache)) {
@@ -166,6 +166,17 @@ store_delete_object <- function(store, name = NULL) {
 store_delete_object.default <- function(store, name = NULL) {
   unlink(store$file$path)
   unlink(store$file$stage)
+}
+
+store_delete_objects <- function(store, meta, batch_size, verbose) {
+  UseMethod("store_delete_objects")
+}
+
+#' @export
+store_delete_objects.default <- function(store, meta, batch_size, verbose) {
+  tar_throw_validate(
+    "store_delete_objects() is for supported cloud objects only."
+  )
 }
 
 store_upload_object <- function(store) {

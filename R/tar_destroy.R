@@ -26,7 +26,9 @@
 #'   The next run of the pipeline will start from scratch,
 #'   and it will not skip any targets.
 #' @inheritSection tar_meta Storage access
+#' @inheritSection tar_read Cloud target data versioning
 #' @return `NULL` (invisibly).
+#' @inheritParams tar_delete
 #' @inheritParams tar_validate
 #' @param destroy Character of length 1, what to destroy. Choices:
 #'   * `"all"`: entire data store (default: `_targets/`)
@@ -88,11 +90,21 @@ tar_destroy <- function(
     "workspaces",
     "user"
   ),
+  batch_size = 1000L,
+  verbose = TRUE,
   ask = NULL,
   script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
 ) {
   tar_assert_allow_meta("tar_destroy", store)
+  tar_assert_dbl(batch_size)
+  tar_assert_scalar(batch_size)
+  tar_assert_none_na(batch_size)
+  tar_assert_ge(batch_size, 1L)
+  tar_assert_le(batch_size, 1000L)
+  tar_assert_lgl(verbose)
+  tar_assert_scalar(verbose)
+  tar_assert_none_na(verbose)
   if (!file.exists(store)) {
     return(invisible())
   }
@@ -115,7 +127,9 @@ tar_destroy <- function(
     tar_delete_cloud_objects(
       names = meta$name,
       meta = meta,
-      path_store = store
+      path_store = store,
+      batch_size = batch_size,
+      verbose = verbose
     )
     tar_delete_cloud_meta(script = script)
     unlink(path_scratch_dir_network(), recursive = TRUE)

@@ -30,8 +30,8 @@ tar_test("gcp meta", {
     )
   }, env = list(bucket_name = bucket_name))
   do.call(tar_script, list(code = code))
-  tar_make()
-  expect_true(all(tar_progress()$progress == "built"))
+  tar_make(reporter = "silent")
+  expect_true(all(tar_progress()$progress == "completed"))
   expect_equal(tar_read(c), 2L)
   for (file in c("meta", "process", "progress", "crew")) {
     expect_true(
@@ -53,7 +53,7 @@ tar_test("gcp meta", {
   }
   unlink(path_meta(path_store_default()))
   expect_equal(sort(tar_outdated()), sort(c("a", "b", "c")))
-  tar_make()
+  tar_make(reporter = "silent")
   expect_true(all(tar_progress()$progress == "skipped"))
   tar_destroy()
   for (file in c("meta", "process", "progress", "crew")) {
@@ -108,8 +108,8 @@ tar_test("gcp tar_meta_delete()", {
     )
   }, env = list(bucket_name = bucket_name))
   do.call(tar_script, list(code = code))
-  tar_make()
-  expect_true(all(tar_progress()$progress == "built"))
+  tar_make(reporter = "silent")
+  expect_true(all(tar_progress()$progress == "completed"))
   expect_equal(tar_read(c), 2L)
   for (file in c("meta", "process", "progress", "crew")) {
     expect_true(
@@ -182,8 +182,8 @@ tar_test("gcp tar_meta_upload()", {
     )
   }, env = list(bucket_name = bucket_name))
   do.call(tar_script, list(code = code))
-  tar_make()
-  expect_true(all(tar_progress()$progress == "built"))
+  tar_make(reporter = "silent")
+  expect_true(all(tar_progress()$progress == "completed"))
   expect_equal(tar_read(c), 2L)
   for (file in c("meta", "process", "progress", "crew")) {
     expect_true(
@@ -248,8 +248,8 @@ tar_test("gcp tar_meta_download()", {
     )
   }, env = list(bucket_name = bucket_name))
   do.call(tar_script, list(code = code))
-  tar_make()
-  expect_true(all(tar_progress()$progress == "built"))
+  tar_make(reporter = "silent")
+  expect_true(all(tar_progress()$progress == "completed"))
   expect_equal(tar_read(c), 2L)
   for (file in c("meta", "process", "progress", "crew")) {
     expect_true(
@@ -302,8 +302,8 @@ tar_test("gcp tar_meta_sync() upload", {
     )
   }, env = list(bucket_name = bucket_name))
   do.call(tar_script, list(code = code))
-  tar_make()
-  expect_true(all(tar_progress()$progress == "built"))
+  tar_make(reporter = "silent")
+  expect_true(all(tar_progress()$progress == "completed"))
   expect_equal(tar_read(c), 2L)
   for (file in c("meta", "process", "progress", "crew")) {
     expect_true(
@@ -368,8 +368,8 @@ tar_test("gcp tar_meta_sync() download", {
     )
   }, env = list(bucket_name = bucket_name))
   do.call(tar_script, list(code = code))
-  tar_make()
-  expect_true(all(tar_progress()$progress == "built"))
+  tar_make(reporter = "silent")
+  expect_true(all(tar_progress()$progress == "completed"))
   expect_equal(tar_read(c), 2L)
   for (file in c("meta", "process", "progress", "crew")) {
     expect_true(

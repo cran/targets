@@ -6,6 +6,8 @@
 \usage{
 tar_prune(
   cloud = TRUE,
+  batch_size = 1000L,
+  verbose = TRUE,
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function),
   envir = parent.frame(),
@@ -17,6 +19,17 @@ tar_prune(
 \item{cloud}{Logical of length 1, whether to delete objects
 from the cloud if applicable (e.g. AWS, GCP). If \code{FALSE},
 files are not deleted from the cloud.}
+
+\item{batch_size}{Positive integer between 1 and 1000,
+number of target objects to delete
+from the cloud with each HTTP API request.
+Currently only supported for AWS.
+Cannot be more than 1000.}
+
+\item{verbose}{Logical of length 1, whether to print console messages
+to show progress when deleting each batch of targets from each
+cloud bucket. Batched deletion with verbosity is currently only supported
+for AWS.}
 
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session
@@ -111,6 +124,40 @@ target factories in the \code{tarchetypes} package such as \code{tar_render()}
 and \code{tar_quarto()}.
 }
 
+\section{Cloud target data versioning}{
+
+Some buckets in Amazon S3 or Google Cloud Storage are "versioned",
+which means they track historical versions of each data object.
+If you use \code{targets} with cloud storage
+(\url{https://books.ropensci.org/targets/cloud-storage.html})
+and versioning is turned on, then \code{targets} will record each
+version of each target in its metadata.
+
+Functions like \code{\link[=tar_read]{tar_read()}}
+and \code{\link[=tar_load]{tar_load()}} load the version recorded in the local metadata,
+which may not be the same as the "current" version of the
+object in the bucket. Likewise, functions \code{\link[=tar_delete]{tar_delete()}}
+and \code{\link[=tar_destroy]{tar_destroy()}} only remove
+the version ID of each target as recorded in the local
+metadata.
+
+If you want to interact with the \emph{latest} version of an object
+instead of the version ID recorded in the local metadata,
+then you will need to delete the object from the metadata.
+\enumerate{
+\item Make sure your local copy of the metadata is current and
+up to date. You may need to run \code{\link[=tar_meta_download]{tar_meta_download()}} or
+\code{\link[=tar_meta_sync]{tar_meta_sync()}} first.
+\item Run \code{\link[=tar_unversion]{tar_unversion()}} to remove the recorded version IDs of
+your targets in the local metadata.
+\item With the version IDs gone from the local metadata,
+functions like \code{\link[=tar_read]{tar_read()}} and \code{\link[=tar_destroy]{tar_destroy()}} will use the
+\emph{latest} version of each target data object.
+\item Optional: to back up the local metadata file with the version IDs
+deleted, use \code{\link[=tar_meta_upload]{tar_meta_upload()}}.
+}
+}
+
 \examples{
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
@@ -136,6 +183,7 @@ Other clean:
 \code{\link{tar_delete}()},
 \code{\link{tar_destroy}()},
 \code{\link{tar_invalidate}()},
-\code{\link{tar_prune_list}()}
+\code{\link{tar_prune_list}()},
+\code{\link{tar_unversion}()}
 }
 \concept{clean}
