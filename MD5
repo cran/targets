@@ -1,7 +1,7 @@
-3872d0bc93570fa226c1eb36dbad7604 *DESCRIPTION
+49b8c19d3e5f86eeb708590b5c8ed1a3 *DESCRIPTION
 d00d099c18d809e93f2d77f6df7693ad *LICENSE
 6f5cdeb1e1e419f1090cbccb53cc94e4 *NAMESPACE
-aa48f5ab2502a5155bd7653362cc4bb5 *NEWS.md
+36069cc0bd7c52e4858c3c5cf60b7ab4 *NEWS.md
 c2cc85c410e9fc7b8df697f444ee3465 *R/class_active.R
 06c6ce604ca9179d01801d95b7ebf422 *R/class_algorithm.R
 d89f053277067d0a17e24bdbb08cce49 *R/class_aws.R
@@ -62,7 +62,7 @@ e6778abc629560e13bf4e011f772c4be *R/class_patternview.R
 eb056e354bd51cfa05f4782404874e51 *R/class_pipeline.R
 af351e769cf36403e05e36ab8d544981 *R/class_prelocal.R
 bd4a5a5f0d92ba05c4cf6564fa06869a *R/class_process.R
-52ab3ceb1cf8394c9cdd73695f002b5b *R/class_progress.R
+d79a2b12c0d185efe6ef7d2ec160c9a4 *R/class_progress.R
 eaa2e4aaa89af8156ac728af2761427f *R/class_qs.R
 faf72175e8b8c038868ab6d9d5ba4768 *R/class_queue.R
 317f6c0fe62ed1c5d74ee6dabb6c9c8c *R/class_rds.R
@@ -131,7 +131,7 @@ d4813bbddce13e91523ddd3475e63aa0 *R/tar_config_set.R
 0b1d14a5e6ee4a8a621cedb12e7f5532 *R/tar_config_yaml.R
 8799df1b7852aebb984bcea93a88bd33 *R/tar_crew.R
 eab3746b09d8f8bf97a272c9dc200a89 *R/tar_cue.R
-a55df96a5539b96dac106515d0c9e6b8 *R/tar_debug_instructions.R
+a0ac7bf601a337a840da4cda40d32684 *R/tar_debug_instructions.R
 b9dae13fabed772d898892173794c4ef *R/tar_deduplicate.R
 00ded9c37722b7e38c7fe6a6815945c8 *R/tar_definition.R
 e816bed7155c1ad035b0a648e52fede7 *R/tar_delete.R
@@ -163,7 +163,7 @@ c1e1100edb7d46fc0d934562a9fbe2b8 *R/tar_load_everything.R
 58c5119e9b1de2c8a2fe80b796f873d2 *R/tar_load_globals.R
 70bf38c1d5676845055f94ab89e88371 *R/tar_load_raw.R
 8408abc0cb0bcfac063aa8aacdc97756 *R/tar_make.R
-0f2954fe405888cc97741d833cd2273a *R/tar_make_clustermq.R
+fc63253ab210ed97d805102b61a6cc10 *R/tar_make_clustermq.R
 7bf2f2c06f1cbff7fa36f1cea4ccf9ef *R/tar_make_future.R
 264fdfaa9868efa73e907fdb8997e882 *R/tar_make_interactive.R
 0bf4a02df1c9973dd560f5297be9551c *R/tar_manifest.R
@@ -250,7 +250,7 @@ bd1011ee491e2e4120e4ae1dd3dcd9a2 *R/use_targets_rmd.R
 93389cfa1c57b465598eee346b837397 *R/utils_aws.R
 3600b4db183133eabcfe926c18329583 *R/utils_callr.R
 7096e17219140a72cb0f267b57e8217e *R/utils_character.R
-8080ff4d401fc9b3f99c1f74c3986746 *R/utils_cli.R
+7cb6db5aa5edd7aabd1a369d36f22217 *R/utils_cli.R
 c79de7c3fefaa460a79db690f61a8b92 *R/utils_condition.R
 3a0e7aa3fe23a52d9bfa250204ce4d18 *R/utils_data.R
 a55e15f5567661468558e46d55bbdf15 *R/utils_digest.R
@@ -259,7 +259,7 @@ d09f153644aeb4f4226da1ade96e99ae *R/utils_envvars.R
 9fa64b5b8d9feb80e69555eef887c56a *R/utils_functional.R
 c0eb6db8e8001c58edcb49ca873cdddb *R/utils_gcp.R
 761268c96cc7eea600261d1198ebf4b9 *R/utils_igraph.R
-5e1287eca152256c29da5d5af67106b9 *R/utils_imports.R
+e137547bcbfa455b9a3a003960c1a474 *R/utils_imports.R
 ee41891bea6a4c854cdb0ed7101f369f *R/utils_language.R
 36431cd7d497ddfafcf51d64b8f7b70f *R/utils_logic.R
 3eb3418d682d1ce9145b50f4f772a70e *R/utils_packages.R
@@ -532,7 +532,7 @@ d486eb6ebda97460f3ea65ada79d194e *tests/performance/test-stems.R
 0d313109c9185c9896cdc7f80a674e61 *tests/testthat/helper-aws.R
 a519d05b8c49be57cf0204cd4bc6639e *tests/testthat/helper-gcp.R
 3fc6451a32a2d579a49c07cf7a584bd3 *tests/testthat/helper-pipelines.R
-110187a67e4619a99917053bb18c4fbf *tests/testthat/helper-utils.R
+b68eafc08e9ccd02a32213d545995c42 *tests/testthat/helper-utils.R
 0e2ab2a010cace2b833e683336c6ae6e *tests/testthat/test-class_active.R
 e7142e455991a41ec8cadff030ea8106 *tests/testthat/test-class_aws.R
 2b944c5aea6364a12a984aca26456204 *tests/testthat/test-class_aws_file.R
@@ -541,7 +541,7 @@ fca7532998f87f7a7b41e2312e45a295 *tests/testthat/test-class_backoff.R
 0e0304e96601d16ae95c476752c671b7 *tests/testthat/test-class_bud.R
 d3ee6a8fb419eb06c49a2fdfd9b48867 *tests/testthat/test-class_build.R
 5aedd8f0554d2fef3b86f3732d1dacb8 *tests/testthat/test-class_builder.R
-4b81e77039ea1b170b84c6a119b98b83 *tests/testthat/test-class_clustermq.R
+4a85272e6e6ba6278daeee97f8208348 *tests/testthat/test-class_clustermq.R
 ae8220ea4e39871eac1d841feb2f034a *tests/testthat/test-class_command.R
 0e35f2059d8fa2aa4ed4a827db3b373c *tests/testthat/test-class_counter.R
 9ca8df5dd9fcfb91d3315638406c82d9 *tests/testthat/test-class_crew.R
@@ -613,7 +613,7 @@ aeba6037d3c788deb673460dba1c016e *tests/testthat/test-class_store_file_fast.R
 69ec3bb1463a7a44540ad39dea89ab86 *tests/testthat/test-class_target.R
 71756ce5475dc3aa0e2e12cfb5cd50fd *tests/testthat/test-class_timestamp.R
 540b1101a62f7879dc8a69a6db7700e1 *tests/testthat/test-class_timestamp_positives.R
-6c8a83423d9978db815d8fc7117d947e *tests/testthat/test-class_torch.R
+4de5550496d5814136fe9df4b550b680 *tests/testthat/test-class_torch.R
 a144620d607d14a1836882ea600c1276 *tests/testthat/test-class_vector.R
 4417296460231474f2e5bbcc49656fd1 *tests/testthat/test-class_verbose.R
 3979c9020e495f768dc00437e8dd273a *tests/testthat/test-class_verbose_positives.R
@@ -662,7 +662,7 @@ a937fa93afc3c25e04d2b7c2311cb71d *tests/testthat/test-tar_invalidate.R
 94cb5315d0998f6422d9a940204bae3c *tests/testthat/test-tar_load.R
 278f65e30d25649406a04addb691be49 *tests/testthat/test-tar_load_globals.R
 d7a4791508a8626f5e808eab217f6696 *tests/testthat/test-tar_make.R
-43a92307011e033acd973772e22bf131 *tests/testthat/test-tar_make_clustermq.R
+0658fc9703900fa883a6a2d6ba6d40af *tests/testthat/test-tar_make_clustermq.R
 c4c6ed54f7d00911e245b1b42f1fea71 *tests/testthat/test-tar_make_future.R
 670d45f82caf50933cfe012fed372d7a *tests/testthat/test-tar_make_interactive.R
 bb2dcb012555089d692b6a26bba4474a *tests/testthat/test-tar_manifest.R
@@ -735,7 +735,7 @@ b396c643ffe5097b2e21d0292cf470d2 *tests/testthat/test-tar_workspace.R
 e80e90a24e47406f81e1974b91c20fe8 *tests/testthat/test-utils_ask.R
 a390ea02b5a9504b8ca6f52ace42713e *tests/testthat/test-utils_assert.R
 67ff316f229efa09ad4a0a78713144a3 *tests/testthat/test-utils_callr.R
-79da39096039c12464a4439bf2d6c708 *tests/testthat/test-utils_cli.R
+fe00c2956dc543803a33fc6da37aeb11 *tests/testthat/test-utils_cli.R
 73c43c7b9123c626df2e9df129c61ca5 *tests/testthat/test-utils_condition.R
 2211bb97c357d5ed0ba0cd2669dba3ef *tests/testthat/test-utils_data.R
 00c08e5e70e21056ab109d5b7879911f *tests/testthat/test-utils_digest.R
