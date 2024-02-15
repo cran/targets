@@ -151,7 +151,10 @@
 #'   * `"list"`, branching happens with `[[]]` and aggregation happens with
 #'     `list()`.
 #'   * `"group"`: `dplyr::group_by()`-like functionality to branch over
-#'     subsets of a data frame. The target's return value must be a data
+#'     subsets of a non-dynamic data frame.
+#'     For `iteration = "group"`, the target must not by dynamic
+#'     (the `pattern` argument of [tar_target()] must be left `NULL`).
+#'     The target's return value must be a data
 #'     frame with a special `tar_group` column of consecutive integers
 #'     from 1 through the number of groups. Each integer designates a group,
 #'     and a branch is created for each collection of rows in a group.
@@ -228,10 +231,13 @@
 #'   and the latter conserves local storage.
 #' @param garbage_collection Logical, whether to run `base::gc()`
 #'   just before the target runs.
-#' @param deployment Character of length 1, only relevant to
-#'   [tar_make_clustermq()] and [tar_make_future()]. If `"worker"`,
-#'   the target runs on a parallel worker. If `"main"`,
-#'   the target runs on the host machine / process managing the pipeline.
+#' @param deployment Character of length 1. If `deployment` is
+#'   `"main"`, then the target will run on the central controlling R process.
+#'   Otherwise, if `deployment` is `"worker"` and you set up the pipeline
+#'   with distributed/parallel computing, then
+#'   the target runs on a parallel worker. For more on distributed/parallel
+#'   computing in `targets`, please visit
+#'   <https://books.ropensci.org/targets/crew.html>.
 #' @param priority Numeric of length 1 between 0 and 1. Controls which
 #'   targets get deployed first when multiple competing targets are ready
 #'   simultaneously. Targets with priorities closer to 1 get dispatched earlier

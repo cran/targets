@@ -168,6 +168,18 @@ tar_test("tar_assert_nonempty()", {
   )
 })
 
+tar_test("tar_assert_null()", {
+  expect_silent(tar_assert_null(NULL))
+  expect_error(
+    tar_assert_null(logical(0L)),
+    class = "tar_condition_validate"
+  )
+  expect_error(
+    tar_assert_null(environment()),
+    class = "tar_condition_validate"
+  )
+})
+
 tar_test("tar_assert_all_na()", {
   skip_cran()
   expect_silent(tar_assert_all_na(NA_character_))
@@ -291,15 +303,6 @@ tar_test("tar_assert_script()", {
   expect_silent(tar_assert_script("_targets.R"))
   writeLines("tar_make()", "_targets.R")
   expect_error(
-    tar_assert_script("_targets.R"),
-    class = "tar_condition_validate"
-  )
-  tar_script({
-    library(targets)
-    pkgload::load_all()
-    list(tar_target(x, 1))
-  })
-  expect_warning(
     tar_assert_script("_targets.R"),
     class = "tar_condition_validate"
   )

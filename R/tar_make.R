@@ -96,6 +96,10 @@
 #'   You can manually terminate the controller with
 #'   `tar_option_get("controller")$summary()` to close down the dispatcher
 #'   and worker processes.
+#' @param as_job `TRUE` to run as an RStudio IDE / Posit Workbench job,
+#'   `FALSE` to run as a `callr` process in the main R session
+#'   (depending on the `callr_function` argument).
+#'   If `as_job` is `TRUE`, then the `rstudioapi` package must be installed.
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
@@ -136,7 +140,8 @@ tar_make <- function(
   store = targets::tar_config_get("store"),
   garbage_collection = targets::tar_config_get("garbage_collection"),
   use_crew = targets::tar_config_get("use_crew"),
-  terminate_controller = TRUE
+  terminate_controller = TRUE,
+  as_job = targets::tar_config_get("as_job")
 ) {
   tar_assert_allow_meta("tar_make", store)
   force(envir)
@@ -164,6 +169,17 @@ tar_make <- function(
   tar_assert_lgl(terminate_controller)
   tar_assert_scalar(terminate_controller)
   tar_assert_none_na(terminate_controller)
+  tar_assert_lgl(as_job)
+  tar_assert_scalar(as_job)
+  tar_assert_none_na(as_job)
+  # Tested in tests/interactive/test-job.R.
+  # nocov start
+  if (as_job) {
+    call <- match.call()
+    tar_make_as_job(call = call)
+    return(invisible())
+  }
+  # nocov end
   targets_arguments <- list(
     path_store = store,
     names_quosure = rlang::enquo(names),
@@ -224,7 +240,7 @@ tar_make_inner <- function(
       envir = tar_option_get("envir")
     )$run()
   } else {
-    tar_assert_package("crew (>= 0.7.0)")
+    tar_assert_package("crew (>= 0.9.0)")
     crew_init(
       pipeline = pipeline,
       meta = meta_init(path_store = path_store),
@@ -243,3 +259,47 @@ tar_make_inner <- function(
   }
   invisible()
 }
+
+# Tested in tests/interactive/test-job.R.
+# nocov start
+tar_make_as_job <- function(call) {
+  tar_assert_package(
+    "rstudioapi",
+    msg = paste(
+      "The 'rstudioapi' package is required to run tar_make()",
+      "with as_job = TRUE. Either install the package or set as_job = FALSE.",
+      "You can set as_job = FALSE either manually",
+      "in tar_make() or persistently",
+      "for the project in _targets.yaml",
+      "using tar_config_set(as_job = FALSE)."
+    )
+  )
+  tar_assert_true(
+    rstudioapi::isAvailable(),
+    msg = paste(
+      "tar_make(as_job = TRUE) can only run inside the RStudio IDE",
+      "or Posit Workbench. If you are running the pipeline in a terminal",
+      "or a different IDE, then please set as_job = FALSE.",
+      "You can set as_job = FALSE either manually",
+      "in tar_make() or persistently",
+      "for the project in _targets.yaml",
+      "using tar_config_set(as_job = FALSE)."
+    )
+  )
+  args <- as.list(call)[-1L]
+  args$as_job <- FALSE
+  args <- paste(names(args), "=", map_chr(args, tar_deparse_safe))
+  args <- c(args, "callr_function = NULL")
+  args <- paste0(args, collapse = ", ")
+  text <- sprintf("targets::tar_make(%s)", args)
+  script <- tempfile()
+  writeLines(text, script)
+  rstudioapi::jobRunScript(
+    path = script,
+    name = paste("targets", Sys.time()),
+    workingDir = getwd(),
+    importEnv = FALSE,
+    exportEnv = ""
+  )
+}
+# nocov end

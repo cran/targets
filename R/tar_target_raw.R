@@ -137,6 +137,20 @@ tar_target_raw <- function(
   if (!is.null(cue)) {
     cue_validate(cue)
   }
+  tar_assert_true(
+    is.null(pattern) || (iteration != "group"),
+    msg = sprintf(
+      paste(
+        "\"group\" iteration is invalid for dynamic targets such as %s.",
+        "(e.g. with pattern = %s in tar_target()). You can either",
+        "set iteration = \"group\" or set a dynamic branching pattern like",
+        "pattern = %s, but please avoid doing both for the same target."
+      ),
+      name,
+      tar_deparse_language(pattern),
+      tar_deparse_language(pattern)
+    )
+  )
   target_init(
     name = name,
     expr = command,
@@ -168,6 +182,6 @@ warn_error_format <- function(error, format) {
       "\" is incompatible with error = \"null\" ",
       "(and superseded by tar_format())."
     )
-    tar_warn_validate(message)
+    tar_warn_deprecate(message)
   }
 }

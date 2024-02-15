@@ -100,6 +100,15 @@ tar_warn_validate <- function(...) {
 
 #' @export
 #' @rdname tar_condition
+tar_message_validate <- function(...) {
+  tar_message(
+    message = paste0(...),
+    class = c("tar_condition_validate", "tar_condition_targets")
+  )
+}
+
+#' @export
+#' @rdname tar_condition
 tar_print <- function(...) {
   tar_message(
     message = paste0(...),
@@ -114,7 +123,7 @@ tar_error <- function(message, class) {
   on.exit(options(cli.num_colors = old_cli_number_ansi_colors))
   options(cli.num_colors = cli_number_ansi_colors)
   old <- options(rlang_backtrace_on_error = "none")
-  on.exit(options(old))
+  on.exit(options(old), add = TRUE)
   message <- cli::col_red(message)
   rlang::abort(message = message, class = class, call = tar_empty_envir)
 }
@@ -126,7 +135,7 @@ tar_warning <- function(message, class) {
   on.exit(options(cli.num_colors = old_cli_number_ansi_colors))
   options(cli.num_colors = cli_number_ansi_colors)
   old <- options(rlang_backtrace_on_error = "none")
-  on.exit(options(old))
+  on.exit(options(old), add = TRUE)
   message <- cli::col_red(message)
   rlang::warn(message = message, class = class)
 }

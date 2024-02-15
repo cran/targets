@@ -1,5 +1,4 @@
 #' targets: Dynamic Function-Oriented Make-Like Declarative Pipelines for R
-#' @docType package
 #' @description A pipeline toolkit for Statistics and data science in R,
 #'   the `targets` package brings function-oriented programming to
 #'   Make-like declarative pipelines. `targets` orchestrates a pipeline
@@ -19,14 +18,16 @@
 #'   num_ansi_colors symbol
 #' @importFrom codetools findGlobals
 #' @importFrom data.table data.table fread fwrite rbindlist set
-#' @importFrom digest digest digest2int getVDigest
-#' @importFrom igraph adjacent_vertices get.edgelist gorder
+#' @importFrom digest digest getVDigest
+#' @importFrom igraph adjacent_vertices as_edgelist gorder
 #'   graph_from_data_frame igraph_opt igraph_options is_dag simplify topo_sort
 #'   V
 #' @importFrom knitr engine_output knit_engines
+#' @importFrom ps ps_create_time ps_handle
 #' @importFrom R6 R6Class
 #' @importFrom rlang abort as_function check_installed enquo inform
 #'   is_installed quo_squash warn
+#' @importFrom secretbase sha3
 #' @importFrom stats complete.cases runif
 #' @importFrom tibble as_tibble
 #' @importFrom tidyselect all_of any_of contains ends_with everything

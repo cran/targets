@@ -82,6 +82,101 @@ tar_test("prevent high-memory data via target objects", {
   pryr::object_size(self)
 })
 
+tar_test("saturated controllers should not get tasks", {
+  # Also watch CPU usage on htop. Should be low.
+  skip_on_cran()
+  skip_if_not_installed("crew")
+  tar_script({
+    library(targets)
+    controller <- crew::crew_controller_local(workers = 2)
+    tar_option_set(controller = controller)
+    list(
+      tar_target(w, Sys.sleep(10)),
+      tar_target(x, Sys.sleep(10)),
+      tar_target(y, Sys.sleep(10)),
+      tar_target(z, Sys.sleep(10))
+    )
+  })
+  tar_make() # 2 targets should run, and then the rest 10 seconds later.
+  expect_equal(tar_outdated(callr_function = NULL), character(0))
+})
+
+tar_test("saturated controllers should not get tasks in controller groups", {
+  # Also watch CPU usage on htop. Should be low.
+  skip_on_cran()
+  skip_if_not_installed("crew")
+  tar_script({
+    library(targets)
+    library(crew)
+    x <- crew_controller_local(name = "x")
+    y <- crew_controller_local(name = "y")
+    controller <- crew_controller_group(x, y)
+    tar_option_set(controller = controller)
+    resources_x <- tar_resources(
+      crew = tar_resources_crew(controller = "x")
+    )
+    resources_y <- tar_resources(
+      crew = tar_resources_crew(controller = "y")
+    )
+    sleep <- function(seconds, ...) {
+      Sys.sleep(seconds)
+    }
+    list(
+      tar_target(a1, sleep(5), resources = resources_x),
+      tar_target(b1, sleep(10), resources = resources_y),
+      tar_target(a2, sleep(10), resources = resources_x),
+      tar_target(b2, sleep(10), resources = resources_y)
+    )
+  })
+  tar_make()
+  # 1. a1 and b1 start together
+  # 2. a1 completes
+  # 3. a2 starts
+  # 4. b1 completes
+  # 5. b2 starts
+  # 6. a2 completes
+  # 7. b2 completes
+  expect_equal(tar_outdated(callr_function = NULL), character(0))
+})
+
+tar_test("same with controllers reversed", {
+  # Also watch CPU usage on htop. Should be low.
+  skip_on_cran()
+  skip_if_not_installed("crew")
+  tar_script({
+    library(targets)
+    library(crew)
+    x <- crew_controller_local(name = "x")
+    y <- crew_controller_local(name = "y")
+    controller <- crew_controller_group(x, y)
+    tar_option_set(controller = controller)
+    resources_x <- tar_resources(
+      crew = tar_resources_crew(controller = "x")
+    )
+    resources_y <- tar_resources(
+      crew = tar_resources_crew(controller = "y")
+    )
+    sleep <- function(seconds, ...) {
+      Sys.sleep(seconds)
+    }
+    list(
+      tar_target(a1, sleep(5), resources = resources_y),
+      tar_target(b1, sleep(10), resources = resources_x),
+      tar_target(a2, sleep(10), resources = resources_y),
+      tar_target(b2, sleep(10), resources = resources_x)
+    )
+  })
+  tar_make()
+  # 1. a1 and b1 start together
+  # 2. a1 completes
+  # 3. a2 starts
+  # 4. b1 completes
+  # 5. b2 starts
+  # 6. a2 completes
+  # 7. b2 completes
+  expect_equal(tar_outdated(callr_function = NULL), character(0))
+})
+
 tar_test("heavily parallel workload should run fast", {
   skip_on_cran()
   skip_if_not_installed("crew")
@@ -116,25 +211,27 @@ tar_test("heavily parallel workload should run fast", {
       )
     )
   })
-  tar_make(seconds_meta_append = 15, seconds_reporter = 15)
+  tar_make(seconds_meta_append = 15, seconds_reporter = 1)
   expect_equal(tar_outdated(callr_function = NULL), character(0))
 })
 
-tar_test("saturated controllers should get tasks", {
-  # Also watch CPU usage on htop. Should be low.
+tar_test("crew local with many tasks and many workers", {
   skip_on_cran()
   skip_if_not_installed("crew")
   tar_script({
+    library(crew)
     library(targets)
-    controller <- crew::crew_controller_local(workers = 2)
+    controller <- crew_controller_local(workers = 25, tasks_max = 100)
     tar_option_set(controller = controller)
     list(
-      tar_target(w, Sys.sleep(10)),
-      tar_target(x, Sys.sleep(10)),
-      tar_target(y, Sys.sleep(10)),
-      tar_target(z, Sys.sleep(10))
+      tar_target(x, seq_len(10000)),
+      tar_target(y, Sys.sleep(1), pattern = map(x))
     )
   })
-  tar_make() # All 4 targets should start and the last 2 should be "pending".
-  expect_equal(tar_outdated(callr_function = NULL), character(0))
+  tar_make(
+    seconds_meta_append = 15,
+    seconds_reporter = 1,
+    reporter = "summary"
+  )
+  expect_equal(tar_outdated(reporter = "forecast"), character(0))
 })

@@ -126,6 +126,16 @@ crew_class <- R6::R6Class(
       list(common = common, globals = globals)
     },
     run_worker = function(target) {
+      name <- target_get_name(target)
+      resources <- target$settings$resources$crew
+      name_controller <- resources$controller
+      # Covered in tests/hpc/test-crew_local.R
+      # nocov start
+      if (self$controller$saturated(controller = name_controller)) {
+        self$controller$push_backlog(name = name, controller = name_controller)
+        return()
+      }
+      # nocov end
       if (self$garbage_collection) {
         gc()
       }
@@ -143,14 +153,12 @@ crew_class <- R6::R6Class(
       data <- self$exports$common
       data$target <- target
       globals <- self$exports$globals
-      resources <- target$settings$resources$crew
-      name <- target_get_name(target)
       target_prepare(
         target = target,
         pipeline = self$pipeline,
         scheduler = self$scheduler,
         meta = self$meta,
-        pending = self$controller$saturated(controller = resources$controller)
+        pending = FALSE
       )
       self$sync_meta_time()
       self$controller$push(
@@ -159,7 +167,7 @@ crew_class <- R6::R6Class(
         globals = globals,
         substitute = FALSE,
         name = name,
-        controller = resources$controller,
+        controller = name_controller,
         scale = TRUE,
         throttle = TRUE,
         seconds_timeout = resources$seconds_timeout
@@ -202,19 +210,30 @@ crew_class <- R6::R6Class(
     iterate = function() {
       self$sync_meta_time()
       queue <- self$scheduler$queue
-      interval <- self$controller$launcher$seconds_interval
-      if_any(
-        queue$should_dequeue(),
-        self$process_target(queue$dequeue()),
+      # Covered in tests/hpc/test-crew_local.R
+      # nocov start
+      if (queue$should_dequeue()) {
+        self$process_target(queue$dequeue())
+        self$conclude_worker_task()
+      } else if (length(backlog <- self$controller$pop_backlog())) {
+        map(
+          x = backlog,
+          f = ~{
+            self$process_target(.x)
+            self$conclude_worker_task()
+          }
+        )
+      } else {
         self$controller$wait(
           mode = "one",
-          seconds_interval = interval,
-          seconds_timeout = interval,
+          seconds_interval = 0.5,
+          seconds_timeout = 0.5,
           scale = TRUE,
           throttle = TRUE
         )
-      )
-      self$conclude_worker_task()
+        self$conclude_worker_task()
+      }
+      # nocov end
     },
     conclude_worker_task = function() {
       result <- self$controller$pop(scale = TRUE, throttle = TRUE)
