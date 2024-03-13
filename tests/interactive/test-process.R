@@ -7,7 +7,7 @@ tar_test("error running two pipelines on _targets/ at the same time", {
   for (index in seq_len(2L)) {
     expect_error(
       tar_make(callr_function = NULL),
-      class = "tar_condition_validate"
+      class = "tar_condition_run"
     )
   }
   temp <- tempfile()
@@ -22,4 +22,17 @@ tar_test("error running two pipelines on _targets/ at the same time", {
   tar_script(tar_target(x, FALSE))
   tar_make(callr_function = NULL)
   expect_false(tar_read(x))
+})
+
+tar_test("current parent PID can be the old pipeline PID", {
+  tar_script(
+    list(
+      tar_target(x, "x"),
+      tar_target(y, "y")
+    )
+  )
+  tar_make(callr_function = NULL, names = any_of("x"), reporter = "silent")
+  tar_make(reporter = "silent")
+  expect_equal(tar_read(x), "x")
+  expect_equal(tar_read(y), "y")
 })

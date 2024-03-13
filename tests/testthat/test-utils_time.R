@@ -1,4 +1,4 @@
-test_that("time_seconds_local()", {
+tar_test("time_seconds_local()", {
   tar_runtime$nanonext <- NULL
   for (i in seq_len(4)) {
     out <- time_seconds_local()
@@ -9,7 +9,29 @@ test_that("time_seconds_local()", {
   expect_equal(2 * 2, 4)
 })
 
-test_that("time stamps", {
+tar_test("time_stamp()", {
   skip_cran()
-  expect_s3_class(posixct_time(time_stamp()), "POSIXct")
+  out <- time_stamp(time = Sys.time())
+  expect_true(is.character(out))
+  expect_false(anyNA(out))
+})
+
+tar_test("time_stamp_cli()", {
+  skip_cran()
+  out <- time_stamp_cli(time = Sys.time())
+  expect_true(is.character(out))
+  expect_false(anyNA(out))
+  expect_true(grepl("UTC$", out))
+})
+
+tar_test("time stamp_pid", {
+  skip_cran()
+  out <- time_stamp_pid(pid = Sys.getpid())
+  expect_true(is.character(out))
+  expect_equal(length(out), 1L)
+  expect_false(anyNA(out))
+  out <- time_stamp_pid(pid = -1L)
+  expect_true(is.character(out))
+  expect_equal(length(out), 1L)
+  expect_true(anyNA(out))
 })

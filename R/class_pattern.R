@@ -163,6 +163,7 @@ print.tar_pattern <- function(x, ...) {
   cat(
     "<tar_pattern>",
     "\n  name:", target_get_name(x),
+    "\n  description:", x$settings$description,
     "\n  command:\n   ",
     produce_lines(string_sub_expression(x$command$string)),
     "\n  pattern:\n   ",
@@ -359,7 +360,8 @@ pattern_combine_niblings_siblings <- function(niblings, siblings) {
 }
 
 pattern_name_branches <- function(parent, niblings) {
-  suffixes <- digest_chr32(do.call(paste, niblings))
+  tuples <- do.call(paste, niblings)
+  suffixes <- map_chr(tuples, digest_chr32)
   paste0(parent, "_", suffixes)
 }
 

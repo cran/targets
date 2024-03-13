@@ -12,7 +12,8 @@ runtime_new <- function(
   file_info_exist = NULL,
   nanonext = NULL,
   inventories = NULL,
-  traceback = NULL
+  traceback = NULL,
+  pid_parent = NULL
 ) {
   force(target)
   force(frames)
@@ -28,11 +29,17 @@ runtime_new <- function(
   force(nanonext)
   force(inventories)
   force(traceback)
+  force(pid_parent)
   environment()
 }
 
 runtime_validate <- function(x) {
   tar_assert_correct_fields(x, runtime_new)
+  runtime_validate_basics(x)
+  runtime_validate_extras(x)
+}
+
+runtime_validate_basics <- function(x) {
   if (!is.null(x$target)) {
     tar_assert_inherits(x$target, "tar_target")
     target_validate(x$target)
@@ -64,6 +71,9 @@ runtime_validate <- function(x) {
     tar_assert_chr(x$fun)
     tar_assert_nzchar(x$fun)
   }
+}
+
+runtime_validate_extras <- function(x) {
   if (!is.null(x$gcp_auth)) {
     tar_assert_scalar(x$gcp_auth)
     tar_assert_lgl(x$gcp_auth)
@@ -87,6 +97,12 @@ runtime_validate <- function(x) {
   }
   if (!is.null(x$traceback)) {
     tar_assert_chr(x$traceback)
+  }
+  if (!is.null(x$pid_parent)) {
+    tar_assert_int(x$pid_parent)
+    tar_assert_scalar(x$pid_parent)
+    tar_assert_none_na(x$pid_parent)
+    tar_assert_ge(x$pid_parent, 0L)
   }
 }
 
