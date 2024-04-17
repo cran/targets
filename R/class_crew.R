@@ -160,6 +160,7 @@ crew_class <- R6::R6Class(
         meta = self$meta,
         pending = FALSE
       )
+      builder_marshal_subpipeline(target)
       self$sync_meta_time()
       self$controller$push(
         command = command,
@@ -329,7 +330,9 @@ database_crew <- function(path_store) {
   database_init(
     path = file.path(path_meta_dir(path_store), "crew"),
     subkey = file.path(basename(path_meta("")), "crew"),
-    header = c("controller", "worker", "seconds", "targets")
+    header = c("controller", "worker", "seconds", "targets"),
+    integer_columns = "targets",
+    numeric_columns = "seconds"
   )
 }
 

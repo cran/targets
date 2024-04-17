@@ -1,3 +1,17 @@
+# targets 1.7.0
+
+## Invalidating changes
+
+* Use `secretbase::siphash13()` instead of `digest(algo = "xxhash64", serializationVersion = 3)` so hashes of in-memory objects no longer depend on serialization version 3 headers (#1244, @shikokuchuo). Unfortunately, pipelines built with earlier versions of `targets` will need to rerun.
+
+## Other improvements
+
+* Ensure patterns marshal properly (#1266, #1264, https://github.com/njtierney/geotargets/issues/52, @Aariq, @njtierney).
+* Inform and prompt the user when the pipeline was built with an old version of `targets` and changes to the package will cause the current work to rerun (#1244). For the `tar_make*()` functions, `utils::menu()` prompts the user to give people a chance to downgrade if necessary.
+* For type safety in the internal database class, read all columns as character vectors in `data.table::fread()`, then convert them to the correct types afterwards.
+* Add a new `tar_resources_custom_format()` function which can pass environment variables to customize the behavior of custom `tar_format()` storage formats (#1263, #1232, @Aariq, @noamross).
+* Only marshal dependencies if actually sending the target to a parallel worker.
+
 # targets 1.6.0
 
 * Modernize `extras` in `tar_renv()`.
