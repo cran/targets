@@ -164,6 +164,7 @@ You can manually terminate the controller with
 and worker processes.}
 
 \item{as_job}{\code{TRUE} to run as an RStudio IDE / Posit Workbench job,
+if running on RStudio IDE / Posit Workbench.
 \code{FALSE} to run as a \code{callr} process in the main R session
 (depending on the \code{callr_function} argument).
 If \code{as_job} is \code{TRUE}, then the \code{rstudioapi} package must be installed.}
@@ -183,18 +184,6 @@ back into R, and see
 to manage output files.
 }
 \section{Storage access}{
-
-Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
-\code{tar_meta()}, and \code{tar_progress()} read or modify
-the local data store of the pipeline.
-The local data store is in flux while a pipeline is running,
-and depending on how distributed computing or cloud computing is set up,
-not all targets can even reach it. So please do not call these
-functions from inside a target as part of a running
-pipeline. The only exception is literate programming
-target factories in the \code{tarchetypes} package such as \code{tar_render()}
-and \code{tar_quarto()}.
-
 
 Several functions like \code{tar_make()}, \code{tar_read()}, \code{tar_load()},
 \code{tar_meta()}, and \code{tar_progress()} read or modify
