@@ -71,7 +71,11 @@
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
-#' tar_script(list(tar_target(x, 1 + 1)), ask = FALSE)
+#' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
+#'   list(tar_target(x, 1 + 1))
+#' })
 #' tar_make() # Creates the _targets/ data store.
 #' tar_destroy()
 #' print(file.exists("_targets")) # Should be FALSE.
@@ -146,7 +150,7 @@ tar_delete_cloud_meta <- function(script) {
   if (!file.exists(script)) {
     return()
   }
-  options <- tar_option_script(script = script)
+  options <- tar_script_options(script = script)
   old_repository_meta <- tar_options$get_repository_meta()
   old_resources <- tar_options$get_resources()
   on.exit({

@@ -55,8 +55,8 @@ dependency targets. The random number generator seed for the
 target is also assigned with \code{\link[=tar_seed_set]{tar_seed_set()}}.
 }
 \description{
-Load the packages, workspace, and random number generator seed
-of target attempted with a workspace file.
+Load the packages, environment, and random number generator
+seed of a target.
 }
 \details{
 If you activate workspaces through the \code{workspaces} argument
@@ -74,6 +74,8 @@ if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tmp <- sample(1)
 tar_script({
+  library(targets)
+  library(tarchetypes)
   tar_option_set(workspace_on_error = TRUE)
   list(
     tar_target(x, "loaded"),

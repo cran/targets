@@ -1,11 +1,8 @@
 #' @title Define a custom target storage format.
 #' @export
-#' @family targets
+#' @family storage
 #' @description Define a custom target storage format for the
 #'   `format` argument of [tar_target()] or [tar_option_set()].
-#' @details It is good practice to write formats that correctly handle
-#'   `NULL` objects if you are planning to set `error = "null"`
-#'   in [tar_option_set()].
 #' @return A character string of length 1 encoding the custom format.
 #'   You can supply this string directly to the `format`
 #'   argument of [tar_target()] or [tar_option_set()].
@@ -26,7 +23,7 @@
 #'   Arguments `marshal` and `unmarshal` of `tar_format()`
 #'   let you control how marshalling and unmarshalling happens.
 #' @section Format functions:
-#'   In `tar_format()`, functions like `read`, `write`,
+#'   In [tar_format()], functions like `read`, `write`,
 #'   `marshal`, and `unmarshal` must be perfectly pure
 #'   and perfectly self-sufficient.
 #'   They must load or namespace all their own packages,
@@ -101,6 +98,22 @@
 #'   `data.table` objects, using `data.table::copy()`).
 #'   If `NULL`, the `copy` argument defaults to just
 #'   returning the original object without any modifications.
+#' @param substitute Named list of values to be inserted into the
+#'   body of each custom function in place of symbols in the body.
+#'   For example, if
+#'   `write = function(object, path) saveRDS(object, path, version = VERSION)`
+#'   and `substitute = list(VERSION = 3)`, then
+#'   the `write` function will actually end up being
+#'   `function(object, path) saveRDS(object, path, version = 3)`.
+#'
+#'   Please do not include temporary or sensitive information
+#'   such as authentication credentials.
+#'   If you do, then `targets` will write them
+#'   to metadata on disk, and a malicious actor could
+#'   steal and misuse them. Instead, pass sensitive information
+#'   as environment variables using [tar_resources_custom_format()].
+#'   These environment variables only exist in the transient memory
+#'   spaces of the R sessions of the local and worker processes.
 #' @param repository Deprecated. Use the `repository` argument of
 #'   [tar_target()] or [tar_option_set()] instead.
 #' @examples
@@ -163,31 +176,38 @@ tar_format <- function(
   unmarshal = NULL,
   convert = NULL,
   copy = NULL,
+  substitute = list(),
   repository = NULL
 ) {
   if (!is.null(read)) {
     tar_assert_function(read)
     tar_assert_function_arguments(read, "path")
+    read <- tar_sub_body(read, substitute)
   }
   if (!is.null(write)) {
     tar_assert_function(write)
     tar_assert_function_arguments(write, c("object", "path"))
+    write <- tar_sub_body(write, substitute)
   }
   if (!is.null(marshal)) {
     tar_assert_function(marshal)
     tar_assert_function_arguments(marshal, "object")
+    marshal <- tar_sub_body(marshal, substitute)
   }
   if (!is.null(unmarshal)) {
     tar_assert_function(unmarshal)
     tar_assert_function_arguments(unmarshal, "object")
+    unmarshal <- tar_sub_body(unmarshal, substitute)
   }
   if (!is.null(convert)) {
     tar_assert_function(convert)
     tar_assert_function_arguments(convert, "object")
+    convert <- tar_sub_body(convert, substitute)
   }
   if (!is.null(copy)) {
     tar_assert_function(copy)
     tar_assert_function_arguments(copy, "object")
+    copy <- tar_sub_body(copy, substitute)
   }
   if (!is.null(repository)) {
     tar_warn_deprecate(

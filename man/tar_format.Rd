@@ -11,6 +11,7 @@ tar_format(
   unmarshal = NULL,
   convert = NULL,
   copy = NULL,
+  substitute = list(),
   repository = NULL
 )
 }
@@ -72,6 +73,23 @@ before a downstream target attempts to use it (in the case of
 If \code{NULL}, the \code{copy} argument defaults to just
 returning the original object without any modifications.}
 
+\item{substitute}{Named list of values to be inserted into the
+body of each custom function in place of symbols in the body.
+For example, if
+\code{write = function(object, path) saveRDS(object, path, version = VERSION)}
+and \code{substitute = list(VERSION = 3)}, then
+the \code{write} function will actually end up being
+\code{function(object, path) saveRDS(object, path, version = 3)}.
+
+Please do not include temporary or sensitive information
+such as authentication credentials.
+If you do, then \code{targets} will write them
+to metadata on disk, and a malicious actor could
+steal and misuse them. Instead, pass sensitive information
+as environment variables using \code{\link[=tar_resources_custom_format]{tar_resources_custom_format()}}.
+These environment variables only exist in the transient memory
+spaces of the R sessions of the local and worker processes.}
+
 \item{repository}{Deprecated. Use the \code{repository} argument of
 \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}} instead.}
 }
@@ -83,11 +101,6 @@ argument of \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_s
 \description{
 Define a custom target storage format for the
 \code{format} argument of \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_option_set]{tar_option_set()}}.
-}
-\details{
-It is good practice to write formats that correctly handle
-\code{NULL} objects if you are planning to set \code{error = "null"}
-in \code{\link[=tar_option_set]{tar_option_set()}}.
 }
 \section{Marshalling}{
 
@@ -110,7 +123,7 @@ let you control how marshalling and unmarshalling happens.
 
 \section{Format functions}{
 
-In \code{tar_format()}, functions like \code{read}, \code{write},
+In \code{\link[=tar_format]{tar_format()}}, functions like \code{read}, \code{write},
 \code{marshal}, and \code{unmarshal} must be perfectly pure
 and perfectly self-sufficient.
 They must load or namespace all their own packages,
@@ -191,9 +204,10 @@ tar_target(
 )
 }
 \seealso{
-Other targets: 
-\code{\link{tar_cue}()},
-\code{\link{tar_target}()},
-\code{\link{tar_target_raw}()}
+Other storage: 
+\code{\link{tar_load}()},
+\code{\link{tar_load_everything}()},
+\code{\link{tar_objects}()},
+\code{\link{tar_read}()}
 }
-\concept{targets}
+\concept{storage}

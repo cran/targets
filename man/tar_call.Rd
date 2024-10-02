@@ -23,6 +23,8 @@ if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_call() # NULL
 tar_script({
+  library(targets)
+  library(tarchetypes)
   message("called function: ", tar_call())
   tar_target(x, tar_call())
 })
@@ -40,6 +42,7 @@ Other utilities:
 \code{\link{tar_definition}()},
 \code{\link{tar_described_as}()},
 \code{\link{tar_envir}()},
+\code{\link{tar_format_get}()},
 \code{\link{tar_group}()},
 \code{\link{tar_name}()},
 \code{\link{tar_path}()},

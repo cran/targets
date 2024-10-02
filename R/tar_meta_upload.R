@@ -13,18 +13,20 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
-#>   tar_option_set(
-#>     resources = tar_resources(
-#>       aws = tar_resources_aws(
-#>         bucket = "YOUR_BUCKET_NAME",
-#>         prefix = "YOUR_PROJECT_NAME"
-#>       )
-#>     ),
-#>     repository = "aws"
-#>   )
-#>   list(
-#>     tar_target(x, data.frame(x = seq_len(2), y = seq_len(2)))
-#>   )
+#'   library(targets)
+#'   library(tarchetypes)
+#'   tar_option_set(
+#'     resources = tar_resources(
+#'       aws = tar_resources_aws(
+#'         bucket = "YOUR_BUCKET_NAME",
+#'         prefix = "YOUR_PROJECT_NAME"
+#'       )
+#'     ),
+#'     repository = "aws"
+#'   )
+#'   list(
+#'     tar_target(x, data.frame(x = seq_len(2), y = seq_len(2)))
+#'   )
 #' }, ask = FALSE)
 #' tar_make()
 #' tar_meta_upload()
@@ -60,7 +62,7 @@ tar_meta_upload <- function(
   tar_assert_none_na(strict)
   tar_assert_script(script)
   tar_assert_store(store)
-  options <- tar_option_script(script = script)
+  options <- tar_script_options(script = script)
   old_repository_meta <- tar_options$get_repository_meta()
   old_resources <- tar_options$get_resources()
   on.exit({

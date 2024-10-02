@@ -30,6 +30,7 @@ tar_option_set(
   workspace_on_error = NULL,
   seed = NULL,
   controller = NULL,
+  trust_timestamps = NULL,
   trust_object_timestamps = NULL
 )
 }
@@ -131,6 +132,8 @@ for details for instructions.
 See the cloud storage section of
 \url{https://books.ropensci.org/targets/data.html}
 for details for instructions.
+\item A character string from \code{\link[=tar_repository_cas]{tar_repository_cas()}} for content-addressable
+storage.
 }
 
 Note: if \code{repository} is not \code{"local"} and \code{format} is \code{"file"}
@@ -140,9 +143,13 @@ where it exists in the cloud. The local file is deleted after
 the target runs.}
 
 \item{repository_meta}{Character of length 1 with the same values as
-\code{repository} (\code{"aws"}, \code{"gcp"}, \code{"local"}). Cloud repository
+\code{repository} but excluding content-addressable storage
+(\code{"aws"}, \code{"gcp"}, \code{"local"}). Cloud repository
 for the metadata text files in \verb{_targets/meta/}, including target
-metadata and progress data. Defaults to \code{tar_option_get("repository")}.}
+metadata and progress data. Defaults to \code{tar_option_get("repository")}
+except in the case of content-addressable storage (CAS).
+When \code{tar_option_get("repository")} is a CAS repository,
+the default value of \code{repository_meta} is \code{"local"}.}
 
 \item{iteration}{Character of length 1, name of the iteration mode
 of the target. Choices:
@@ -168,13 +175,25 @@ stops and throws an error. Options:
 \itemize{
 \item \code{"stop"}: the whole pipeline stops and throws an error.
 \item \code{"continue"}: the whole pipeline keeps going.
-\item \code{"abridge"}: any currently running targets keep running,
-but no new targets launch after that.
-(Visit \url{https://books.ropensci.org/targets/debugging.html}
-to learn how to debug targets using saved workspaces.)
 \item \code{"null"}: The errored target continues and returns \code{NULL}.
 The data hash is deliberately wrong so the target is not
 up to date for the next run of the pipeline.
+\item \code{"abridge"}: any currently running targets keep running,
+but no new targets launch after that.
+\item \code{"trim"}: all currently running targets stay running. A queued
+target is allowed to start if:
+\enumerate{
+\item It is not downstream of the error, and
+\item It is not a sibling branch from the same \code{\link[=tar_target]{tar_target()}} call
+(if the error happened in a dynamic branch).
+}
+
+The idea is to avoid starting any new work that the immediate error
+impacts. \code{error = "trim"} is just like \code{error = "abridge"},
+but it allows potentially healthy regions of the dependency graph
+to begin running.
+(Visit \url{https://books.ropensci.org/targets/debugging.html}
+to learn how to debug targets using saved workspaces.)
 }}
 
 \item{memory}{Character of length 1, memory strategy.
@@ -328,13 +347,18 @@ unless they have \code{cue = tar_cue(seed = FALSE)}.}
 produced by the \code{crew} R package. \code{crew} brings auto-scaled
 distributed computing to \code{\link[=tar_make]{tar_make()}}.}
 
-\item{trust_object_timestamps}{Logical of length 1, whether to use
+\item{trust_timestamps}{Logical of length 1, whether to use
 file system modification timestamps to check whether the target output
-data files in \verb{_targets/objects/} are up to date. This is an advanced
+data files in are up to date. This is an advanced
 setting and usually does not need to be set by the user
 except on old or difficult platforms.
 
-If \code{trust_object_timestamps}
+If \code{trust_timestamps} was reset with \code{\link[=tar_option_reset]{tar_option_reset()}}
+or never set at all (recommended)
+then \code{targets} makes a decision based on the type of file system
+of the given file.
+
+If \code{trust_timestamps}
 is \code{TRUE} (default), then \code{targets} looks at the timestamp first.
 If it agrees with the timestamp recorded in the metadata, then \code{targets}
 considers the file unchanged. If the timestamps disagree, then \code{targets}
@@ -349,9 +373,8 @@ possibility that you will manually change the file within 2 seconds
 after the pipeline finishes.
 If the data store is on a file system with low-precision timestamps,
 then you may
-consider setting \code{trust_object_timestamps} to \code{FALSE} so \code{targets}
-errs on the safe side and always recomputes the hashes of files in
-\verb{_targets/objects/}.
+consider setting \code{trust_timestamps} to \code{FALSE} so \code{targets}
+errs on the safe side and always recomputes the hashes of files.
 
 To check if your
 file system has low-precision timestamps, you can run
@@ -361,7 +384,9 @@ and then check
 \code{difftime(file.mtime("y"), file.mtime("x"), units = "secs")}.
 If the value from \code{difftime()} is around 0.001 seconds
 (must be strictly above 0 and below 1) then you do not need to set
-\code{trust_object_timestamps = FALSE}.}
+\code{trust_timestamps = FALSE}.}
+
+\item{trust_object_timestamps}{Deprecated. Use \code{trust_timestamps} instead.}
 }
 \value{
 \code{NULL} (invisibly).
@@ -377,9 +402,16 @@ before calls to \code{\link[=tar_target]{tar_target()}} or \code{\link[=tar_targ
 }
 \section{Storage formats}{
 
+\code{targets} has several built-in storage formats to control how return
+values are saved and loaded from disk:
 \itemize{
 \item \code{"rds"}: Default, uses \code{saveRDS()} and \code{readRDS()}. Should work for
 most objects, but slow.
+\item \code{"auto"}: either \code{"file"} or \code{"qs"}, depending on the return value
+of the target. If the return value is a character vector of
+existing files (and/or directories), then the format becomes
+\code{"file"} before \code{\link[=tar_make]{tar_make()}} saves the target. Otherwise,
+the format becomes \code{"qs"}.
 \item \code{"qs"}: Uses \code{qs::qsave()} and \code{qs::qread()}. Should work for
 most objects, much faster than \code{"rds"}. Optionally set the
 preset for \code{qsave()} through \code{tar_resources()} and \code{tar_resources_qs()}.
@@ -441,21 +473,6 @@ file paths are not supported for dynamic files on the cloud.)
 That output file is uploaded to the cloud and tracked for changes
 where it exists in the cloud. The local file is deleted after
 the target runs.
-
-To check if the file is up to date, \code{targets} avoids timestamps
-and always recomputes the hash. If you find this to be too slow,
-and if you trust the time stamps on your file system
-(see the \code{trust_object_timestamps} argument of \code{\link[=tar_option_set]{tar_option_set()}}),
-then consider \code{format = "file_fast"} instead.
-\item \code{"file_fast"}: same as \code{format = "file"}, except that \code{targets}
-uses time stamps to check if a file is up to date. If the time stamp
-of the file agrees with the time stamp in the metadata, the
-file is considered up to date. Otherwise, \code{targets} recomputes the
-hash of the file to make a final determination. Low-precision
-timestamps are not reliable for this, and some file systems
-have timestamp precision as poor as 2 seconds. See the
-\code{trust_object_timestamps} argument of \code{\link[=tar_option_set]{tar_option_set()}}
-for advice on this.
 \item \code{"url"}: A dynamic input URL. For this storage format,
 \code{repository} is implicitly \code{"local"},
 URL format is like \code{format = "file"}
@@ -480,6 +497,15 @@ and (un)marshaling the return value of the target.
 (\code{targets} version > 0.10.0). For cloud storage integration, use the
 \code{repository} argument instead.
 }
+
+Formats \code{"rds"}, \code{"file"}, and \code{"url"} are general-purpose formats
+that belong in the \code{targets} package itself.
+Going forward, any additional formats should be implemented with
+\code{\link[=tar_format]{tar_format()}} in third-party packages like \code{tarchetypes}
+and \code{geotargets} (for example: \code{tarchetypes::tar_format_nanoparquet()}).
+Formats \code{"qs"}, \code{"fst"}, etc. are legacy formats from before the
+existence of \code{\link[=tar_format]{tar_format()}}, and they will continue to remain in
+\code{targets} without deprecation.
 }
 
 \examples{
@@ -493,6 +519,8 @@ tar_target(x, 1)$settings$format
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script({
+  library(targets)
+  library(tarchetypes)
   tar_option_set(cue = tar_cue(mode = "always")) # All targets always run.
   list(tar_target(x, 1), tar_target(y, 2))
 })

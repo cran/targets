@@ -7,6 +7,20 @@
 #'   by the commands of targets downstream. Targets that
 #'   are already up to date are skipped. See the user manual
 #'   for more details.
+#'
+#'   [tar_target()] defines a target using non-standard evaluation.
+#'   The `name` argument is an unevaluated symbol,
+#'   and the `command` and `pattern`
+#'   arguments are unevaluated expressions. Example:
+#'   `tar_target(name = data, command = get_data())`.
+#'
+#'   [tar_target_raw()] defines a target with standard evaluation.
+#'   The `name` argument is a character string,
+#'   and the `command` and `pattern`
+#'   arguments are evaluated expressions. Example:
+#'   `tar_target_raw(name = "data", command = quote(get_data()))`.
+#'   [tar_target_raw()] also has extra arguments `deps` and `string`
+#'   for advanced customization.
 #' @section Target objects:
 #'   Functions like `tar_target()` produce target objects,
 #'   special objects with specialized sets of S3 classes.
@@ -23,8 +37,16 @@
 #'   <https://books.ropensci.org/targets-design/>
 #'   details the structure and composition of target objects.
 #' @section Storage formats:
+#'   `targets` has several built-in storage formats to control how return
+#'   values are saved and loaded from disk:
+#'
 #'   * `"rds"`: Default, uses `saveRDS()` and `readRDS()`. Should work for
 #'     most objects, but slow.
+#'   * `"auto"`: either `"file"` or `"qs"`, depending on the return value
+#'     of the target. If the return value is a character vector of
+#'     existing files (and/or directories), then the format becomes
+#'     `"file"` before [tar_make()] saves the target. Otherwise,
+#'     the format becomes `"qs"`.
 #'   * `"qs"`: Uses `qs::qsave()` and `qs::qread()`. Should work for
 #'     most objects, much faster than `"rds"`. Optionally set the
 #'     preset for `qsave()` through `tar_resources()` and `tar_resources_qs()`.
@@ -86,21 +108,6 @@
 #'     That output file is uploaded to the cloud and tracked for changes
 #'     where it exists in the cloud. The local file is deleted after
 #'     the target runs.
-#'
-#'     To check if the file is up to date, `targets` avoids timestamps
-#'     and always recomputes the hash. If you find this to be too slow,
-#'     and if you trust the time stamps on your file system
-#'     (see the `trust_object_timestamps` argument of [tar_option_set()]),
-#'     then consider `format = "file_fast"` instead.
-#'   * `"file_fast"`: same as `format = "file"`, except that `targets`
-#'     uses time stamps to check if a file is up to date. If the time stamp
-#'     of the file agrees with the time stamp in the metadata, the
-#'     file is considered up to date. Otherwise, `targets` recomputes the
-#'     hash of the file to make a final determination. Low-precision
-#'     timestamps are not reliable for this, and some file systems
-#'     have timestamp precision as poor as 2 seconds. See the
-#'     `trust_object_timestamps` argument of [tar_option_set()]
-#'     for advice on this.
 #'   * `"url"`: A dynamic input URL. For this storage format,
 #'     `repository` is implicitly `"local"`,
 #'     URL format is like `format = "file"`
@@ -124,6 +131,15 @@
 #'   * The formats starting with `"aws_"` are deprecated as of 2022-03-13
 #'     (`targets` version > 0.10.0). For cloud storage integration, use the
 #'     `repository` argument instead.
+#'
+#'   Formats `"rds"`, `"file"`, and `"url"` are general-purpose formats
+#'   that belong in the `targets` package itself.
+#'   Going forward, any additional formats should be implemented with
+#'   [tar_format()] in third-party packages like `tarchetypes`
+#'   and `geotargets` (for example: `tarchetypes::tar_format_nanoparquet()`).
+#'   Formats `"qs"`, `"fst"`, etc. are legacy formats from before the
+#'   existence of [tar_format()], and they will continue to remain in
+#'   `targets` without deprecation.
 #' @param repository Character of length 1, remote repository for target
 #'   storage. Choices:
 #'   * `"local"`: file system of the local machine.
@@ -138,6 +154,8 @@
 #'     See the cloud storage section of
 #'     <https://books.ropensci.org/targets/data.html>
 #'     for details for instructions.
+#'   * A character string from [tar_repository_cas()] for content-addressable
+#'     storage.
 #'
 #'   Note: if `repository` is not `"local"` and `format` is `"file"`
 #'   then the target should create a single output file.
@@ -163,8 +181,13 @@
 #' @return A target object. Users should not modify these directly,
 #'   just feed them to [list()] in your target script file
 #'   (default: `_targets.R`).
-#' @param name Symbol, name of the target. A target
-#'   name must be a valid name for a symbol in R, and it
+#' @param name Symbol, name of the target.
+#'   In [tar_target()], `name` is an unevaluated symbol, e.g.
+#'   `tar_target(name = data)`.
+#'   In [tar_target_raw()], `name` is a character string, e.g.
+#'   `tar_target_raw(name = "data")`.
+#'
+#'   A target name must be a valid name for a symbol in R, and it
 #'   must not start with a dot. Subsequent targets
 #'   can refer to this name symbolically to induce a dependency relationship:
 #'   e.g. `tar_target(downstream_target, f(upstream_target))` is a
@@ -179,8 +202,18 @@
 #'   with `tar_meta(your_target, seed)` and run [tar_seed_set()]
 #'   on the result to locally recreate the target's initial RNG state.
 #' @param command R code to run the target.
-#' @param pattern Language to define branching for a target.
-#'   For example, in a pipeline with numeric vector targets `x` and `y`,
+#'   In [tar_target()], `command` is an unevaluated expression, e.g.
+#'   `tar_target(command = data)`.
+#'   In [tar_target_raw()], `command` is an evaluated expression, e.g.
+#'   `tar_target_raw(command = quote(data))`.
+#' @param pattern Code to define a dynamic branching branching for a target.
+#'   In [tar_target()], `pattern` is an unevaluated expression, e.g.
+#'   `tar_target(pattern = map(data))`.
+#'   In [tar_target_raw()], `command` is an evaluated expression, e.g.
+#'   `tar_target_raw(pattern = quote(map(data)))`.
+#'
+#'   To demonstrate dynamic branching patterns, suppose we have
+#'   a pipeline with numeric vector targets `x` and `y`. Then,
 #'   `tar_target(z, x + y, pattern = map(x, y))` implicitly defines
 #'   branches of `z` that each compute `x[1] + y[1]`, `x[2] + y[2]`,
 #'   and so on. See the user manual for details.
@@ -203,13 +236,24 @@
 #'   stops and throws an error. Options:
 #'   * `"stop"`: the whole pipeline stops and throws an error.
 #'   * `"continue"`: the whole pipeline keeps going.
-#'   * `"abridge"`: any currently running targets keep running,
-#'     but no new targets launch after that.
-#'   (Visit <https://books.ropensci.org/targets/debugging.html>
-#'   to learn how to debug targets using saved workspaces.)
 #'   * `"null"`: The errored target continues and returns `NULL`.
 #'     The data hash is deliberately wrong so the target is not
 #'     up to date for the next run of the pipeline.
+#'   * `"abridge"`: any currently running targets keep running,
+#'     but no new targets launch after that.
+#'   * `"trim"`: all currently running targets stay running. A queued
+#'     target is allowed to start if:
+#'
+#'       1. It is not downstream of the error, and
+#'       2. It is not a sibling branch from the same [tar_target()] call
+#'         (if the error happened in a dynamic branch).
+#'
+#'     The idea is to avoid starting any new work that the immediate error
+#'     impacts. `error = "trim"` is just like `error = "abridge"`,
+#'     but it allows potentially healthy regions of the dependency graph
+#'     to begin running.
+#'   (Visit <https://books.ropensci.org/targets/debugging.html>
+#'   to learn how to debug targets using saved workspaces.)
 #' @param memory Character of length 1, memory strategy.
 #'   If `"persistent"`, the target stays in memory
 #'   until the end of the pipeline (unless `storage` is `"worker"`,
@@ -294,12 +338,39 @@
 #'   `tar_manifest(names = tar_described_as(starts_with("survival model")))`
 #'   lists all the targets whose descriptions start with the character
 #'   string `"survival model"`.
+#' @param deps Optional character vector of the adjacent upstream
+#'   dependencies of the target, including targets and global objects.
+#'   If `NULL`, dependencies are resolved automatically as usual.
+#'   The `deps` argument is only for developers of extension
+#'   packages such as `tarchetypes`,
+#'   not for end users, and it should almost never be used at all.
+#'   In scenarios that at first appear to requires `deps`,
+#'   there is almost always a simpler and more robust workaround
+#'   that avoids setting `deps`.
+#' @param string Optional string representation of the command.
+#'   Internally, the string gets hashed to check if the command changed
+#'   since last run, which helps `targets` decide whether the
+#'   target is up to date. External interfaces can take control of
+#'   `string` to ignore changes in certain parts of the command.
+#'   If `NULL`, the strings is just deparsed from `command` (default).
 #' @examples
 #' # Defining targets does not run them.
 #' data <- tar_target(target_name, get_data(), packages = "tidyverse")
 #' analysis <- tar_target(analysis, analyze(x), pattern = map(x))
-#' # Pipelines accept targets.
-#' pipeline <- list(data, analysis)
+#' # In a pipeline:
+#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
+#' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
+#' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
+#'   list(
+#'     tar_target(name = x, command = 1 + 1),
+#'     tar_target_raw(name = "y", command = quote(x + y))
+#'   )
+#' })
+#' tar_make()
+#' tar_read(x)
+#' })
 #' # Tidy evaluation
 #' tar_option_set(envir = environment())
 #' n_rows <- 30L
@@ -309,13 +380,6 @@
 #' data <- tar_target(target_name, get_data(!!n_rows), tidy_eval = FALSE)
 #' print(data)
 #' tar_option_reset()
-#' # In a pipeline:
-#' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
-#' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
-#' tar_script(tar_target(x, 1 + 1), ask = FALSE)
-#' tar_make()
-#' tar_read(x)
-#' })
 #' }
 tar_target <- function(
   name,

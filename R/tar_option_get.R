@@ -24,6 +24,8 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   tar_option_set(cue = tar_cue(mode = "always")) # All targets always run.
 #'   list(tar_target(x, 1), tar_target(y, 2))
 #' })
@@ -39,6 +41,12 @@ tar_option_get <- function(name = NULL, option = NULL) {
       "use the name argument instead."
     )
     name <- option
+  }
+  if (identical(as.character(name), "trust_object_timestamps")) {
+    tar_warn_deprecate(
+      "tar_option_get(\"trust_object_timestamps\") is deprecated. ",
+      "Please use the more unified tar_option_get(\"trust_timestamps\")."
+    )
   }
   tar_assert_nonempty(name)
   tar_assert_flag(name, choices = names(formals(tar_option_set)))
@@ -69,6 +77,7 @@ tar_option_get <- function(name = NULL, option = NULL) {
     workspace_on_error = tar_options$get_workspace_on_error(),
     seed = tar_options$get_seed(),
     controller = tar_options$get_controller(),
-    trust_object_timestamps = tar_options$get_trust_object_timestamps()
+    trust_timestamps = tar_options$get_trust_timestamps(),
+    trust_object_timestamps = NULL
   )
 }

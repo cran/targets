@@ -13,9 +13,9 @@ tar_test("tar_format() generates a format string", {
       keras::unserialize_model(object)
     },
   )
-  expect_equal(length(format), 1)
+  expect_length(format, 1L)
   format <- unlist(strsplit(format, split = "&", fixed = TRUE))
-  expect_equal(format[1], "format_custom")
+  expect_equal(format[1L], "format_custom")
   expect_true(any(grepl("^read=+.", format)))
   expect_true(any(grepl("^write=+.", format)))
   expect_true(any(grepl("^marshal=+.", format)))
@@ -23,31 +23,7 @@ tar_test("tar_format() generates a format string", {
   expect_true(any(grepl("^repository=", format)))
 })
 
-tar_test("tar_format() default arguments are short", {
-  format <- tar_format()
-  expect_equal(length(format), 1)
-  format <- unlist(strsplit(format, split = "&", fixed = TRUE))
-  expect_equal(format[1], "format_custom")
-  expect_true(any(grepl("^read=$", format)))
-  expect_true(any(grepl("^write=$", format)))
-  expect_true(any(grepl("^marshal=$", format)))
-  expect_true(any(grepl("^unmarshal=$", format)))
-  expect_true(any(grepl("^repository=$", format)))
-})
-
-# nolint start
-tar_test("Deprecated tar_format() repostory arg", {
-  expect_error(
-    tar_format(
-      read = function(x) {
-        keras::load_model_hdf5(x)
-      }),
-    class = "tar_condition_validate"
-  )
-})
-# nolint end
-
-tar_test("tar_format() generates a format string", {
+tar_test("same with deprecated repository argument", {
   expect_warning(
     format <- tar_format(
       read = function(path) {
@@ -66,7 +42,7 @@ tar_test("tar_format() generates a format string", {
     ),
     class = "tar_condition_deprecate"
   )
-  expect_equal(length(format), 1)
+  expect_length(format, 1L)
   format <- unlist(strsplit(format, split = "&", fixed = TRUE))
   expect_equal(format[1], "format_custom")
   expect_true(any(grepl("^read=+.", format)))
@@ -75,6 +51,30 @@ tar_test("tar_format() generates a format string", {
   expect_true(any(grepl("^unmarshal=+.", format)))
   expect_true(any(grepl("^repository=aws", format)))
 })
+
+tar_test("tar_format() default arguments are short", {
+  format <- tar_format()
+  expect_length(format, 1L)
+  format <- unlist(strsplit(format, split = "&", fixed = TRUE))
+  expect_equal(format[1], "format_custom")
+  expect_true(any(grepl("^read=$", format)))
+  expect_true(any(grepl("^write=$", format)))
+  expect_true(any(grepl("^marshal=$", format)))
+  expect_true(any(grepl("^unmarshal=$", format)))
+  expect_true(any(grepl("^repository=$", format)))
+})
+
+# nolint start
+tar_test("Function assertions", {
+  expect_error(
+    tar_format(
+      read = function(x) {
+        keras::load_model_hdf5(x)
+      }),
+    class = "tar_condition_validate"
+  )
+})
+# nolint end
 
 tar_test("custom format is not allowed to create a directory", {
   skip_cran()
@@ -121,6 +121,26 @@ tar_test("custom format envvar resources", {
   tar_make(callr_function = NULL)
   expect_equal(tar_read(target_name), data.frame(x = 1L))
   expect_equal(Sys.getenv("SERIALIZATION", unset = ""), "")
+})
+
+tar_test("custom format insertions", {
+  tar_script(
+    tar_target(
+      name = target_name,
+      command = data.frame(x = 1L),
+      format = tar_format(
+        read = function(path) {
+          readRDS(file = path)
+        },
+        write = function(object, path) {
+          saveRDS(object = object, file = path, version = VERSION_VARIABLE)
+        },
+        substitute = list(VERSION_VARIABLE = 3)
+      )
+    )
+  )
+  tar_make(callr_function = NULL)
+  expect_equal(tar_read(target_name), data.frame(x = 1L))
 })
 
 tar_test("patterns are marshaled correctly", {

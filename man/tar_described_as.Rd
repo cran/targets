@@ -83,6 +83,8 @@ Targets with empty descriptions are ignored.
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script({
+  library(targets)
+  library(tarchetypes)
   list(
     tar_target(b2, TRUE, description = "blue two"),
     tar_target(b3, TRUE, description = "blue three"),
@@ -105,6 +107,7 @@ Other utilities:
 \code{\link{tar_cancel}()},
 \code{\link{tar_definition}()},
 \code{\link{tar_envir}()},
+\code{\link{tar_format_get}()},
 \code{\link{tar_group}()},
 \code{\link{tar_name}()},
 \code{\link{tar_path}()},

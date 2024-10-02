@@ -96,7 +96,7 @@ tar_assert_df <- function(x, msg = NULL) {
 #' @export
 #' @rdname tar_assert
 tar_assert_equal_lengths <- function(x, msg = NULL) {
-  lengths <- map_int(x, length)
+  lengths <- lengths(x)
   if (length(unique(lengths)) > 1L) {
     targets::tar_throw_validate(msg %|||% "x must have equal-length elements.")
   }
@@ -163,14 +163,22 @@ tar_assert_format <- function(format) {
     )
     format <- gsub("^aws_", "", format)
   }
-  store_assert_format_setting(store_format_dispatch(format))
+  if (identical(as.character(format), "file_fast")) {
+    tar_warn_deprecate(
+      "format = \"file_fast\" is deprecated. ",
+      "please use format = \"file\" and set trust_timestamps to TRUE or ",
+      "FALSE in tar_option_set() as needed."
+    )
+    format <- gsub("^aws_", "", format)
+  }
+  store_assert_format_setting(store_dispatch_format(format))
 }
 
 tar_assert_repository <- function(repository) {
   tar_assert_scalar(repository)
   tar_assert_chr(repository)
   tar_assert_nzchar(repository)
-  store_assert_repository_setting(enclass(repository, repository))
+  store_assert_repository_setting(store_dispatch_repository(repository))
 }
 
 #' @export
@@ -666,7 +674,7 @@ tar_assert_script <- function(script) {
     "Functions tar_edit() and tar_script() can help. "
   )
   tar_assert_path(script, msg)
-  vars <- all.vars(parse(file = script), functions = TRUE)
+  vars <- all.vars(parse(file = script, keep.source = TRUE), functions = TRUE)
   exclude <- c(
     "glimpse",
     "make",
@@ -755,7 +763,6 @@ tar_assert_watch_packages <- function() {
     "DT",
     "gt",
     "markdown",
-    "pingr",
     "shiny",
     "shinybusy",
     "shinyWidgets",

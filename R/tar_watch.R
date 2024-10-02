@@ -31,6 +31,8 @@
 #' if (identical(Sys.getenv("TAR_INTERACTIVE_EXAMPLES"), "true")) {
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   sleep_run <- function(...) {
 #'     Sys.sleep(10)
 #'   }
@@ -72,7 +74,9 @@ tar_watch <- function(
   poll_connection = TRUE,
   stdout = "|",
   stderr = "|",
-  theme = bslib::bs_theme()
+  title = "",
+  theme = bslib::bs_theme(),
+  spinner = TRUE
 ) {
   tar_assert_watch_packages()
   tar_assert_chr(exclude)
@@ -117,7 +121,9 @@ tar_watch <- function(
     displays = displays,
     host = host,
     port = port,
-    theme = theme
+    title = title,
+    theme = theme,
+    spinner = spinner
   )
   if (!background) {
     return(do.call(tar_watch_app, args))
@@ -131,7 +137,12 @@ tar_watch <- function(
     poll_connection = poll_connection
   )
   if (browse) {
-    url_port(host = host, port = port,  process = process, verbose = verbose)
+    url_local_port(
+      host = host,
+      port = port,
+      process = process,
+      verbose = verbose
+    )
   }
   if (verbose) {
     cli_port(host = as.character(host), port = as.character(port))
@@ -158,7 +169,9 @@ tar_watch_app <- function(
   displays,
   host,
   port,
-  theme
+  title,
+  theme,
+  spinner
 ) {
   ui <- targets::tar_watch_app_ui(
     seconds = seconds,
@@ -174,7 +187,9 @@ tar_watch_app <- function(
     height = height,
     display = display,
     displays = displays,
-    theme = theme
+    title = title,
+    theme = theme,
+    spinner = spinner
   )
   server <- function(input, output, session) {
     targets::tar_watch_server(
@@ -198,7 +213,6 @@ tar_watch_app <- function(
 #' @return A Shiny UI.
 #' @inheritParams tar_watch_ui
 #' @param label Label argument to [tar_visnetwork()].
-#' @param theme A `bslib` theme object from `bs_theme()`.
 tar_watch_app_ui <- function(
   seconds,
   seconds_min,
@@ -213,29 +227,29 @@ tar_watch_app_ui <- function(
   height,
   display,
   displays,
-  theme = bslib::bs_theme()
+  title,
+  theme,
+  spinner
 ) {
-  bslib::page(
-    shinybusy::add_busy_spinner(position = "top-left"),
-    tar_watch_ui(
-      id = "tar_watch_id",
-      label = "tar_watch_label",
-      seconds = seconds,
-      seconds_min = seconds_min,
-      seconds_max = seconds_max,
-      seconds_step = seconds_step,
-      targets_only = targets_only,
-      outdated = outdated,
-      label_tar_visnetwork = label,
-      level_separation = level_separation,
-      degree_from = degree_from,
-      degree_to = degree_to,
-      height = height,
-      display = display,
-      displays = displays
-    ),
-    title = "",
-    theme = theme
+  tar_watch_ui(
+    id = "tar_watch_id",
+    label = "tar_watch_label",
+    seconds = seconds,
+    seconds_min = seconds_min,
+    seconds_max = seconds_max,
+    seconds_step = seconds_step,
+    targets_only = targets_only,
+    outdated = outdated,
+    label_tar_visnetwork = label,
+    level_separation = level_separation,
+    degree_from = degree_from,
+    degree_to = degree_to,
+    height = height,
+    display = display,
+    displays = displays,
+    title = title,
+    theme = theme,
+    spinner = spinner
   )
 }
 # nocov end

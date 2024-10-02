@@ -24,7 +24,7 @@ options_init <- function(
   workspace_on_error = NULL,
   seed = NULL,
   controller = NULL,
-  trust_object_timestamps = NULL
+  trust_timestamps = NULL
 ) {
   options_new(
     tidy_eval = tidy_eval,
@@ -52,7 +52,7 @@ options_init <- function(
     workspace_on_error = workspace_on_error,
     seed = seed,
     controller = controller,
-    trust_object_timestamps = trust_object_timestamps
+    trust_timestamps = trust_timestamps
   )
 }
 
@@ -82,7 +82,7 @@ options_new <- function(
   workspace_on_error = NULL,
   seed = NULL,
   controller = NULL,
-  trust_object_timestamps = NULL
+  trust_timestamps = NULL
 ) {
   options_class$new(
     tidy_eval = tidy_eval,
@@ -110,7 +110,7 @@ options_new <- function(
     workspace_on_error = workspace_on_error,
     seed = seed,
     controller = controller,
-    trust_object_timestamps = trust_object_timestamps
+    trust_timestamps = trust_timestamps
   )
 }
 
@@ -145,7 +145,7 @@ options_class <- R6::R6Class(
     workspace_on_error = NULL,
     seed = NULL,
     controller = NULL,
-    trust_object_timestamps = NULL,
+    trust_timestamps = NULL,
     initialize = function(
       tidy_eval = NULL,
       packages = NULL,
@@ -172,7 +172,7 @@ options_class <- R6::R6Class(
       workspace_on_error = NULL,
       seed = NULL,
       controller = NULL,
-      trust_object_timestamps = NULL
+      trust_timestamps = NULL
     ) {
       self$tidy_eval <- tidy_eval
       self$packages <- packages
@@ -199,7 +199,7 @@ options_class <- R6::R6Class(
       self$workspace_on_error <- workspace_on_error
       self$seed <- seed
       self$controller <- controller
-      self$trust_object_timestamps <- trust_object_timestamps
+      self$trust_timestamps <- trust_timestamps
     },
     export = function() {
       list(
@@ -225,7 +225,7 @@ options_class <- R6::R6Class(
         workspaces = self$get_workspaces(),
         workspace_on_error = self$get_workspace_on_error(),
         seed = self$get_seed(),
-        trust_object_timestamps = self$get_trust_object_timestamps()
+        trust_timestamps = self$get_trust_timestamps()
       )
     },
     import = function(list) {
@@ -251,7 +251,7 @@ options_class <- R6::R6Class(
       self$set_workspaces(list$workspaces)
       self$set_workspace_on_error(list$workspace_on_error)
       self$set_seed(list$seed)
-      self$set_trust_object_timestamps(list$trust_object_timestamps)
+      self$set_trust_timestamps(list$trust_timestamps)
     },
     reset = function() {
       self$tidy_eval <- NULL
@@ -279,7 +279,7 @@ options_class <- R6::R6Class(
       self$workspace_on_error <- NULL
       self$seed <- NULL
       self$controller <- NULL
-      self$trust_object_timestamps <- NULL
+      self$trust_timestamps <- NULL
     },
     get_tidy_eval = function() {
       self$tidy_eval %|||% TRUE
@@ -303,7 +303,9 @@ options_class <- R6::R6Class(
       self$repository %|||% "local"
     },
     get_repository_meta = function() {
-      (self$repository_meta %|||% self$repository) %|||% "local"
+      default <- self$repository_meta %|||%
+        if_any(is_repository_cas(self$repository), "local", self$repository)
+      default %|||% "local"
     },
     get_iteration = function() {
       self$iteration %|||% "vector"
@@ -348,7 +350,7 @@ options_class <- R6::R6Class(
       self$workspaces %|||% character(0L)
     },
     get_workspace_on_error = function() {
-      self$workspace_on_error %|||% FALSE
+      self$workspace_on_error %|||% TRUE
     },
     get_seed = function() {
       self$seed %|||% 0L
@@ -356,8 +358,8 @@ options_class <- R6::R6Class(
     get_controller = function() {
       self$controller
     },
-    get_trust_object_timestamps = function() {
-      self$trust_object_timestamps %|||% TRUE
+    get_trust_timestamps = function() {
+      self$trust_timestamps
     },
     set_tidy_eval = function(tidy_eval) {
       self$validate_tidy_eval(tidy_eval)
@@ -469,9 +471,9 @@ options_class <- R6::R6Class(
       self$validate_controller(controller)
       self$controller <- controller
     },
-    set_trust_object_timestamps = function(trust_object_timestamps) {
-      self$validate_trust_object_timestamps(trust_object_timestamps)
-      self$trust_object_timestamps <- trust_object_timestamps
+    set_trust_timestamps = function(trust_timestamps) {
+      self$validate_trust_timestamps(trust_timestamps)
+      self$trust_timestamps <- trust_timestamps
     },
     validate_tidy_eval = function(tidy_eval) {
       tar_assert_scalar(tidy_eval)
@@ -501,7 +503,11 @@ options_class <- R6::R6Class(
       tar_assert_repository(repository)
     },
     validate_repository_meta = function(repository_meta) {
-      tar_assert_repository(repository_meta)
+      tar_assert_in(
+        repository_meta,
+        choices = c("local", "aws", "gcp"),
+        msg = "repository_meta must be one of \"local\", \"aws\", or \"gcp\"."
+      )
     },
     validate_iteration = function(iteration) {
       tar_assert_flag(iteration, c("vector", "list", "group"))
@@ -510,7 +516,7 @@ options_class <- R6::R6Class(
       deprecate_error_workspace(error)
       tar_assert_flag(
         error,
-        c("stop", "continue", "abridge", "workspace", "null")
+        c("stop", "continue", "null", "abridge", "trim", "workspace")
       )
     },
     validate_memory = function(memory) {
@@ -552,16 +558,16 @@ options_class <- R6::R6Class(
     },
     validate_debug = function(debug) {
       tar_assert_chr(debug)
-      tar_assert_none_na(trust_object_timestamps)
+      tar_assert_none_na(trust_timestamps)
     },
     validate_workspaces = function(workspaces) {
       tar_assert_chr(workspaces)
-      tar_assert_none_na(trust_object_timestamps)
+      tar_assert_none_na(trust_timestamps)
     },
     validate_workspace_on_error = function(workspace_on_error) {
       tar_assert_scalar(workspace_on_error)
       tar_assert_lgl(workspace_on_error)
-      tar_assert_none_na(trust_object_timestamps)
+      tar_assert_none_na(trust_timestamps)
     },
     validate_seed = function(seed) {
       tar_assert_scalar(seed)
@@ -574,11 +580,11 @@ options_class <- R6::R6Class(
         validate_crew_controller(controller)
       }
     },
-    validate_trust_object_timestamps = function(trust_object_timestamps) {
-      if (!is.null(trust_object_timestamps)) {
-        tar_assert_lgl(trust_object_timestamps)
-        tar_assert_scalar(trust_object_timestamps)
-        tar_assert_none_na(trust_object_timestamps)
+    validate_trust_timestamps = function(trust_timestamps) {
+      if (!is.null(trust_timestamps)) {
+        tar_assert_lgl(trust_timestamps)
+        tar_assert_scalar(trust_timestamps)
+        tar_assert_none_na(trust_timestamps)
       }
     },
     validate = function() {
@@ -607,7 +613,7 @@ options_class <- R6::R6Class(
       self$validate_workspace_on_error(self$get_workspace_on_error())
       self$validate_seed(self$get_seed())
       self$validate_controller(self$get_controller())
-      self$validate_trust_object_timestamps(self$get_trust_object_timestamps())
+      self$validate_trust_timestamps(self$get_trust_timestamps())
     }
   )
 )
@@ -623,27 +629,4 @@ deprecate_error_workspace <- function(error) {
       "tar_option_set(workspace_on_error = TRUE)."
     )
   }
-}
-
-#' @title Export options.
-#' @export
-#' @keywords internal
-#' @description Internal function. Not for users.
-#' @return A list of options from tar_option_set().
-tar_option_export <- function() {
-  tar_options$export()
-}
-
-tar_option_script <- function(script) {
-  tar_assert_script(script)
-  callr::r(
-    # Covered in unit tests but runs in a different R process.
-    # nocov start
-    func = function(script) {
-      eval(parse(file = script), envir = targets::tar_option_get("envir"))
-      targets::tar_option_export()
-    },
-    # nocov end
-    args = list(script = script)
-  )
 }

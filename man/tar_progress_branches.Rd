@@ -36,7 +36,7 @@ and the following columns.
 \itemize{
 \item \code{name}: name of the pattern.
 \item \code{progress}: progress status: \code{"dispatched"}, \code{"completed"},
-\code{"cancelled"}, or \code{"errored"}.
+\code{"canceled"}, or \code{"errored"}.
 \item \code{branches}: number of branches in the progress category.
 \item \code{total}: total number of branches planned for the whole pattern.
 Values within the same pattern should all be equal.
@@ -51,6 +51,8 @@ of dynamic branches. Only the most recent record is shown.
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script({
+  library(targets)
+  library(tarchetypes)
   list(
     tar_target(x, seq_len(2)),
     tar_target(y, x, pattern = map(x)),

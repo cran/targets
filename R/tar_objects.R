@@ -1,6 +1,6 @@
 #' @title List saved targets
 #' @export
-#' @family data
+#' @family storage
 #' @description List targets currently saved to `_targets/objects/`
 #'   or the cloud. Does not include local files
 #'   with `tar_target(..., format = "file", repository = "local")`.
@@ -19,6 +19,8 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   list(tar_target(x, "value"))
 #' }, ask = FALSE)
 #' tar_make()

@@ -17,11 +17,7 @@ tar_load_everything(
 \item{branches}{Integer of indices of the branches to load
 for any targets that are patterns.}
 
-\item{meta}{Data frame of metadata from \code{\link[=tar_meta]{tar_meta()}}.
-\code{tar_read()} with the default arguments can be inefficient for large
-pipelines because all the metadata is stored in a single file.
-However, if you call \code{\link[=tar_meta]{tar_meta()}} beforehand and supply it to the \code{meta}
-argument, then successive calls to \code{tar_read()} may run much faster.}
+\item{meta}{Data frame of target metadata from \code{\link[=tar_meta]{tar_meta()}}.}
 
 \item{strict}{Logical of length 1, whether to error out
 if one of the selected targets is in the metadata
@@ -36,16 +32,10 @@ if a target is in the metadata but cannot be loaded.
 However, load failures
 will not stop other targets from being loaded.}
 
-\item{envir}{Environment to put the loaded targets.}
+\item{envir}{R environment in which to load target return values.}
 
-\item{store}{Character of length 1, path to the
-\code{targets} data store. Defaults to \code{tar_config_get("store")},
-which in turn defaults to \verb{_targets/}.
-When you set this argument, the value of \code{tar_config_get("store")}
-is temporarily changed for the current function call.
-See \code{\link[=tar_config_get]{tar_config_get()}} and \code{\link[=tar_config_set]{tar_config_set()}} for details
-about how to set the data store path persistently
-for a project.}
+\item{store}{Character of length 1, directory path to the data store
+of the pipeline.}
 }
 \value{
 Nothing.
@@ -58,6 +48,8 @@ targets with entries in the metadata.
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script({
+  library(targets)
+  library(tarchetypes)
   list(
     tar_target(y1, 1 + 1),
     tar_target(y2, 1 + 1),
@@ -72,14 +64,10 @@ ls() # Has "y1", "y2", and "z".
 }
 }
 \seealso{
-Other data: 
-\code{\link{tar_crew}()},
+Other storage: 
+\code{\link{tar_format}()},
 \code{\link{tar_load}()},
-\code{\link{tar_load_raw}()},
 \code{\link{tar_objects}()},
-\code{\link{tar_pid}()},
-\code{\link{tar_process}()},
-\code{\link{tar_read}()},
-\code{\link{tar_read_raw}()}
+\code{\link{tar_read}()}
 }
-\concept{data}
+\concept{storage}

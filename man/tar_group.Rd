@@ -49,6 +49,8 @@ data.frame(
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script({
 library(dplyr)
+library(targets)
+library(tarchetypes)
 list(
   tar_target(
     data,
@@ -82,6 +84,7 @@ Other utilities:
 \code{\link{tar_definition}()},
 \code{\link{tar_described_as}()},
 \code{\link{tar_envir}()},
+\code{\link{tar_format_get}()},
 \code{\link{tar_name}()},
 \code{\link{tar_path}()},
 \code{\link{tar_path_script}()},

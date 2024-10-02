@@ -319,7 +319,7 @@ tar_test("invalidation: map over a stem with no branches previously", {
   last_children <- unlist(meta$children[meta$name == "z"])
   expect_equal(intersect(first_children, last_children), character(0))
   out <- counter_get_names(local$scheduler$progress$completed)
-  expect_equal(length(out), 2L)
+  expect_length(out, 2L)
   expect_true(all(grepl("^z_", out)))
 })
 
@@ -434,12 +434,16 @@ tar_test("target_allow_meta()", {
   expect_false(target_allow_meta(target))
   target <- tar_target(x, 1, format = "file", repository = "aws")
   expect_false(target_allow_meta(target))
-  target <- tar_target(x, 1, format = "file_fast", repository = "aws")
-  expect_false(target_allow_meta(target))
   target <- tar_target(x, 1, format = "rds", repository = "local")
   expect_false(target_allow_meta(target))
   target <- tar_target(x, 1, format = "file", repository = "local")
   expect_true(target_allow_meta(target))
-  target <- tar_target(x, 1, format = "file_fast", repository = "local")
-  expect_true(target_allow_meta(target))
+})
+
+tar_test("deprecate file_fast", {
+  expect_warning(
+    target <- tar_target(x, 1, format = "file_fast"),
+    class = "tar_condition_deprecate"
+  )
+  expect_equal(target$settings$format, "file")
 })

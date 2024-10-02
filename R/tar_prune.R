@@ -25,6 +25,8 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
@@ -88,7 +90,7 @@ tar_prune_inner <- function(pipeline, cloud, path_store, batch_size, verbose) {
   names <- pipeline_get_names(pipeline)
   meta <- meta_init(path_store = path_store)
   data <- as.data.frame(meta$database$read_condensed_data())
-  imports <- data$name[data$type %in% c("function", "object")]
+  imports <- names(pipeline$imports)
   children <- unlist(data$children[data$name %in% names])
   children <- unique(children[!is.na(children)])
   keep <- c(names, children, imports)

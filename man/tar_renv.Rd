@@ -5,8 +5,8 @@
 \title{Set up package dependencies for compatibility with \code{renv}}
 \usage{
 tar_renv(
-  extras = c("bslib", "crew", "gt", "markdown", "pingr", "rstudioapi", "shiny",
-    "shinybusy", "shinyWidgets", "visNetwork"),
+  extras = c("bslib", "crew", "gt", "markdown", "rstudioapi", "shiny", "shinybusy",
+    "shinyWidgets", "visNetwork"),
   path = "_targets_packages.R",
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function),
@@ -118,6 +118,8 @@ to check the health of your \code{renv} project library.
 \examples{
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
   tar_script({
+    library(targets)
+    library(tarchetypes)
     tar_option_set(packages = c("tibble", "qs"))
     list()
   }, ask = FALSE)
@@ -133,7 +135,6 @@ Other scripts:
 \code{\link{tar_edit}()},
 \code{\link{tar_github_actions}()},
 \code{\link{tar_helper}()},
-\code{\link{tar_helper_raw}()},
 \code{\link{tar_script}()}
 }
 \concept{scripts}

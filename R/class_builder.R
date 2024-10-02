@@ -128,7 +128,7 @@ target_run.tar_builder <- function(target, envir, path_store) {
   target_gc(target)
   builder_ensure_deps(target, target$subpipeline, "worker")
   frames <- frames_produce(envir, target, target$subpipeline)
-  builder_set_tar_runtime(target, frames, path_store)
+  builder_set_tar_runtime(target, frames)
   store_update_stage_early(target$store, target$settings$name, path_store)
   builder_update_build(target, frames_get_envir(frames))
   builder_ensure_paths(target, path_store)
@@ -167,9 +167,7 @@ target_skip.tar_builder <- function(
   active
 ) {
   target_update_queue(target, scheduler)
-  path <- meta$get_record(target_get_name(target))$path
-  file <- target$store$file
-  file$path <- path
+  file_repopulate(target$store$file, meta$get_record(target_get_name(target)))
   if (active) {
     builder_ensure_workspace(
       target = target,
@@ -188,6 +186,8 @@ target_skip.tar_builder <- function(
 
 #' @export
 target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
+  on.exit(builder_unset_tar_runtime())
+  builder_set_tar_runtime(target, NULL)
   target_update_queue(target, scheduler)
   builder_handle_warnings(target, scheduler)
   builder_ensure_workspace(
@@ -339,6 +339,7 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
     target$settings$error,
     continue = builder_error_continue(target, scheduler),
     abridge = scheduler$abridge(target),
+    trim = scheduler$trim(target, pipeline),
     stop = builder_error_exit(target, pipeline, scheduler, meta),
     null = builder_error_null(target, pipeline, scheduler, meta),
     workspace = builder_error_exit(target, pipeline, scheduler, meta)
@@ -346,7 +347,7 @@ builder_handle_error <- function(target, pipeline, scheduler, meta) {
 }
 
 builder_error_continue <- function(target, scheduler) {
-  target$value <- NULL
+  store_unload(store = target$store, target = target)
   scheduler$reporter$report_error(target$metrics$error)
 }
 
@@ -406,7 +407,13 @@ builder_update_build <- function(target, envir) {
   if (!identical(target$settings$storage, "none")) {
     target$value <- value_init(object, target$settings$iteration)
   }
+  builder_update_format(target)
   invisible()
+}
+
+builder_update_format <- function(target) {
+  store_reformat_auto(target)
+  store_reformat_null(target)
 }
 
 builder_resolve_object <- function(target, build) {
@@ -438,16 +445,16 @@ builder_unload_value <- function(target) {
   clear <- identical(settings$deployment, "worker") &&
     identical(settings$storage, "worker")
   if (clear) {
-    target$value <- NULL
+    store_unload(store = target$store, target = target)
   }
 }
 
 builder_update_object <- function(target) {
+  on.exit(builder_unload_value(target))
   file_validate_path(target$store$file$path)
   if (!identical(target$settings$storage, "none")) {
     store_write_object(target$store, target$value$object)
   }
-  builder_unload_value(target)
   store_hash_late(target$store)
   store_upload_object(target$store)
 }
@@ -492,7 +499,7 @@ builder_wait_correct_hash <- function(target) {
   store_ensure_correct_hash(target$store, storage, deployment)
 }
 
-builder_set_tar_runtime <- function(target, frames, path_store) {
+builder_set_tar_runtime <- function(target, frames) {
   tar_runtime$target <- target
   tar_runtime$frames <- frames
 }

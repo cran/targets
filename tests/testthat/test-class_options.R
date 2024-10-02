@@ -29,7 +29,7 @@ tar_test("validate non-default options", {
     workspaces = letters,
     workspace_on_error = TRUE,
     seed = 57L,
-    trust_object_timestamps = FALSE
+    trust_timestamps = FALSE
   )
   expect_silent(x$validate())
 })
@@ -58,7 +58,7 @@ tar_test("export", {
     workspaces = letters,
     workspace_on_error = TRUE,
     seed = 57L,
-    trust_object_timestamps = FALSE
+    trust_timestamps = FALSE
   )
   out <- x$export()
   exp <- list(
@@ -84,7 +84,7 @@ tar_test("export", {
     workspaces = letters,
     workspace_on_error = TRUE,
     seed = 57L,
-    trust_object_timestamps = FALSE
+    trust_timestamps = FALSE
   )
   out$cue <- as.list(out$cue)
   exp$cue <- as.list(exp$cue)
@@ -114,14 +114,14 @@ tar_test("import", {
     description = "my description",
     debug = "x",
     workspaces = "x",
-    workspace_on_error = TRUE,
+    workspace_on_error = FALSE,
     seed = 57L,
-    trust_object_timestamps = FALSE
+    trust_timestamps = FALSE
   )
   envir <- new.env(parent = emptyenv())
   x <- options_init(envir = envir)
   x$import(list)
-  expect_equal(x$get_tidy_eval(), FALSE)
+  expect_false(x$get_tidy_eval())
   expect_equal(x$get_packages(), character(0))
   expect_equal(x$get_envir(), envir)
   expect_equal(x$get_imports(), "targets")
@@ -132,7 +132,7 @@ tar_test("import", {
   expect_equal(x$get_iteration(), "list")
   expect_equal(x$get_error(), "continue")
   expect_equal(x$get_memory(), "transient")
-  expect_equal(x$get_garbage_collection(), TRUE)
+  expect_true(x$get_garbage_collection())
   expect_equal(x$get_deployment(), "main")
   expect_equal(x$get_priority(), 0.5)
   expect_equal(x$get_resources(), resources)
@@ -145,18 +145,18 @@ tar_test("import", {
   expect_equal(x$get_description(), "my description")
   expect_equal(x$get_debug(), "x")
   expect_equal(x$get_workspaces(), "x")
-  expect_equal(x$get_workspace_on_error(), TRUE)
+  expect_false(x$get_workspace_on_error())
   expect_equal(x$get_seed(), 57L)
-  expect_equal(x$get_trust_object_timestamps(), FALSE)
+  expect_false(x$get_trust_timestamps())
 })
 
 tar_test("tidy_eval", {
   x <- options_init()
-  expect_equal(x$get_tidy_eval(), TRUE)
+  expect_true(x$get_tidy_eval())
   x$set_tidy_eval(FALSE)
-  expect_equal(x$get_tidy_eval(), FALSE)
+  expect_false(x$get_tidy_eval())
   x$reset()
-  expect_equal(x$get_tidy_eval(), TRUE)
+  expect_true(x$get_tidy_eval())
   expect_error(x$set_tidy_eval("bad"), class = "tar_condition_validate")
 })
 
@@ -181,11 +181,11 @@ tar_test("imports", {
 
 tar_test("library", {
   x <- options_init()
-  expect_equal(x$get_library(), NULL)
+  expect_null(x$get_library())
   x$set_library("x")
   expect_equal(x$get_library(), "x")
   x$reset()
-  expect_equal(x$get_library(), NULL)
+  expect_null(x$get_library())
   expect_error(x$set_library(123), class = "tar_condition_validate")
 })
 
@@ -282,11 +282,11 @@ tar_test("memory", {
 
 tar_test("garbage_collection", {
   x <- options_init()
-  expect_equal(x$get_garbage_collection(), FALSE)
+  expect_false(x$get_garbage_collection())
   x$set_garbage_collection(TRUE)
-  expect_equal(x$get_garbage_collection(), TRUE)
+  expect_true(x$get_garbage_collection())
   x$reset()
-  expect_equal(x$get_garbage_collection(), FALSE)
+  expect_false(x$get_garbage_collection())
   expect_error(x$set_garbage_collection(0), class = "tar_condition_validate")
 })
 
@@ -415,11 +415,11 @@ tar_test("workspaces", {
 
 tar_test("workspace_on_error", {
   x <- options_init()
-  expect_equal(x$get_workspace_on_error(), FALSE)
-  x$set_workspace_on_error(workspace_on_error = TRUE)
-  expect_equal(x$get_workspace_on_error(), TRUE)
+  expect_true(x$get_workspace_on_error())
+  x$set_workspace_on_error(workspace_on_error = FALSE)
+  expect_false(x$get_workspace_on_error())
   x$reset()
-  expect_equal(x$get_workspace_on_error(), FALSE)
+  expect_true(x$get_workspace_on_error())
   expect_error(x$set_workspace_on_error(123), class = "tar_condition_validate")
 })
 
@@ -463,15 +463,15 @@ tar_test("controller", {
   )
 })
 
-tar_test("trust_object_timestamps", {
+tar_test("trust_timestamps", {
   x <- options_init()
-  expect_equal(x$get_trust_object_timestamps(), TRUE)
-  x$set_trust_object_timestamps(FALSE)
-  expect_equal(x$get_trust_object_timestamps(), FALSE)
+  expect_null(x$get_trust_timestamps())
+  x$set_trust_timestamps(FALSE)
+  expect_false(x$get_trust_timestamps())
   x$reset()
-  expect_equal(x$get_trust_object_timestamps(), TRUE)
+  expect_null(x$get_trust_timestamps())
   expect_error(
-    x$set_trust_object_timestamps(0),
+    x$set_trust_timestamps(0),
     class = "tar_condition_validate"
   )
 })
@@ -480,7 +480,7 @@ tar_test("tar_option_export", {
   skip_cran()
   script <- path_script_default()
   tar_script(tar_target(x, 1), script = script)
-  out <- tar_option_script(script = script)
+  out <- tar_script_options(script = script)
   expect_true(is.list(out))
   names <- c(
     "packages",

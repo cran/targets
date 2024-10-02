@@ -30,7 +30,7 @@ target_init <- function(
   if (identical(format, "url")) {
     repository <- "local"
   }
-  if (store_custom_old_repository(format) == "aws") {
+  if (store_format_custom_old_repository(format) == "aws") {
     repository <- "aws"
   }
   settings <- settings_init(
@@ -207,7 +207,13 @@ target_produce_record <- function(target, pipeline, meta) {
   UseMethod("target_produce_record")
 }
 
-target_skip <- function(target, pipeline, scheduler, meta, active) {
+target_skip <- function(
+  target,
+  pipeline,
+  scheduler,
+  meta,
+  active
+) {
   UseMethod("target_skip")
 }
 
@@ -451,6 +457,13 @@ target_allow_meta <- function(target) {
   format <- .subset2(settings, "format")
   repository <- .subset2(settings, "repository")
   (format == "file" || format == "file_fast") && (repository == "local")
+}
+
+target_reformat <- function(target, format) {
+  file <- target$store$file
+  target$settings$format <- format
+  target$store <- settings_produce_store(target$settings)
+  target$store$file <- file
 }
 
 target_validate <- function(target) {

@@ -102,6 +102,8 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   list(
 #'     tar_target(y1, 1 + 1),
 #'     tar_target(y2, 1 + 1),
@@ -112,6 +114,8 @@
 #' # Distributed computing with crew:
 #' if (requireNamespace("crew", quietly = TRUE)) {
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   tar_option_set(controller = crew::controller_local())
 #'   list(
 #'     tar_target(y1, 1 + 1),
@@ -266,6 +270,7 @@ tar_make_inner <- function(
 tar_make_as_job <- function(call) {
   args <- as.list(call)[-1L]
   args$as_job <- FALSE
+  args$callr_function <- NULL
   args <- paste(names(args), "=", map_chr(args, tar_deparse_safe))
   args <- c(args, "callr_function = NULL")
   args <- paste0(args, collapse = ", ")

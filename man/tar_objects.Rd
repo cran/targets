@@ -56,6 +56,8 @@ and \code{tar_quarto()}.
 if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 tar_script({
+  library(targets)
+  library(tarchetypes)
   list(tar_target(x, "value"))
 }, ask = FALSE)
 tar_make()
@@ -65,14 +67,10 @@ tar_objects(starts_with("x")) # see also any_of()
 }
 }
 \seealso{
-Other data: 
-\code{\link{tar_crew}()},
+Other storage: 
+\code{\link{tar_format}()},
 \code{\link{tar_load}()},
 \code{\link{tar_load_everything}()},
-\code{\link{tar_load_raw}()},
-\code{\link{tar_pid}()},
-\code{\link{tar_process}()},
-\code{\link{tar_read}()},
-\code{\link{tar_read_raw}()}
+\code{\link{tar_read}()}
 }
-\concept{data}
+\concept{storage}

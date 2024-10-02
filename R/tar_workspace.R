@@ -1,8 +1,8 @@
 #' @title Load a saved workspace and seed for debugging.
 #' @export
 #' @family debug
-#' @description Load the packages, workspace, and random number generator seed
-#'   of target attempted with a workspace file.
+#' @description Load the packages, environment, and random number generator
+#'   seed of a target.
 #' @details If you activate workspaces through the `workspaces` argument
 #'   of [tar_option_set()], then under the circumstances you specify,
 #'   `targets` will save a special workspace file to a location in
@@ -33,6 +33,8 @@
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tmp <- sample(1)
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   tar_option_set(workspace_on_error = TRUE)
 #'   list(
 #'     tar_target(x, "loaded"),
@@ -71,7 +73,7 @@ tar_workspace <- function(
     workspace_load_packages(workspace)
   }
   if (source) {
-    eval(parse(text = readLines(script)), envir = envir)
+    eval(parse(text = readLines(script), keep.source = TRUE), envir = envir)
   }
   workspace_set_seed(workspace)
   invisible()

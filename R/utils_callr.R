@@ -42,22 +42,82 @@ callr_outer <- function(
 }
 
 callr_error <- function(traced_condition, fun) {
-  message <- sprintf(
-    paste0(
-      "Error running targets::%s()\n",
-      "Error messages: ",
-      "targets::tar_meta(fields = error, complete_only = TRUE)\n",
-      "Debugging guide: https://books.ropensci.org/targets/debugging.html\n",
-      "How to ask for help: https://books.ropensci.org/targets/help.html\n",
-      "Last error message:\n",
-      "    %s\n",
-      "Last error traceback:\n",
-      "%s"
+  general <- c(
+    utils::capture.output(
+      cli::cli_h1("General debugging"),
+      type = "message"
     ),
-    fun,
-    conditionMessage(traced_condition$condition),
-    paste(paste0("    ", traced_condition$trace), collapse = "\n")
+    paste(
+      "   ",
+      cli_blue_bullet(
+        c(
+          "tar_errored()",
+          "tar_meta(fields = any_of(\"error\"), complete_only = TRUE)",
+          "tar_workspace()",
+          "tar_workspaces()"
+        ),
+        print = FALSE
+      )
+    )
   )
+  suppressMessages(
+    meta <- tar_meta(
+      fields = tidyselect::any_of(c("name", "time", "error")),
+      complete_only = TRUE
+    )
+  )
+  tailored <- character(0L)
+  if (any(!is.na(meta$time))) {
+    name <- meta$name[meta$time == max(meta$time, na.rm = TRUE)]
+    meta <- sprintf("tar_meta(%s)$error", name)
+    workspace <- sprintf("tar_workspace(%s)", name)
+    tailored <- c(
+      utils::capture.output(
+        cli::cli_h1(paste("Debug target", name)),
+        type = "message"
+      ),
+      paste("   ", c(meta, workspace))
+    )
+  }
+  how_to <- c(
+    utils::capture.output(cli::cli_h1("How to"), type = "message"),
+    paste(
+      "   ",
+      cli_blue_bullet(
+        c(
+          paste(
+            "Debug:",
+            cli_url("https://books.ropensci.org/targets/debugging.html")
+          ),
+          paste(
+            "Help:",
+            cli_url("https://books.ropensci.org/targets/help.html")
+          )
+        ),
+        print = FALSE
+      )
+    )
+  )
+  data <- c(
+    utils::capture.output(
+      cli::cli_h1("Last error message"),
+      type = "message"
+    ),
+    paste0("    ", conditionMessage(traced_condition$condition)),
+    utils::capture.output(
+      cli::cli_h1("Last error traceback"),
+      type = "message"
+    ),
+    paste0("    ", traced_condition$trace)
+  )
+  lines <- c(
+    sprintf("targets::%s() error", fun),
+    tailored,
+    general,
+    how_to,
+    data
+  )
+  message <- paste(lines, collapse = "\n")
   tar_throw_run(message, class = class(traced_condition$condition))
 }
 

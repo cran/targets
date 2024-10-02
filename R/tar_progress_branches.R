@@ -8,7 +8,7 @@
 #'   and the following columns.
 #'   * `name`: name of the pattern.
 #'   * `progress`: progress status: `"dispatched"`, `"completed"`,
-#'     `"cancelled"`, or `"errored"`.
+#'     `"canceled"`, or `"errored"`.
 #'   * `branches`: number of branches in the progress category.
 #'   * `total`: total number of branches planned for the whole pattern.
 #'     Values within the same pattern should all be equal.
@@ -25,6 +25,8 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   list(
 #'     tar_target(x, seq_len(2)),
 #'     tar_target(y, x, pattern = map(x)),

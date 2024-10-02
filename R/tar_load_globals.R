@@ -22,6 +22,8 @@
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #' tar_script({
+#'   library(targets)
+#'   library(tarchetypes)
 #'   tar_option_set(packages = "callr")
 #'   analyze_data <- function(data) {
 #'     summary(data)
@@ -42,7 +44,7 @@ tar_load_globals <- function(
 ) {
   force(envir)
   tar_assert_script(script)
-  eval(parse(file = script), envir = envir)
+  eval(parse(file = script, keep.source = TRUE), envir = envir)
   map(
     x = tar_option_get("packages"),
     f = library,

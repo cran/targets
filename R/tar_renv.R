@@ -57,6 +57,8 @@
 #' @examples
 #' tar_dir({ # tar_dir() runs code from a temp dir for CRAN.
 #'   tar_script({
+#'     library(targets)
+#'     library(tarchetypes)
 #'     tar_option_set(packages = c("tibble", "qs"))
 #'     list()
 #'   }, ask = FALSE)
@@ -70,7 +72,6 @@ tar_renv <- function(
     "crew",
     "gt",
     "markdown",
-    "pingr",
     "rstudioapi",
     "shiny",
     "shinybusy",
