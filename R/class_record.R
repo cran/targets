@@ -24,13 +24,29 @@ record_init <- function(
   warnings = NA_character_,
   error = NA_character_
 ) {
+  path <- as.character(path)
+  children <- as.character(children)
+  warnings <- as.character(warnings)
+  error <- as.character(error)
+  if (!length(path)) {
+    path <- NA_character_
+  }
+  if (!length(children)) {
+    children <- NA_character_
+  }
+  if (!length(warnings)) {
+    warnings <- NA_character_
+  }
+  if (!length(error)) {
+    error <- NA_character_
+  }
   record_new(
     name = as.character(name),
     type = as.character(type),
     command = as.character(command),
     seed = as.integer(seed),
     depend = as.character(depend),
-    path = as.character(path) %||% NA_character_,
+    path = path,
     data = as.character(data),
     time = as.character(time),
     size = as.character(size),
@@ -39,10 +55,10 @@ record_init <- function(
     repository = as.character(repository),
     iteration = as.character(iteration),
     parent = as.character(parent),
-    children = as.character(children) %||% NA_character_,
+    children = children,
     seconds = as.numeric(seconds),
-    warnings = as.character(warnings) %||% NA_character_,
-    error = as.character(error) %||% NA_character_
+    warnings = warnings,
+    error = error
   )
 }
 
@@ -66,25 +82,26 @@ record_new <- function(
   warnings = NULL,
   error = NULL
 ) {
-  force(name)
-  force(parent)
-  force(type)
-  force(command)
-  force(seed)
-  force(depend)
-  force(path)
-  force(data)
-  force(time)
-  force(size)
-  force(bytes)
-  force(format)
-  force(repository)
-  force(iteration)
-  force(children)
-  force(seconds)
-  force(warnings)
-  force(error)
-  environment()
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$name <- name
+  out$parent <- parent
+  out$type <- type
+  out$command <- command
+  out$seed <- seed
+  out$depend <- depend
+  out$path <- path
+  out$data <- data
+  out$time <- time
+  out$size <- size
+  out$bytes <- bytes
+  out$format <- format
+  out$repository <- repository
+  out$iteration <- iteration
+  out$children <- children
+  out$seconds <- seconds
+  out$warnings <- warnings
+  out$error <- error
+  out
 }
 
 record_has_error <- function(record) {
@@ -120,12 +137,12 @@ record_produce_row <- function(record) {
 }
 
 record_row_path <- function(record) {
-  store <- store_init(
+  store <- store_enclass(
+    list(),
     format = record$format,
     repository = record$repository
   )
-  store$file$path <- record$path
-  store_row_path(store)
+  store_row_path(store, list(path = record$path))
 }
 
 record_from_row <- function(row, path_store) {
@@ -161,8 +178,13 @@ record_bootstrap_store <- function(record) {
     repository = record$repository,
     resources = tar_options$get_resources()
   )
-  file_repopulate(store$file, record)
   store
+}
+
+record_bootstrap_file <- function(record) {
+  file <- file_init()
+  file_repopulate(file, record)
+  file
 }
 
 record_validate <- function(record) {

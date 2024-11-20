@@ -5,25 +5,29 @@ builder_new <- function(
   value = NULL,
   metrics = NULL,
   store = NULL,
+  file = NULL,
   subpipeline = NULL
 ) {
-  force(command)
-  force(settings)
-  force(cue)
-  force(value)
-  force(metrics)
-  force(store)
-  force(subpipeline)
-  enclass(environment(), c("tar_builder", "tar_target"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$command <- command
+  out$settings <- settings
+  out$cue <- cue
+  out$value <- value
+  out$metrics <- metrics
+  out$store <- store
+  out$file <- file
+  out$subpipeline <- subpipeline
+  enclass(out, builder_s3_class)
 }
+
+builder_s3_class <- c("tar_builder", "tar_target")
 
 #' @export
 target_update_depend.tar_builder <- function(target, pipeline, meta) {
-  depends <- meta$depends
-  memory_set_object(
-    depends,
-    target_get_name(target),
-    meta$produce_depend(target, pipeline)
+  lookup_set(
+    lookup = .subset2(meta, "depends"),
+    names = target_get_name(target),
+    object = .subset2(meta, "produce_depend")(target, pipeline)
   )
 }
 
@@ -36,6 +40,8 @@ target_bootstrap.tar_builder <- function(
 ) {
   record <- target_bootstrap_record(target, meta)
   target$store <- record_bootstrap_store(record)
+  target$file <- record_bootstrap_file(record)
+  pipeline_set_target(pipeline, target)
   invisible()
 }
 
@@ -43,7 +49,7 @@ target_bootstrap.tar_builder <- function(
 target_read_value.tar_builder <- function(target, pipeline = NULL) {
   command <- target$command
   load_packages(packages = command$packages, library = command$library)
-  object <- store_read_object(target$store)
+  object <- store_read_object(target$store, target$file)
   iteration <- target$settings$iteration
   value_init(object, iteration)
 }
@@ -56,6 +62,11 @@ target_prepare.tar_builder <- function(
   meta,
   pending = FALSE
 ) {
+  if (package_installed("autometric (>= 0.1.0)")) {
+    phase <- paste("prepare:", target_get_name(target))
+    autometric::log_phase_set(phase = phase)
+    on.exit(autometric::log_phase_reset())
+  }
   target_patternview_dispatched(target, pipeline, scheduler)
   scheduler$progress$register_dispatched(target)
   scheduler$reporter$report_dispatched(
@@ -63,7 +74,9 @@ target_prepare.tar_builder <- function(
     progress = scheduler$progress,
     pending = pending
   )
-  builder_ensure_deps(target, pipeline, "main")
+  if (identical(target$settings$retrieval, "main")) {
+    target_ensure_deps_main(target, pipeline)
+  }
   builder_update_subpipeline(target, pipeline)
 }
 
@@ -121,15 +134,23 @@ target_needs_worker.tar_builder <- function(target) {
 
 #' @export
 target_run.tar_builder <- function(target, envir, path_store) {
-  on.exit({
-    builder_unset_tar_runtime()
-    target$subpipeline <- NULL
-  })
-  target_gc(target)
-  builder_ensure_deps(target, target$subpipeline, "worker")
+  if (package_installed("autometric (>= 0.1.0)")) {
+    autometric::log_phase_set(phase = target_get_name(target))
+    on.exit(autometric::log_phase_reset())
+  }
+  on.exit(builder_unset_tar_runtime(), add = TRUE)
+  on.exit(target$subpipeline <- NULL, add = TRUE)
+  if (!identical(target$settings$retrieval, "none")) {
+    target_ensure_deps_worker(target, target$subpipeline)
+  }
   frames <- frames_produce(envir, target, target$subpipeline)
   builder_set_tar_runtime(target, frames)
-  store_update_stage_early(target$store, target$settings$name, path_store)
+  store_update_stage_early(
+    store = target$store,
+    file = target$file,
+    name = target_get_name(target),
+    path_store = path_store
+  )
   builder_update_build(target, frames_get_envir(frames))
   builder_ensure_paths(target, path_store)
   builder_ensure_object(target, "worker")
@@ -146,12 +167,18 @@ target_run_worker.tar_builder <- function(
   options,
   envvars
 ) {
+  if (package_installed("autometric (>= 0.1.0)")) {
+    autometric::log_phase_set(phase = target_get_name(target))
+    on.exit(autometric::log_phase_reset())
+  }
+  set_envvars(envvars)
+  tar_options$import(options)
   envir <- if_any(identical(envir, "globalenv"), globalenv(), envir)
   tar_option_set(envir = envir)
   tar_runtime$store <- path_store
   tar_runtime$fun <- fun
-  tar_options$import(options)
-  set_envvars(envvars)
+  runtime_increment_targets_run(tar_runtime)
+  target_gc(target)
   builder_unmarshal_subpipeline(target)
   target_run(target, envir, path_store)
   builder_marshal_value(target)
@@ -167,7 +194,8 @@ target_skip.tar_builder <- function(
   active
 ) {
   target_update_queue(target, scheduler)
-  file_repopulate(target$store$file, meta$get_record(target_get_name(target)))
+  file_repopulate(target$file, meta$get_record(target_get_name(target)))
+  pipeline_set_target(pipeline, target)
   if (active) {
     builder_ensure_workspace(
       target = target,
@@ -179,17 +207,21 @@ target_skip.tar_builder <- function(
   if_any(
     active,
     scheduler$progress$register_skipped(target),
-    scheduler$progress$assign_skipped(target)
+    scheduler$progress$assign_skipped(target_get_name(target))
   )
   scheduler$reporter$report_skipped(target, scheduler$progress)
 }
 
 #' @export
 target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
-  on.exit(builder_unset_tar_runtime())
+  if (package_installed("autometric (>= 0.1.0)")) {
+    phase <- paste("conclude:", target_get_name(target))
+    autometric::log_phase_set(phase = phase)
+    on.exit(autometric::log_phase_reset())
+  }
+  on.exit(builder_unset_tar_runtime(), add = TRUE)
   builder_set_tar_runtime(target, NULL)
   target_update_queue(target, scheduler)
-  builder_handle_warnings(target, scheduler)
   builder_ensure_workspace(
     target = target,
     pipeline = pipeline,
@@ -198,6 +230,7 @@ target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
   )
   builder_ensure_object(target, "main")
   builder_ensure_correct_hash(target)
+  builder_handle_warnings(target, scheduler)
   switch(
     metrics_outcome(target$metrics),
     cancel = builder_cancel(target, pipeline, scheduler, meta),
@@ -208,10 +241,11 @@ target_conclude.tar_builder <- function(target, pipeline, scheduler, meta) {
 }
 
 builder_completed <- function(target, pipeline, scheduler, meta) {
-  store_cache_path(target$store, target$store$file$path)
+  store_cache_path(target$store, target$file$path)
   target_ensure_buds(target, pipeline, scheduler)
   meta$insert_record(target_produce_record(target, pipeline, meta))
   target_patternview_meta(target, pipeline, meta)
+  pipeline_set_target(pipeline, target)
   pipeline_register_loaded(pipeline, target_get_name(target))
   scheduler$progress$register_completed(target)
   scheduler$reporter$report_completed(target, scheduler$progress)
@@ -274,30 +308,10 @@ target_validate.tar_builder <- function(target) {
   }
 }
 
-builder_ensure_deps <- function(target, pipeline, retrieval) {
-  if (!identical(target$settings$retrieval, retrieval)) {
-    return()
-  }
-  tryCatch(
-    target_ensure_deps(target, pipeline),
-    error = function(error) {
-      message <- paste0(
-        "could not load dependencies of target ",
-        target_get_name(target),
-        ". ",
-        conditionMessage(error)
-      )
-      expr <- as.expression(as.call(list(quote(stop), message)))
-      target$command$expr <- expr
-      target$settings$deployment <- "main"
-    }
-  )
-}
-
 builder_update_subpipeline <- function(target, pipeline) {
   target$subpipeline <- pipeline_produce_subpipeline(
     pipeline,
-    target_get_name(target)
+    target
   )
 }
 
@@ -316,7 +330,7 @@ builder_unmarshal_subpipeline <- function(target) {
     pipeline_unmarshal_values(target$subpipeline)
   }
   patterns <- fltr(
-    names(subpipeline$targets),
+    pipeline_get_names(subpipeline),
     ~inherits(pipeline_get_target(subpipeline, .x), "tar_pattern")
   )
   map(
@@ -327,7 +341,7 @@ builder_unmarshal_subpipeline <- function(target) {
 
 builder_handle_warnings <- function(target, scheduler) {
   if (metrics_has_warnings(target$metrics)) {
-    scheduler$progress$assign_warned(target)
+    scheduler$progress$assign_warned(target_get_name(target))
   }
 }
 
@@ -362,6 +376,7 @@ builder_error_null <- function(target, pipeline, scheduler, meta) {
   record$data <- "error"
   meta$insert_record(record)
   target_patternview_meta(target, pipeline, meta)
+  pipeline_set_target(pipeline, target)
   pipeline_register_loaded(pipeline, target_get_name(target))
   scheduler$progress$register_errored(target)
 }
@@ -397,7 +412,7 @@ builder_record_error_meta <- function(target, pipeline, meta) {
 }
 
 builder_update_build <- function(target, envir) {
-  build <- command_produce_build(target$command, envir)
+  build <- command_produce_build(target$command, target$seed, envir)
   target$metrics <- build$metrics
   object <- build$object
   object <- tryCatch(
@@ -417,7 +432,9 @@ builder_update_format <- function(target) {
 }
 
 builder_resolve_object <- function(target, build) {
-  if (!builder_should_save(target)) {
+  no_storage_expected <- !builder_expect_storage(target)
+  storage_off <- identical(target$settings$storage, "none")
+  if (no_storage_expected || storage_off) {
     return(build$object)
   }
   store_assert_format(target$store, build$object, target_get_name(target))
@@ -425,7 +442,7 @@ builder_resolve_object <- function(target, build) {
 }
 
 builder_ensure_paths <- function(target, path_store) {
-  if (builder_should_save(target)) {
+  if (builder_expect_storage(target)) {
     tryCatch(
       builder_update_paths(target, path_store),
       error = function(error) builder_error_internal(target, error, "_paths_")
@@ -435,9 +452,21 @@ builder_ensure_paths <- function(target, path_store) {
 
 builder_update_paths <- function(target, path_store) {
   name <- target_get_name(target)
-  store_update_path(target$store, name, target$value$object, path_store)
-  store_update_stage_late(target$store, name, target$value$object, path_store)
-  store_hash_early(target$store)
+  store_update_path(
+    store = target$store,
+    file = target$file,
+    name = name,
+    object = target$value$object,
+    path_store = path_store
+  )
+  store_update_stage_late(
+    store = target$store,
+    file = target$file,
+    name = name,
+    object = target$value$object,
+    path_store = path_store
+  )
+  store_hash_early(target$store, target$file)
 }
 
 builder_unload_value <- function(target) {
@@ -451,23 +480,35 @@ builder_unload_value <- function(target) {
 
 builder_update_object <- function(target) {
   on.exit(builder_unload_value(target))
-  file_validate_path(target$store$file$path)
+  file_validate_path(target$file$path)
   if (!identical(target$settings$storage, "none")) {
-    store_write_object(target$store, target$value$object)
+    withCallingHandlers(
+      store_write_object(target$store, target$file, target$value$object),
+      warning = function(condition) {
+        if (length(target$metrics$warnings) < 51L) {
+          target$metrics$warnings <- paste(
+            c(target$metrics$warnings, build_message(condition)),
+            collapse = ". "
+          )
+        }
+        warning(as_immediate_condition(condition))
+        invokeRestart("muffleWarning")
+      }
+    )
   }
-  store_hash_late(target$store)
-  store_upload_object(target$store)
+  store_hash_late(target$store, target$file)
+  store_upload_object(target$store, target$file)
 }
 
-builder_should_save <- function(target) {
+builder_expect_storage <- function(target) {
   error_null <- identical(target$settings$error, "null") &&
     metrics_has_error(target$metrics)
-  !metrics_terminated_early(target$metrics) || error_null
+  !metrics_terminated_early(target$metrics) && !error_null
 }
 
 builder_ensure_object <- function(target, storage) {
   context <- identical(target$settings$storage, storage)
-  if (context && builder_should_save(target)) {
+  if (context && builder_expect_storage(target)) {
     tryCatch(
       builder_update_object(target),
       error = function(error) builder_error_internal(target, error, "_store_")
@@ -496,7 +537,7 @@ builder_ensure_correct_hash <- function(target) {
 builder_wait_correct_hash <- function(target) {
   storage <- target$settings$storage
   deployment <- target$settings$deployment
-  store_ensure_correct_hash(target$store, storage, deployment)
+  store_ensure_correct_hash(target$store, target$file, storage, deployment)
 }
 
 builder_set_tar_runtime <- function(target, frames) {

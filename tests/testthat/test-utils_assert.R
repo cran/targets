@@ -446,3 +446,28 @@ tar_test("tar_assert_meta()", {
   file.create(meta)
   expect_silent(tar_assert_meta(store))
 })
+
+tar_test("tar_assert_match()", {
+  skip_cran()
+  expect_silent(
+    tar_assert_match(
+      x = "abcde",
+      pattern = "^abc"
+    )
+  )
+  expect_error(
+    tar_assert_match(
+      x = "abcde",
+      pattern = "^Abc"
+    ),
+    class = "tar_condition_validate"
+  )
+})
+
+tar_test("tar_assert_identical()", {
+  expect_silent(tar_assert_identical(TRUE, TRUE))
+  expect_error(
+    tar_assert_identical(TRUE, "false"),
+    class = "tar_condition_validate"
+  )
+})

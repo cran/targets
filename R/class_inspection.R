@@ -197,7 +197,7 @@ inspection_class <- R6::R6Class(
       )
     },
     resolve_target_meta = function(vertices) {
-      self$meta$database$ensure_preprocessed(write = FALSE)
+      self$meta$ensure_preprocessed(write = FALSE)
       meta <- map(vertices$name, function(name) {
         if (self$meta$exists_record(name)) {
           record <- self$meta$get_record(name)
@@ -233,14 +233,14 @@ inspection_class <- R6::R6Class(
       self$vertices_imports <- vertices
     },
     update_targets = function() {
-      names <- pipeline_get_names(self$pipeline)
-      vertices <- data_frame(name = names)
-      vertices <- self$resolve_target_status(vertices)
-      vertices <- self$resolve_target_meta(vertices)
-      names <- c(names, names(self$pipeline$imports))
+      target_names <- pipeline_get_names(self$pipeline)
+      names <- c(target_names, names(self$pipeline$imports))
       edges <- pipeline_upstream_edges(self$pipeline, targets_only = FALSE)
       edges <- edges[edges$from %in% names & edges$to %in% names,, drop = FALSE] # nolint
       edges <- edges[edges$from != edges$to,, drop = FALSE] # nolint
+      vertices <- data_frame(name = target_names)
+      vertices <- self$resolve_target_status(vertices)
+      vertices <- self$resolve_target_meta(vertices)
       self$edges_targets <- edges
       self$vertices_targets <- vertices
     },

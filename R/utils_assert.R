@@ -56,10 +56,14 @@ tar_assert_chr_no_delim <- function(x, msg = NULL) {
   }
 }
 
-tar_assert_correct_fields <- function(object, constructor) {
+tar_assert_correct_fields <- function(
+  object,
+  constructor,
+  optional = character(0L)
+) {
   tar_assert_identical_chr(
-    sort_chr(names(object)),
-    sort_chr(names(formals(constructor)))
+    sort_chr(setdiff(names(object), optional)),
+    sort_chr(c(names(formals(constructor))))
   )
 }
 
@@ -211,8 +215,9 @@ tar_assert_function <- function(x, msg = NULL) {
 #' @export
 #' @rdname tar_assert
 tar_assert_function_arguments <- function(x, args, msg = NULL) {
-  exp <- as.character(names(formals(x)))
-  equal <- identical(exp, as.character(args))
+  out <- as.character(names(formals(x)))
+  exp <- as.character(args)
+  equal <- identical(out, exp)
   msg <- paste(
     "function",
     tar_deparse_safe(substitute(x)),
@@ -617,7 +622,7 @@ tar_assert_store_noninvalidating <- function(store, threshold, prompt) {
     version_old,
     ". Just after version ",
     threshold,
-    ", {targets} made changes that cause the targets in old pipelines ",
+    ", {targets} made changes that may cause the targets in old pipelines ",
     "to rerun. For details, please see ",
     "https://github.com/ropensci/targets/blob/main/NEWS.md. Sorry for the ",
     "inconvenience. As a workaround, you can either rerun this pipeline ",
@@ -786,12 +791,12 @@ tar_assert_allow_meta <- function(fun, store) {
   if (!target_allow_meta(target)) {
     message <- paste0(
       "target ",
-      target$settings$name,
+      target_get_name(target),
       " attempted to run targets::",
       fun,
       "() to during a pipeline, which is unsupported ",
-      "except when format %in% c(\"file\", \"file_fast\") and ",
-      "repository == \"local\", or if you are reading from a data store ",
+      "except when format is \"file\" and ",
+      "repository is \"local\", or if you are reading from a data store ",
       "that does not belong to the current pipeline. ",
       "This is because functions like ",
       fun,

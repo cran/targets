@@ -9,9 +9,12 @@ resources_fst_init <- function(
 resources_fst_new <- function(
   compress = NULL
 ) {
-  force(compress)
-  enclass(environment(), c("tar_resources_fst", "tar_resources"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$compress <- compress
+  enclass(out, resources_fst_s3_class)
 }
+
+resources_fst_s3_class <- c("tar_resources_fst", "tar_resources")
 
 #' @export
 resources_validate.tar_resources_fst <- function(resources) {

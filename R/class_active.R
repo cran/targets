@@ -8,7 +8,6 @@ active_new <- function(
   seconds_meta_append = NULL,
   seconds_meta_upload = NULL,
   seconds_reporter = NULL,
-  garbage_collection = NULL,
   envir = NULL
 ) {
   active_class$new(
@@ -21,7 +20,6 @@ active_new <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = garbage_collection,
     envir = envir
   )
 }
@@ -32,7 +30,6 @@ active_class <- R6::R6Class(
   portable = FALSE,
   cloneable = FALSE,
   public = list(
-    garbage_collection = NULL,
     envir = NULL,
     exports = NULL,
     process = NULL,
@@ -49,8 +46,7 @@ active_class <- R6::R6Class(
       seconds_meta_append = NULL,
       seconds_meta_upload = NULL,
       seconds_reporter = NULL,
-      envir = NULL,
-      garbage_collection = NULL
+      envir = NULL
     ) {
       super$initialize(
         pipeline = pipeline,
@@ -63,7 +59,6 @@ active_class <- R6::R6Class(
         seconds_meta_upload = seconds_meta_upload,
         seconds_reporter = seconds_reporter
       )
-      self$garbage_collection <- garbage_collection
       self$envir <- envir
     },
     ensure_meta = function() {
@@ -71,7 +66,7 @@ active_class <- R6::R6Class(
       self$meta$database$sync(prefer_local = TRUE, verbose = FALSE)
       self$meta$migrate_database()
       self$meta$validate()
-      self$meta$database$preprocess(write = TRUE)
+      self$meta$preprocess(write = TRUE)
       if (new_store) {
         self$write_gitignore()
         self$write_user()
@@ -189,11 +184,14 @@ active_class <- R6::R6Class(
       target <- pipeline_get_target(self$pipeline, name)
       target_debug(target)
       target_update_depend(target, self$pipeline, self$meta)
-      if (counter_exists_name(self$scheduler$trimmed, name)) {
+      if (counter_exists_name(self$scheduler$progress$trimmed, name)) {
         self$scheduler$trim(target, self$pipeline)
+        counter_del_name(self$scheduler$progress$queued, name)
       } else if (target_should_run(target, self$meta)) {
         self$flush_upload_meta_file(target)
-        self$run_target(name)
+        runtime_increment_targets_run(tar_runtime)
+        target_gc(target)
+        self$run_target(target)
       } else {
         self$skip_target(target)
       }
@@ -228,9 +226,6 @@ active_class <- R6::R6Class(
       if (!is.null(self$process)) {
         self$process$validate()
       }
-      tar_assert_lgl(self$garbage_collection)
-      tar_assert_scalar(self$garbage_collection)
-      tar_assert_none_na(self$garbage_collection)
     }
   )
 )

@@ -30,16 +30,19 @@ cue_new <- function(
   file = NULL,
   seed = NULL
 ) {
-  force(mode)
-  force(command)
-  force(depend)
-  force(format)
-  force(repository)
-  force(iteration)
-  force(file)
-  force(seed)
-  enclass(environment(), "tar_cue")
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$mode <- mode
+  out$command <- command
+  out$depend <- depend
+  out$format <- format
+  out$repository <- repository
+  out$iteration <- iteration
+  out$file <- file
+  out$seed <- seed
+  enclass(out, cue_s3_class)
 }
+
+cue_s3_class <- "tar_cue"
 
 cue_record_exists <- function(cue, target, meta) {
   !meta$exists_record(target_get_name(target))
@@ -120,7 +123,7 @@ cue_file <- function(cue, target, meta, record) {
   if (!cue$file) {
     return(FALSE)
   }
-  file_current <- target$store$file
+  file_current <- target$file
   file_recorded <- file_new(
     path = record$path,
     hash = record$data,
@@ -128,9 +131,9 @@ cue_file <- function(cue, target, meta, record) {
     size = record$size,
     bytes = record$bytes
   )
-  on.exit(target$store$file <- file_current)
-  target$store$file <- file_recorded
-  !store_has_correct_hash(target$store)
+  on.exit(target$file <- file_current)
+  target$file <- file_recorded
+  !store_has_correct_hash(target$store, target$file)
 }
 
 cue_seed <- function(cue, target, meta, record) {
@@ -138,7 +141,7 @@ cue_seed <- function(cue, target, meta, record) {
     return(FALSE)
   }
   old <- as.integer(record$seed)
-  new <- as.integer(target$command$seed)
+  new <- as.integer(target$seed)
   anyNA(new) || !identical(old, new)
 }
 

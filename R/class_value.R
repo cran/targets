@@ -9,8 +9,12 @@ value_init <- function(object = NULL, iteration = "vector") {
 }
 
 value_new <- function(object = NULL) {
-  enclass(environment(), "tar_value")
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$object <- object
+  enclass(out, value_s3_class)
 }
+
+value_s3_class <- "tar_value"
 
 value_hash_slice <- function(value, index) {
   hash_object(value_produce_slice_kernel(value, index))

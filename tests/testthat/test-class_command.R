@@ -16,7 +16,7 @@ tar_test("command_produce_build()", {
   b <- 1L
   c <- 2L
   envir <- environment()
-  build <- command_produce_build(command, envir)
+  build <- command_produce_build(command, 1L, envir)
   expect_silent(build_validate(build))
   expect_equal(build$object, 3L)
   expect_true(is.numeric(build$metrics$seconds))
@@ -24,40 +24,23 @@ tar_test("command_produce_build()", {
 
 tar_test("command$produce_build() uses seed", {
   x <- command_init(expr = quote(sample.int(1e9, 1L)))
-  x$seed <- 0L
+  seed <- 0L
   sample_with_seed <- function(seed) {
     tar_seed_set(seed)
     sample.int(1e9, 1L)
   }
   exp0 <- sample_with_seed(0L)
   for (i in seq_len(2)) {
-    out <- command_produce_build(x, environment())$object
+    out <- command_produce_build(x, seed, environment())$object
     expect_equal(out, exp0)
   }
-  x$seed <- 1L
+  seed <- 1L
   exp1 <- sample_with_seed(1L)
   for (i in seq_len(2)) {
-    out <- command_produce_build(x, environment())$object
+    out <- command_produce_build(x, seed, environment())$object
     expect_equal(out, exp1)
   }
   expect_false(exp0 == exp1)
-})
-
-tar_test("command_init(deps)", {
-  command <- command_init(quote(a <- b + c), deps = "custom")
-  expect_equal(command$deps, "custom")
-})
-
-tar_test("command_init() with automatic deps", {
-  command <- command_init(quote(a <- b + c))
-  expect_true(all(c("b", "c") %in% command$deps))
-  expect_false("a" %in% command$deps)
-})
-
-tar_test("command_init() inspects formulas", {
-  command <- command_init(quote(map_dfr(data, ~do_row(.x, dataset))))
-  expect_true(all(c("dataset", "do_row") %in% command$deps))
-  expect_false("~" %in% command$deps)
 })
 
 tar_test("command_init(string)", {
@@ -100,18 +83,10 @@ tar_test("command_validate() with bad library field", {
   expect_error(command_validate(command), class = "tar_condition_validate")
 })
 
-tar_test("command_validate() with bad deps field", {
-  command <- command_init(expr = quote(a <- b + c))
-  command$deps <- 123L
-  expect_error(command_validate(command), class = "tar_condition_validate")
-})
-
 tar_test("command_validate() with bad string field", {
   command <- command_new(
     expr = quote(a <- b + c),
-    packages = character(0),
-    deps = character(0),
-    seed = 0L
+    packages = character(0)
   )
   expect_error(command_validate(command), class = "tar_condition_validate")
 })
@@ -120,17 +95,7 @@ tar_test("command_validate() with bad hash field", {
   command <- command_new(
     expr = quote(a <- b + c),
     packages = character(0),
-    deps = character(0),
-    string = "abcde",
-    seed = 0L
+    string = "abcde"
   )
   expect_error(command_validate(command), class = "tar_condition_validate")
-})
-
-tar_test("command_validate() with a bad seed", {
-  x <- command_init(expr = quote(a <- b + c))
-  x$seed <- "123"
-  expect_error(command_validate(x), class = "tar_condition_validate")
-  x$seed <- integer(0)
-  expect_error(command_validate(x), class = "tar_condition_validate")
 })

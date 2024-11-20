@@ -47,9 +47,15 @@
 #'     existing files (and/or directories), then the format becomes
 #'     `"file"` before [tar_make()] saves the target. Otherwise,
 #'     the format becomes `"qs"`.
-#'   * `"qs"`: Uses `qs::qsave()` and `qs::qread()`. Should work for
-#'     most objects, much faster than `"rds"`. Optionally set the
-#'     preset for `qsave()` through `tar_resources()` and `tar_resources_qs()`.
+#'   * `"qs"`: Uses `qs2::qs_save()` and `qs2::qs_read()`. Should work for
+#'     most objects, much faster than `"rds"`. Optionally configure settings
+#'     through `tar_resources()` and `tar_resources_qs()`.
+#'
+#'     Prior to `targets` version 1.8.0.9014, `format = "qs"` used the `qs`
+#'     package. `qs` has since been superseded in favor of `qs2`, and so
+#'     later versions of `targets` use `qs2` to save new data. To read
+#'     existing data, `targets` first attempts [qs2::qs_read()], and then if
+#'     that fails, it falls back on [qs::qread()].
 #'   * `"feather"`: Uses `arrow::write_feather()` and
 #'     `arrow::read_feather()` (version 2.0). Much faster than `"rds"`,
 #'     but the value must be a data frame. Optionally set
@@ -238,7 +244,9 @@
 #'   * `"continue"`: the whole pipeline keeps going.
 #'   * `"null"`: The errored target continues and returns `NULL`.
 #'     The data hash is deliberately wrong so the target is not
-#'     up to date for the next run of the pipeline.
+#'     up to date for the next run of the pipeline. In addition,
+#'     as of version 1.8.0.9011, a value of `NULL` is given
+#'     to upstream dependencies with `error = "null"` if loading fails.
 #'   * `"abridge"`: any currently running targets keep running,
 #'     but no new targets launch after that.
 #'   * `"trim"`: all currently running targets stay running. A queued
@@ -254,27 +262,42 @@
 #'     to begin running.
 #'   (Visit <https://books.ropensci.org/targets/debugging.html>
 #'   to learn how to debug targets using saved workspaces.)
-#' @param memory Character of length 1, memory strategy.
-#'   If `"persistent"`, the target stays in memory
-#'   until the end of the pipeline (unless `storage` is `"worker"`,
-#'   in which case `targets` unloads the value from memory
-#'   right after storing it in order to avoid sending
-#'   copious data over a network).
-#'   If `"transient"`, the target gets unloaded
-#'   after every new target completes.
-#'   Either way, the target gets automatically loaded into memory
-#'   whenever another target needs the value.
+#' @param memory Character of length 1, memory strategy. Possible values:
+#'
+#'   * `"auto"`: new in `targets` version 1.8.0.9011, `memory = "auto"`
+#'     is equivalent to `memory = "transient"` for dynamic branching
+#'     (a non-null `pattern` argument) and `memory = "persistent"`
+#'     for targets that do not use dynamic branching.
+#'   * `"persistent"`: the target stays in memory
+#'     until the end of the pipeline (unless `storage` is `"worker"`,
+#'     in which case `targets` unloads the value from memory
+#'     right after storing it in order to avoid sending
+#'     copious data over a network).
+#'   * `"transient"`: the target gets unloaded
+#'     after every new target completes.
+#'     Either way, the target gets automatically loaded into memory
+#'     whenever another target needs the value.
+#'
 #'   For cloud-based dynamic files
 #'   (e.g. `format = "file"` with `repository = "aws"`),
-#'   this memory strategy applies to the
+#'   the `memory` option applies to the
 #'   temporary local copy of the file:
 #'   `"persistent"` means it remains until the end of the pipeline
 #'   and is then deleted,
 #'   and `"transient"` means it gets deleted as soon as possible.
 #'   The former conserves bandwidth,
 #'   and the latter conserves local storage.
-#' @param garbage_collection Logical, whether to run `base::gc()`
-#'   just before the target runs.
+#' @param garbage_collection Logical: `TRUE` to run `base::gc()`
+#'   just before the target runs,
+#'   `FALSE` to omit garbage collection.
+#'   In the case of high-performance computing,
+#'   `gc()` runs both locally and on the parallel worker.
+#'   All this garbage collection is skipped if the actual target
+#'   is skipped in the pipeline.
+#'   Non-logical values of `garbage_collection` are converted to `TRUE` or
+#'   `FALSE` using `isTRUE()`. In other words, non-logical values are
+#'   converted `FALSE`. For example, `garbage_collection = 2`
+#'   is equivalent to `garbage_collection = FALSE`.
 #' @param deployment Character of length 1. If `deployment` is
 #'   `"main"`, then the target will run on the central controlling R process.
 #'   Otherwise, if `deployment` is `"worker"` and you set up the pipeline
@@ -291,43 +314,29 @@
 #'   functionality, alternative data storage formats,
 #'   and other optional capabilities of `targets`.
 #'   See `tar_resources()` for details.
-#' @param storage Character of length 1, only relevant to
-#'   [tar_make_clustermq()] and [tar_make_future()].
+#' @param storage Character string to control when the output of the target
+#'   is saved to storage. Only relevant when using `targets`
+#'   with parallel workers (<https://books.ropensci.org/targets/crew.html>).
 #'   Must be one of the following values:
 #'   * `"main"`: the target's return value is sent back to the
-#'   host machine and saved/uploaded locally.
+#'     host machine and saved/uploaded locally.
 #'   * `"worker"`: the worker saves/uploads the value.
-#'   * `"none"`: almost never recommended. It is only for
-#'     niche situations, e.g. the data needs to be loaded
-#'     explicitly from another language. If you do use it,
-#'     then the return value of the target is totally ignored
-#'     when the target ends, but
-#'     each downstream target still attempts to load the data file
-#'     (except when `retrieval = "none"`).
-#'
-#'     If you select `storage = "none"`, then
-#'     the return value of the target's command is ignored,
-#'     and the data is not saved automatically.
-#'     As with dynamic files (`format = "file"`) it is the
-#'     responsibility of the user to write to
-#'     the data store from inside the target.
-#'
-#'     The distinguishing feature of `storage = "none"`
-#'     (as opposed to `format = "file"`)
-#'     is that in the general case,
-#'     downstream targets will automatically try to load the data
-#'     from the data store as a dependency. As a corollary, `storage = "none"`
-#'     is completely unnecessary if `format` is `"file"`.
-#' @param retrieval Character of length 1, only relevant to
-#'   [tar_make_clustermq()] and [tar_make_future()].
+#'   * `"none"`: `targets` makes no attempt to save the result
+#'     of the target to storage in the location where `targets`
+#'     expects it to be. Saving to storage is the responsibility
+#'     of the user. Use with caution.
+#' @param retrieval Character string to control when the current target
+#'   loads its dependencies into memory before running.
+#'   (Here, a "dependency" is another target upstream that the current one
+#'   depends on.) Only relevant when using `targets`
+#'   with parallel workers (<https://books.ropensci.org/targets/crew.html>).
 #'   Must be one of the following values:
 #'   * `"main"`: the target's dependencies are loaded on the host machine
 #'     and sent to the worker before the target runs.
-#'   * `"worker"`: the worker loads the targets dependencies.
-#'   * `"none"`: the dependencies are not loaded at all.
-#'     This choice is almost never recommended. It is only for
-#'     niche situations, e.g. the data needs to be loaded
-#'     explicitly from another language.
+#'   * `"worker"`: the worker loads the target's dependencies.
+#'   * `"none"`: `targets` makes no attempt to load its
+#'     dependencies. With `retrieval = "none"`, loading dependencies
+#'     is the responsibility of the user. Use with caution.
 #' @param cue An optional object from `tar_cue()` to customize the
 #'   rules that decide whether the target is up to date.
 #' @param description Character of length 1, a custom free-form human-readable
@@ -393,7 +402,7 @@ tar_target <- function(
   iteration = targets::tar_option_get("iteration"),
   error = targets::tar_option_get("error"),
   memory = targets::tar_option_get("memory"),
-  garbage_collection = targets::tar_option_get("garbage_collection"),
+  garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
   deployment = targets::tar_option_get("deployment"),
   priority = targets::tar_option_get("priority"),
   resources = targets::tar_option_get("resources"),
@@ -412,6 +421,7 @@ tar_target <- function(
   command <- tar_tidy_eval(command, envir, tidy_eval)
   pattern <- as.expression(substitute(pattern))
   pattern <- tar_tidy_eval(pattern, envir, tidy_eval)
+  garbage_collection <- isTRUE(garbage_collection)
   tar_target_raw(
     name = name,
     command = command,

@@ -10,7 +10,7 @@ target_init <- function(
   pattern = NULL,
   iteration = "vector",
   error = "stop",
-  memory = "persistent",
+  memory = "auto",
   garbage_collection = FALSE,
   deployment = "worker",
   priority = 0,
@@ -21,7 +21,11 @@ target_init <- function(
   description = character(0L)
 ) {
   seed <- tar_seed_create(name)
-  command <- command_init(expr, packages, library, seed, deps, string)
+  deps <- deps <- deps %|||% deps_function(embody_expr(expr))
+  command <- command_init(expr, packages, library, string)
+  if (identical(memory, "auto")) {
+    memory <- if_any(is.null(pattern), "persistent", "transient")
+  }
   cue <- cue %|||% cue_init()
   if (any(grepl("^aws_", format))) {
     format <- gsub("^aws_", "", format)
@@ -49,21 +53,25 @@ target_init <- function(
     storage = storage,
     retrieval = retrieval
   )
-  command$deps <- unique(c(command$deps, settings$dimensions))
-  command$deps <- setdiff(command$deps, name)
+  deps <- unique(c(deps, settings$dimensions))
+  deps <- setdiff(deps, name)
   if_any(
     is.null(settings$pattern),
-    stem_new(
-      command,
-      settings,
-      cue,
-      store = settings_produce_store(settings)
+    stem_init(
+      name = name,
+      command = command,
+      seed = seed,
+      deps = deps,
+      settings = settings,
+      cue = cue
     ),
-    pattern_new(
-      command,
-      settings,
-      cue,
-      patternview = patternview_init()
+    pattern_init(
+      name = name,
+      command = command,
+      seed = seed,
+      deps = deps,
+      settings = settings,
+      cue = cue
     )
   )
 }
@@ -71,33 +79,80 @@ target_init <- function(
 target_new <- function(
   command = NULL,
   settings = NULL,
-  cue = NULL,
-  value = NULL
+  cue = NULL
 ) {
-  force(command)
-  force(settings)
-  force(cue)
-  force(value)
-  enclass(environment(), "tar_target")
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$command <- command
+  out$settings <- settings
+  out$cue <- cue
+  enclass(out, target_s3_class)
 }
 
+target_s3_class <- "tar_target"
+
 target_get_name <- function(target) {
-  target$settings$name
+  .subset2(target, "name")
 }
 
 target_ensure_dep <- function(target, dep, pipeline) {
-  target_ensure_value(dep, pipeline)
+  tryCatch(
+    target_ensure_value(dep, pipeline),
+    error = function(error) {
+      message <- paste0(
+        "could not load dependency ",
+        target_get_name(dep),
+        " of target ",
+        target_get_name(target),
+        ". ",
+        conditionMessage(error)
+      )
+      expr <- as.expression(as.call(list(quote(stop), message)))
+      target$command$expr <- expr
+      target$settings$deployment <- "main"
+    }
+  )
 }
 
-target_ensure_deps <- function(target, pipeline) {
+target_ensure_deps_worker <- function(target, pipeline) {
   map(
     target_deps_shallow(target, pipeline),
     ~target_ensure_dep(target, pipeline_get_target(pipeline, .x), pipeline)
   )
 }
 
+target_ensure_deps_main <- function(target, pipeline) {
+  for (name in target_deps_shallow(target, pipeline)) {
+    dep <- pipeline_get_target(pipeline, name)
+    if (inherits(dep, "tar_pattern")) {
+      map(
+        target_get_children(dep),
+        ~target_ensure_dep(target, pipeline_get_target(pipeline, .x), pipeline)
+      )
+    } else {
+      target_ensure_dep(target, dep, pipeline)
+    }
+  }
+}
+
+target_value_null <- function(target) {
+  value_init(
+    object = NULL,
+    iteration = target$settings$iteration
+  )
+}
+
 target_load_value <- function(target, pipeline) {
-  target$value <- target_read_value(target, pipeline)
+  target$value <- tryCatch(
+    target_read_value(target, pipeline),
+    error = function(condition) {
+      if_any(
+        identical(target$settings$error, "null"),
+        target_value_null(target),
+        tar_throw_run(conditionMessage(condition))
+      )
+    }
+  )
+  pipeline_set_target(pipeline, target)
   pipeline_register_loaded(pipeline, target_get_name(target))
 }
 
@@ -108,20 +163,34 @@ target_ensure_value <- function(target, pipeline) {
 }
 
 target_deps_shallow <- function(target, pipeline) {
-  fltr(target$command$deps, ~pipeline_exists_target(pipeline, .x))
+  fltr(target$deps, ~pipeline_exists_target(pipeline, .x))
 }
 
 target_deps_deep <- function(target, pipeline) {
   deps <- target_deps_shallow(target, pipeline)
-  children <- unlist(
-    lapply(deps, function(dep) {
-      target_get_children(pipeline_get_target(pipeline, dep))
-    })
+  retrieval_worker <- identical(target$settings$retrieval, "worker")
+  extras <- map(
+    deps,
+    ~target_worker_extras(
+      target = pipeline_get_target(pipeline, .x),
+      pipeline = pipeline,
+      retrieval_worker = retrieval_worker
+    )
   )
-  parents <- map_chr(deps, function(dep) {
-    target_get_parent(pipeline_get_target(pipeline, dep))
-  })
-  unique(c(deps, children, parents))
+  unique(as.character(c(deps, unlist(extras))))
+}
+
+target_worker_extras <- function(target, pipeline, retrieval_worker) {
+  UseMethod("target_worker_extras")
+}
+
+#' @export
+target_worker_extras.tar_target <- function(
+  target,
+  pipeline,
+  retrieval_worker
+) {
+  character(0L)
 }
 
 target_downstream_branching <- function(target, pipeline, scheduler) {
@@ -138,7 +207,7 @@ target_downstream_nonbranching <- function(target, pipeline, scheduler) {
 
 target_upstream_edges <- function(target) {
   name <- target_get_name(target)
-  from <- c(name, target$command$deps)
+  from <- c(name, target$deps)
   to <- rep(name, length(from))
   list(from = from, to = to)
 }
@@ -156,12 +225,7 @@ target_decrement_ranks <- function(names, scheduler) {
 }
 
 target_get_parent <- function(target) {
-  UseMethod("target_get_parent")
-}
-
-#' @export
-target_get_parent.default <- function(target) {
-  target_get_name(target)
+  .subset2(.subset2(target, "settings"), "name")
 }
 
 target_get_children <- function(target) {
@@ -293,6 +357,12 @@ target_run_worker <- function(
 target_gc <- function(target) {
   if (target$settings$garbage_collection) {
     gc()
+  } else {
+    count <- .subset2(tar_runtime, "number_targets_run") %|||% 0L
+    interval <- .subset2(tar_options, "get_garbage_collection")()
+    if (interval > 0L && (count %% interval) == 0L) {
+      gc()
+    }
   }
 }
 
@@ -330,7 +400,7 @@ target_bootstrap <- function(target, pipeline, meta, branched_over) {
 }
 
 target_bootstrap_record <- function(target, meta) {
-  name <- target$settings$name
+  name <- target_get_name(target)
   if (!meta$exists_record(name)) {
     tar_throw_validate(
       "cannot bootstrap target ",
@@ -460,19 +530,34 @@ target_allow_meta <- function(target) {
 }
 
 target_reformat <- function(target, format) {
-  file <- target$store$file
+  file <- target$file
   target$settings$format <- format
   target$store <- settings_produce_store(target$settings)
-  target$store$file <- file
+  target$file <- file
 }
 
 target_validate <- function(target) {
   UseMethod("target_validate")
 }
 
+target_produce_child <- function(target, name) {
+  UseMethod("target_produce_child")
+}
+
+target_produce_reference <- function(target) {
+  UseMethod("target_produce_reference")
+}
+
+#' @export
+target_produce_reference.default <- function(target) {
+  target
+}
+
 #' @export
 target_validate.tar_target <- function(target) {
-  command_validate(target$command)
+  tar_assert_chr(target$name)
+  tar_assert_scalar(target$name)
+  tar_assert_nzchar(target$name)
   settings_validate(target$settings)
   if (!is.null(target$cue)) {
     cue_validate(target$cue)

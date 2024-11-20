@@ -18,18 +18,53 @@ tar_test("target seed", {
   on.exit(tar_option_reset())
   out <- integer(0)
   tar_option_set(seed = 1L)
-  out[1] <- target_init(name = "x", expr = quote(a))$command$seed
-  out[2] <- target_init(name = "x", expr = quote(a))$command$seed
-  out[3] <- target_init(name = "y", expr = quote(a))$command$seed
+  out[1] <- target_init(name = "x", expr = quote(a))$seed
+  out[2] <- target_init(name = "x", expr = quote(a))$seed
+  out[3] <- target_init(name = "y", expr = quote(a))$seed
   tar_option_set(seed = 2L)
-  out[4] <- target_init(name = "y", expr = quote(a))$command$seed
+  out[4] <- target_init(name = "y", expr = quote(a))$seed
   tar_option_set(seed = NA)
-  out[5] <- target_init(name = "z", expr = quote(a))$command$seed
+  out[5] <- target_init(name = "z", expr = quote(a))$seed
   expect_equal(out[1], out[2])
   expect_false(out[1] == out[3])
   expect_false(out[3] == out[4])
   expect_false(anyNA(out[seq_len(4)]))
   expect_true(is.na(out[5]))
+})
+
+tar_test("stem with automatic deps", {
+  target <- target_init(name = "x", expr = quote(a <- b + c))
+  expect_true(all(c("b", "c") %in% target$deps))
+  expect_false("a" %in% target$deps)
+})
+
+tar_test("pattern with automatic deps", {
+  target <- target_init(
+    name = "x",
+    expr = quote(a <- b + c),
+    pattern = quote(map(b))
+  )
+  expect_true(all(c("b", "c") %in% target$deps))
+  expect_false("a" %in% target$deps)
+})
+
+tar_test("stem inspect formulas", {
+  target <- target_init(
+    name = "x",
+    expr = quote(map_dfr(data, ~do_row(.x, dataset)))
+  )
+  expect_true(all(c("dataset", "do_row") %in% target$deps))
+  expect_false("~" %in% target$deps)
+})
+
+tar_test("pattern inspect formulas", {
+  target <- target_init(
+    name = "x",
+    expr = quote(map_dfr(data, ~do_row(.x, dataset))),
+    pattern = quote(map(dataset))
+  )
+  expect_true(all(c("dataset", "do_row") %in% target$deps))
+  expect_false("~" %in% target$deps)
 })
 
 tar_test("target$value", {
@@ -48,7 +83,7 @@ tar_test("target_ensure_value() loads values", {
   x <- target_init(name = "abc", expr = quote(2L), format = "rds")
   tmp <- tempfile()
   saveRDS("abc", tmp)
-  file <- x$store$file
+  file <- x$file
   file$path <- tmp
   pipeline <- pipeline_init(list(x))
   for (index in seq_len(2)) {
@@ -64,7 +99,7 @@ tar_test("target_ensure_dep()", {
   pipeline <- pipeline_init(list(x, y))
   tmp <- tempfile()
   saveRDS("value", tmp)
-  file <- y$store$file
+  file <- y$file
   file$path <- tmp
   expect_null(y$value$object)
   for (index in seq_len(2)) {
@@ -78,7 +113,7 @@ tar_test("target_deps_shallow()", {
   x <- target_init("x", quote(1 + 1))
   y <- target_init("y", quote(x + z))
   pipeline <- pipeline_init(list(x, y))
-  expect_true("z" %in% y$command$deps)
+  expect_true("z" %in% y$deps)
   expect_equal(target_deps_shallow(y, pipeline), "x")
 })
 
@@ -446,4 +481,14 @@ tar_test("deprecate file_fast", {
     class = "tar_condition_deprecate"
   )
   expect_equal(target$settings$format, "file")
+})
+
+tar_test("target_gc()", {
+  skip_cran()
+  tar_option_set(garbage_collection = 2L)
+  on.exit(tar_option_reset())
+  x <- tar_target(x, 1, garbage_collection = FALSE)
+  for (index in seq_len(2L)) {
+    expect_silent(target_gc(x))
+  }
 })

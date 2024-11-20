@@ -314,10 +314,10 @@ options_class <- R6::R6Class(
       self$error %|||% "stop"
     },
     get_memory = function() {
-      self$memory %|||% "persistent"
+      self$memory %|||% "auto"
     },
     get_garbage_collection = function() {
-      self$garbage_collection %|||% FALSE
+      self$garbage_collection %|||% 1000L
     },
     get_deployment = function() {
       self$deployment %|||% "worker"
@@ -406,8 +406,9 @@ options_class <- R6::R6Class(
       self$memory <- memory
     },
     set_garbage_collection = function(garbage_collection) {
+      garbage_collection <- as.integer(garbage_collection)
       self$validate_garbage_collection(garbage_collection)
-      self$garbage_collection <- garbage_collection
+      self$garbage_collection <- as.integer(garbage_collection)
     },
     set_deployment = function(deployment) {
       self$validate_deployment(deployment)
@@ -520,11 +521,13 @@ options_class <- R6::R6Class(
       )
     },
     validate_memory = function(memory) {
-      tar_assert_flag(memory, c("persistent", "transient"))
+      tar_assert_flag(memory, c("auto", "persistent", "transient"))
     },
     validate_garbage_collection = function(garbage_collection) {
-      tar_assert_lgl(garbage_collection)
+      tar_assert_dbl(garbage_collection)
       tar_assert_scalar(garbage_collection)
+      tar_assert_none_na(garbage_collection)
+      tar_assert_ge(garbage_collection, 0L)
     },
     validate_deployment = function(deployment) {
       tar_assert_flag(deployment, c("worker", "main"))

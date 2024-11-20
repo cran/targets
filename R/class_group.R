@@ -1,6 +1,10 @@
 group_new <- function(object = NULL) {
-  enclass(environment(), c("tar_group", "tar_value"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$object <- object
+  enclass(out, group_s3_class)
 }
+
+group_s3_class <- c("tar_group", "tar_value")
 
 #' @export
 value_count_slices.tar_group <- function(value) {

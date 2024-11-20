@@ -8,7 +8,6 @@ future_init <- function(
   seconds_meta_append = 0,
   seconds_meta_upload = 15,
   seconds_reporter = 0,
-  garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   workers = 1L
 ) {
@@ -22,7 +21,6 @@ future_init <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = garbage_collection,
     envir = envir,
     workers = as.integer(workers)
   )
@@ -39,7 +37,6 @@ future_new <- function(
   seconds_meta_append = NULL,
   seconds_meta_upload = NULL,
   seconds_reporter = NULL,
-  garbage_collection = NULL,
   workers = NULL
 ) {
   future_class$new(
@@ -52,7 +49,6 @@ future_new <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = garbage_collection,
     envir = envir,
     workers = workers
   )
@@ -76,7 +72,6 @@ future_class <- R6::R6Class(
       seconds_meta_append = NULL,
       seconds_meta_upload = NULL,
       seconds_reporter = NULL,
-      garbage_collection = NULL,
       envir = NULL,
       workers = NULL
     ) {
@@ -90,17 +85,13 @@ future_class <- R6::R6Class(
         seconds_meta_append = seconds_meta_append,
         seconds_meta_upload = seconds_meta_upload,
         seconds_reporter = seconds_reporter,
-        garbage_collection = garbage_collection,
         envir = envir
       )
       self$workers <- workers
-      self$worker_list <- memory_init()
+      self$worker_list <- lookup_new()
     },
     run_worker = function(target) {
       builder_marshal_subpipeline(target)
-      if (self$garbage_collection) {
-        gc()
-      }
       self$ensure_exports()
       globals <- self$exports
       globals$.tar_target_5048826d <- target
@@ -141,8 +132,8 @@ future_class <- R6::R6Class(
         seed = FALSE
       )
       future <- do.call(what = future::future, args = args)
-      memory_set_object(
-        self$worker_list,
+      lookup_set(
+        lookup = self$worker_list,
         name = target_get_name(target),
         object = future
       )
@@ -160,8 +151,7 @@ future_class <- R6::R6Class(
         self$meta
       )
     },
-    run_target = function(name) {
-      target <- pipeline_get_target(self$pipeline, name)
+    run_target = function(target) {
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
       self$sync_meta_time()
       if_any(
@@ -179,7 +169,6 @@ future_class <- R6::R6Class(
     },
     conclude_worker_target = function(value, name) {
       target <- future_value_target(value, name, self$pipeline)
-      pipeline_set_target(self$pipeline, target)
       self$unmarshal_target(target)
       target_conclude(
         target,
@@ -190,7 +179,7 @@ future_class <- R6::R6Class(
       self$scheduler$backoff$reset()
     },
     can_submit = function() {
-      self$worker_list$count < self$workers &&
+      lookup_count(self$worker_list) < self$workers &&
         self$scheduler$queue$is_nonempty()
     },
     try_submit = function(wait) {
@@ -204,16 +193,16 @@ future_class <- R6::R6Class(
       tryCatch(future::value(worker, signal = FALSE), error = identity)
     },
     process_worker = function(name) {
-      worker <- memory_get_object(self$worker_list, name)
+      worker <- lookup_get(self$worker_list, name)
       if (future::resolved(worker)) {
         value <- self$future_value(worker)
         self$conclude_worker_target(value, name)
-        memory_del_objects(self$worker_list, name)
+        lookup_remove(self$worker_list, name)
       }
       self$try_submit(wait = FALSE)
     },
     process_workers = function() {
-      names <- self$worker_list$names
+      names <- lookup_list(self$worker_list)
       if (!length(names)) {
         return()
       }

@@ -10,14 +10,14 @@ tar_test("feather format", {
     expr = quote(f()),
     format = "feather"
   )
-  store_update_stage_early(x$store, "abc", path_store_default())
+  store_update_stage_early(x$store, x$file, "abc", path_store_default())
   builder_update_build(x, envir = envir)
   builder_update_paths(x, path_store_default())
   builder_update_object(x)
   exp <- envir$f()
   expect_equal(
     as.data.frame(
-      eval(parse(text = "arrow::read_feather"))(x$store$file$path)
+      eval(parse(text = "arrow::read_feather"))(x$file$path)
     ),
     as.data.frame(exp)
   )
@@ -130,9 +130,11 @@ tar_test("does not inherit from tar_external", {
 tar_test("store_row_path()", {
   skip_cran()
   skip_if_not_installed("arrow")
-  store <- tar_target(x, "x_value", format = "feather")$store
-  store$file$path <- "path"
-  expect_equal(store_row_path(store), NA_character_)
+  target <- tar_target(x, "x_value", format = "feather")
+  store <- target$store
+  file <- target$file
+  file$path <- "path"
+  expect_equal(store_row_path(store, file), NA_character_)
 })
 
 tar_test("store_path_from_record()", {

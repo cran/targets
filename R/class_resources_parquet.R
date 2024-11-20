@@ -12,10 +12,13 @@ resources_parquet_new <- function(
   compression = NULL,
   compression_level = NULL
 ) {
-  force(compression)
-  force(compression_level)
-  enclass(environment(), c("tar_resources_parquet", "tar_resources"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$compression <- compression
+  out$compression_level <- compression_level
+  enclass(out, resources_parquet_s3_class)
 }
+
+resources_parquet_s3_class <- c("tar_resources_parquet", "tar_resources")
 
 #' @export
 resources_validate.tar_resources_parquet <- function(resources) {

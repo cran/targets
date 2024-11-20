@@ -89,14 +89,6 @@ tar_test("file_info_exist", {
   expect_silent(runtime_validate(x))
 })
 
-tar_test("nanonext", {
-  x <- runtime_new()
-  expect_null(x$nanonext)
-  x$nanonext <- TRUE
-  expect_true(x$nanonext)
-  expect_silent(runtime_validate(x))
-})
-
 tar_test("traceback", {
   x <- runtime_new()
   expect_null(x$traceback)
@@ -125,6 +117,26 @@ tar_test("validate non-null runtime", {
     target = tar_target(x, 1),
     frames = frames_init(),
     interactive = FALSE
+  )
+  expect_silent(runtime_validate(x))
+})
+
+tar_test("validate non-null file_systems", {
+  x <- runtime_new(
+    target = tar_target(x, 1),
+    frames = frames_init(),
+    interactive = FALSE,
+    file_systems = "x"
+  )
+  expect_silent(runtime_validate(x))
+})
+
+tar_test("validate non-null trust_timestamps_store", {
+  x <- runtime_new(
+    target = tar_target(x, 1),
+    frames = frames_init(),
+    interactive = FALSE,
+    trust_timestamps_store = TRUE
   )
   expect_silent(runtime_validate(x))
 })
@@ -226,4 +238,19 @@ tar_test("runtime inventories", {
   expect_silent(runtime_validate(x))
   x$inventories <- ""
   expect_error(runtime_validate(x), class = "tar_condition_validate")
+})
+
+tar_test("runtime_increment_targets_run()", {
+  x <- runtime_new()
+  expect_null(x$number_targets_run)
+  runtime_increment_targets_run(x)
+  expect_equal(x$number_targets_run, 1L)
+  runtime_increment_targets_run(x)
+  expect_equal(x$number_targets_run, 2L)
+  expect_silent(runtime_validate(x))
+})
+
+tar_test("validate non-null metadata", {
+  x <- runtime_new(meta = meta_init())
+  expect_silent(runtime_validate(x))
 })

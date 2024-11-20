@@ -1,23 +1,50 @@
-pattern_new <- function(
+pattern_init <- function(
+  name = NULL,
   command = NULL,
+  seed = NULL,
+  deps = NULL,
+  settings = NULL,
+  cue = NULL
+) {
+  pattern_new(
+    name = name,
+    command = command,
+    seed = seed,
+    deps = deps,
+    settings = settings,
+    cue = cue,
+    store = settings_produce_store(settings),
+    patternview = patternview_init()
+  )
+}
+
+pattern_new <- function(
+  name = NULL,
+  command = NULL,
+  seed = NULL,
+  deps = NULL,
   settings = NULL,
   cue = NULL,
-  value = NULL,
-  junction = NULL,
+  store = NULL,
   patternview = NULL
 ) {
-  force(command)
-  force(settings)
-  force(cue)
-  force(value)
-  force(junction)
-  force(patternview)
-  enclass(environment(), c("tar_pattern", "tar_target"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$name <- name
+  out$command <- command
+  out$seed <- seed
+  out$deps <- deps
+  out$settings <- settings
+  out$cue <- cue
+  out$store <- store
+  out$patternview <- patternview
+  enclass(out, pattern_s3_class)
 }
+
+pattern_s3_class <- c("tar_pattern", "tar_target")
 
 #' @export
 target_get_children.tar_pattern <- function(target) {
-  as.character(target$junction$splits)
+  junction_splits(target$junction)
 }
 
 #' @export
@@ -27,7 +54,7 @@ target_produce_record.tar_pattern <- function(target, pipeline, meta) {
     type = target_get_type(target),
     data = pattern_produce_data_hash(target, pipeline, meta),
     command = target$command$hash,
-    seed = target$command$seed,
+    seed = target$seed,
     bytes = target$patternview$bytes,
     format = target$settings$format,
     repository = target$settings$repository,
@@ -69,13 +96,13 @@ target_conclude.tar_pattern <- function(target, pipeline, scheduler, meta) {
 #' @export
 target_read_value.tar_pattern <- function(target, pipeline) {
   branches <- target_get_children(target)
-  map(
-    branches,
-    ~target_ensure_value(pipeline_get_target(pipeline, .x), pipeline)
-  )
   objects <- map(
     branches,
-    ~pipeline_get_target(pipeline, .x)$value$object
+    ~ {
+      target <- pipeline_get_target(pipeline, .x)
+      target_ensure_value(target, pipeline)
+      target$value$object
+    }
   )
   names(objects) <- branches
   value <- value_init(iteration = target$settings$iteration)
@@ -90,8 +117,11 @@ target_branches_over.tar_pattern <- function(target, name) {
 
 #' @export
 target_update_depend.tar_pattern <- function(target, pipeline, meta) {
-  depends <- meta$depends
-  memory_set_object(depends, target_get_name(target), hash_null)
+  lookup_set(
+    lookup = .subset2(meta, "depends"),
+    names = target_get_name(target),
+    object = hash_null
+  )
 }
 
 #' @export
@@ -106,7 +136,7 @@ target_produce_junction.tar_pattern <- function(target, pipeline) {
   siblings <- setdiff(target_deps_shallow(target, pipeline), dimensions)
   niblings <- pattern_children_columns(dimensions, pipeline)
   pattern <- target$settings$pattern
-  niblings <- pattern_produce_grid(pattern, niblings, target$command$seed)
+  niblings <- pattern_produce_grid(pattern, niblings, target$seed)
   all_deps <- pattern_combine_niblings_siblings(niblings, siblings)
   nibling_deps <- all_deps[, dimensions, drop = FALSE]
   names <- pattern_name_branches(target_get_parent(target), nibling_deps)
@@ -126,11 +156,21 @@ target_needs_worker.tar_pattern <- function(target) {
 
 #' @export
 target_validate.tar_pattern <- function(target) {
-  tar_assert_correct_fields(target, pattern_new)
+  tar_assert_correct_fields(
+    target,
+    pattern_new,
+    optional = c("junction", "value")
+  )
+  NextMethod()
+  command_validate(target$command)
+  tar_assert_dbl(target$seed)
+  tar_assert_scalar(target$seed)
+  tar_assert_none_na(target$seed)
+  tar_assert_chr(target$deps)
+  store_validate(target$store)
   if (!is.null(target$junction)) {
     junction_validate(target$junction)
   }
-  NextMethod()
 }
 
 #' @export
@@ -141,11 +181,10 @@ target_bootstrap.tar_pattern <- function(
   branched_over = FALSE
 ) {
   record <- target_bootstrap_record(target, meta)
-  name <- target$settings$name
+  name <- target_get_name(target)
   children <- record$children
   target$junction <- junction_init(nexus = name, splits = children)
-  branches <- pattern_produce_branches(target, pipeline)
-  lapply(branches, pipeline_set_target, pipeline = pipeline)
+  pattern_set_branches(target, pipeline)
   map(
     children,
     ~target_bootstrap(
@@ -166,6 +205,20 @@ target_marshal_value.tar_pattern <- function(target) {
 #' @export
 target_unmarshal_value.tar_pattern <- function(target) {
   target$value <- NULL
+}
+
+#' @export
+target_produce_child.tar_pattern <- function(target, name) {
+  pattern_produce_branch(target, name)
+}
+
+#' @export
+target_worker_extras.tar_pattern <- function(
+  target,
+  pipeline,
+  retrieval_worker
+) {
+  target_get_children(target)
 }
 
 #' @export
@@ -211,33 +264,35 @@ pattern_prepend_branches <- function(target, scheduler) {
   scheduler$queue$prepend(children, ranks)
 }
 
-pattern_produce_branch <- function(spec, command, settings, cue) {
+pattern_produce_branch <- function(target, name) {
+  junction <- .subset2(target, "junction")
+  index <- junction_extract_index(junction, name)
   branch_init(
-    command = command,
-    settings = settings,
-    cue = cue,
-    deps = spec$deps,
-    child = spec$split,
-    index = spec$index
+    name = name,
+    command = .subset2(target, "command"),
+    deps_parent = .subset2(target, "deps"),
+    deps_child = junction_extract_deps(junction, index),
+    settings = .subset2(target, "settings"),
+    cue = .subset2(target, "cue"),
+    store = .subset2(target, "store"),
+    index = index
   )
 }
 
-pattern_produce_branches <- function(target, pipeline) {
-  map(
-    junction_transpose(target$junction),
-    pattern_produce_branch,
-    command = target$command,
-    settings = target$settings,
-    cue = target$cue
+pattern_set_branches <- function(target, pipeline) {
+  pipeline_initialize_references_children(
+    pipeline = pipeline,
+    name_parent = target_get_name(target),
+    names_children = junction_splits(target$junction)
   )
 }
 
 pattern_insert_branches <- function(target, pipeline, scheduler) {
-  branches <- pattern_produce_branches(target, pipeline)
-  lapply(branches, pipeline_set_target, pipeline = pipeline)
   pattern_engraph_branches(target, pipeline, scheduler)
-  lapply(branches, scheduler$progress$assign_queued)
   pattern_prepend_branches(target, scheduler)
+  pattern_set_branches(target, pipeline)
+  lapply(target_get_children(target), scheduler$progress$assign_queued)
+  NULL
 }
 
 pattern_requeue_downstream_branching <- function(
@@ -296,7 +351,7 @@ pattern_begin_initial <- function(target, pipeline, scheduler, meta) {
 }
 
 pattern_begin_final <- function(target, pipeline, scheduler, meta) {
-  scheduler$progress$assign_dequeued(target)
+  scheduler$progress$assign_dequeued(target_get_name(target))
   pattern_requeue_downstream_nonbranching(target, pipeline, scheduler)
 }
 

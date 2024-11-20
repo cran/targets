@@ -20,7 +20,6 @@ local_init <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = FALSE,
     envir = envir
   )
 }
@@ -35,7 +34,6 @@ local_new <- function(
   seconds_meta_append = NULL,
   seconds_meta_upload = NULL,
   seconds_reporter = NULL,
-  garbage_collection = NULL,
   envir = NULL
 ) {
   local_class$new(
@@ -48,7 +46,6 @@ local_new <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = garbage_collection,
     envir = envir
   )
 }
@@ -61,8 +58,7 @@ local_class <- R6::R6Class(
   public = list(
     tar_assert_deployment = function(target) {
     },
-    run_target = function(name) {
-      target <- pipeline_get_target(self$pipeline, name)
+    run_target = function(target) {
       self$tar_assert_deployment(target)
       target_prepare(target, self$pipeline, self$scheduler, self$meta)
       self$sync_meta_time()

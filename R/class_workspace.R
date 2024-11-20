@@ -1,17 +1,19 @@
 workspace_init <- function(target, pipeline) {
   target <- target_workspace_copy(target)
+  target$settings$retrieval <- "worker"
   subpipeline <- pipeline_produce_subpipeline(
     pipeline,
-    target_get_name(target),
+    target,
     keep_value = FALSE
   )
   workspace_new(target = target, subpipeline = subpipeline)
 }
 
 workspace_new <- function(target = NULL, subpipeline = NULL) {
-  force(target)
-  force(subpipeline)
-  environment()
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$target <- target
+  out$subpipeline <- subpipeline
+  out
 }
 
 workspace_save <- function(workspace, path_store) {
@@ -28,7 +30,7 @@ workspace_read <- function(name, path_store) {
 }
 
 workspace_populate <- function(workspace) {
-  target_ensure_deps(workspace$target, workspace$subpipeline)
+  target_ensure_deps_worker(workspace$target, workspace$subpipeline)
 }
 
 workspace_assign <- function(workspace, envir) {
@@ -43,7 +45,7 @@ workspace_load_packages <- function(workspace) {
 }
 
 workspace_set_seed <- function(workspace) {
-  tar_seed_set(workspace$target$command$seed)
+  tar_seed_set(workspace$target$seed)
 }
 
 workspace_validate <- function(workspace) {

@@ -241,7 +241,7 @@ tar_test("cue_depend() suppressed", {
 })
 
 tar_test("cue_format()", {
-  skip_if_not_installed("qs")
+  skip_if_not_installed("qs2")
   x <- target_init("x", quote(1L), format = "rds")
   local <- local_init(pipeline_init(list(x)))
   local$run()
@@ -255,7 +255,7 @@ tar_test("cue_format()", {
 })
 
 tar_test("cue_format() suppressed", {
-  skip_if_not_installed("qs")
+  skip_if_not_installed("qs2")
   cue <- cue_init(format = FALSE)
   x <- target_init("x", quote(1L), format = "rds", cue = cue)
   local <- local_init(pipeline_init(list(x)))
@@ -372,7 +372,7 @@ tar_test("cue_file()", {
   local$run()
   out <- counter_get_names(local$scheduler$progress$completed)
   expect_equal(out, "x")
-  saveRDS(2L, x$store$file$path)
+  saveRDS(2L, x$file$path)
   x <- target_init("x", quote(1L))
   local <- local_init(pipeline_init(list(x)))
   local$run()
@@ -432,7 +432,7 @@ tar_test("cue_file() suppressed", {
   local$run()
   out <- counter_get_names(local$scheduler$progress$completed)
   expect_equal(out, "x")
-  saveRDS(2L, x$store$file$path)
+  saveRDS(2L, x$file$path)
   x <- target_init("x", quote(1L), cue = cue)
   local <- local_init(pipeline_init(list(x)))
   local$run()
@@ -453,7 +453,7 @@ tar_test("cue_file() on a dynamic file", {
   local$run()
   out <- counter_get_names(local$scheduler$progress$completed)
   expect_equal(out, "x")
-  saveRDS(2L, x$store$file$path)
+  saveRDS(2L, x$file$path)
   x <- target_init("x", quote(save1()), format = "file")
   local <- local_init(pipeline_init(list(x)))
   local$run()

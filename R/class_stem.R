@@ -1,30 +1,53 @@
-stem_new <- function(
+stem_init <- function(
+  name = NULL,
   command = NULL,
+  seed = NULL,
+  deps = NULL,
+  settings = NULL,
+  cue = NULL
+) {
+  stem_new(
+    name = name,
+    command = command,
+    seed = seed,
+    deps = deps,
+    settings = settings,
+    cue = cue,
+    store = settings_produce_store(settings),
+    file = file_init()
+  )
+}
+
+stem_new <- function(
+  name = NULL,
+  command = NULL,
+  seed = NULL,
+  deps = NULL,
   settings = NULL,
   cue = NULL,
-  value = NULL,
-  metrics = NULL,
   store = NULL,
-  subpipeline = NULL,
-  junction = NULL
+  file = NULL
 ) {
-  force(command)
-  force(settings)
-  force(cue)
-  force(value)
-  force(metrics)
-  force(store)
-  force(subpipeline)
-  force(junction)
-  enclass(environment(), c("tar_stem", "tar_builder", "tar_target"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$name <- name
+  out$command <- command
+  out$seed <- seed
+  out$deps <- deps
+  out$settings <- settings
+  out$cue <- cue
+  out$store <- store
+  out$file <- file
+  enclass(out, stem_s3_class)
 }
+
+stem_s3_class <- c("tar_stem", "tar_builder", "tar_target")
 
 #' @export
 target_get_children.tar_stem <- function(target) {
   if_any(
     is.null(target$junction),
     character(0),
-    target$junction$splits
+    junction_splits(target$junction)
   )
 }
 
@@ -49,12 +72,12 @@ target_produce_junction.tar_stem <- function(target, pipeline) {
 
 #' @export
 target_produce_record.tar_stem <- function(target, pipeline, meta) {
-  file <- target$store$file
+  file <- target$file
   record_init(
     name = target_get_name(target),
     type = "stem",
     command = target$command$hash,
-    seed = target$command$seed,
+    seed = target$seed,
     depend = meta$get_depend(target_get_name(target)),
     path = file$path,
     data = file$hash,
@@ -100,8 +123,19 @@ target_is_branchable.tar_stem <- function(target) {
 
 #' @export
 target_validate.tar_stem <- function(target) {
-  tar_assert_correct_fields(target, stem_new)
+  tar_assert_correct_fields(
+    target,
+    stem_new,
+    optional = c("junction", "metrics", "subpipeline", "value")
+  )
   NextMethod()
+  command_validate(target$command)
+  tar_assert_dbl(target$seed)
+  tar_assert_scalar(target$seed)
+  tar_assert_none_na(target$seed)
+  tar_assert_chr(target$deps)
+  store_validate(target$store)
+  file_validate(target$file)
   if (!is.null(target$junction)) {
     junction_validate(target$junction)
   }
@@ -132,14 +166,18 @@ stem_tar_assert_nonempty <- function(target) {
   }
 }
 
-stem_produce_buds <- function(target) {
-  settings <- target$settings
-  names <- target_get_children(target)
-  map(seq_along(names), ~bud_init(settings, names[.x], .x))
+stem_produce_bud <- function(target, name) {
+  junction <- .subset2(target, "junction")
+  index <- junction_extract_index(junction, name)
+  bud_new(name = name, settings = .subset2(target, "settings"), index = index)
 }
 
 stem_insert_buds <- function(target, pipeline) {
-  map(stem_produce_buds(target), pipeline_set_target, pipeline = pipeline)
+  pipeline_initialize_references_children(
+    pipeline = pipeline,
+    name_parent = target_get_name(target),
+    names_children = junction_splits(target$junction)
+  )
 }
 
 stem_ensure_buds <- function(target, pipeline, scheduler) {
@@ -178,6 +216,11 @@ stem_restore_junction <- function(target, pipeline, meta) {
     junction_init(nexus = name, splits = children)
   )
   target$junction <- junction
+}
+
+#' @export
+target_produce_child.tar_stem <- function(target, name) {
+  stem_produce_bud(target, name)
 }
 
 #' @export

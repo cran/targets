@@ -1,53 +1,42 @@
-bud_init <- function(
-  settings = settings_init(),
-  child = character(0),
-  index = integer(0)
-) {
-  parent <- settings$name
-  command <- command_null
-  settings <- settings_clone(settings)
-  settings$name <- child
-  bud_new(
-    command = command,
-    settings = settings,
-    cue = NULL,
-    value = NULL,
-    pedigree = pedigree_new(parent, child, index)
-  )
-}
-
 bud_new <- function(
-  command = NULL,
+  name = NULL,
   settings = NULL,
-  cue = NULL,
-  value = NULL,
-  pedigree = NULL
+  index = NULL
 ) {
-  force(command)
-  force(settings)
-  force(cue)
-  force(value)
-  force(pedigree)
-  enclass(environment(), c("tar_bud", "tar_target"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$name <- name
+  out$settings <- settings
+  out$index <- index
+  enclass(out, bud_s3_class)
 }
 
-#' @export
-target_get_parent.tar_bud <- function(target) {
-  target$pedigree$parent
-}
+bud_s3_class <- c("tar_bud", "tar_target")
 
 #' @export
 target_read_value.tar_bud <- function(target, pipeline) {
   parent <- pipeline_get_target(pipeline, target_get_parent(target))
   target_ensure_value(parent, pipeline)
-  index <- target$pedigree$index
+  index <- target$index
   object <- value_produce_slice(parent$value, index)
   value_init(object, parent$settings$iteration)
 }
 
 #' @export
+target_produce_reference.tar_bud <- function(target) {
+  reference_init(parent = target_get_parent(target))
+}
+
+#' @export
+target_worker_extras.tar_bud <- function(target, pipeline, retrieval_worker) {
+  if_any(retrieval_worker, target_get_parent(target), character(0L))
+}
+
+#' @export
 target_validate.tar_bud <- function(target) {
-  tar_assert_correct_fields(target, bud_new)
-  pedigree_validate(target$pedigree)
+  tar_assert_correct_fields(target, bud_new, optional = "value")
   NextMethod()
+  tar_assert_int(target$index)
+  tar_assert_scalar(target$index)
+  tar_assert_finite(target$index)
+  tar_assert_ge(target$index, 1L)
 }

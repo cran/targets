@@ -8,7 +8,6 @@ crew_init <- function(
   seconds_meta_append = 0,
   seconds_meta_upload = 15,
   seconds_reporter = 0,
-  garbage_collection = FALSE,
   envir = tar_option_get("envir"),
   controller = NULL,
   terminate_controller = TRUE
@@ -23,7 +22,6 @@ crew_init <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
     terminate_controller = terminate_controller
@@ -40,7 +38,6 @@ crew_new <- function(
   seconds_meta_append = NULL,
   seconds_meta_upload = NULL,
   seconds_reporter = NULL,
-  garbage_collection = NULL,
   envir = NULL,
   controller = NULL,
   terminate_controller = NULL
@@ -55,7 +52,6 @@ crew_new <- function(
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
     seconds_reporter = seconds_reporter,
-    garbage_collection = garbage_collection,
     envir = envir,
     controller = controller,
     terminate_controller = terminate_controller
@@ -80,7 +76,6 @@ crew_class <- R6::R6Class(
       seconds_meta_append = NULL,
       seconds_meta_upload = NULL,
       seconds_reporter = NULL,
-      garbage_collection = NULL,
       envir = NULL,
       controller = NULL,
       terminate_controller = NULL
@@ -95,7 +90,6 @@ crew_class <- R6::R6Class(
         seconds_meta_append = seconds_meta_append,
         seconds_meta_upload = seconds_meta_upload,
         seconds_reporter = seconds_reporter,
-        garbage_collection = garbage_collection,
         envir = envir
       )
       self$controller <- controller
@@ -136,9 +130,6 @@ crew_class <- R6::R6Class(
         return()
       }
       # nocov end
-      if (self$garbage_collection) {
-        gc()
-      }
       self$ensure_exports()
       command <- quote(
         targets::target_run_worker(
@@ -189,8 +180,7 @@ crew_class <- R6::R6Class(
         self$meta
       )
     },
-    run_target = function(name) {
-      target <- pipeline_get_target(self$pipeline, name)
+    run_target = function(target) {
       if_any(
         target_should_run_worker(target),
         self$run_worker(target),
@@ -246,7 +236,6 @@ crew_class <- R6::R6Class(
         msg = paste("target", result$name, "error:", result$error)
       )
       target <- result$result[[1]]
-      pipeline_set_target(self$pipeline, target)
       self$unmarshal_target(target)
       target_conclude(
         target,
@@ -262,7 +251,6 @@ crew_class <- R6::R6Class(
         names = self$names,
         queue = self$queue,
         reporter = self$reporter,
-        garbage_collection = self$garbage_collection,
         seconds_meta_append = self$seconds_meta_append,
         seconds_meta_upload = self$seconds_meta_upload,
         seconds_reporter = self$seconds_reporter,

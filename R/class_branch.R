@@ -1,57 +1,52 @@
 branch_init <- function(
+  name = NULL,
   command = NULL,
+  deps_parent = character(0L),
+  deps_child = character(0L),
   settings = NULL,
   cue = NULL,
-  value = NULL,
-  deps = character(0),
-  child = character(0),
-  index = integer(0)
+  store = NULL,
+  index = NULL
 ) {
-  command <- command_clone(command)
-  deps <- union(command$deps, deps)
-  command$deps <- setdiff(deps, settings$dimensions)
-  command$seed <- tar_seed_create(child)
-  pedigree <- pedigree_new(settings$name, child, index)
-  settings <- settings_clone(settings)
-  settings$name <- child
-  store <- settings_produce_store(settings)
+  deps <- setdiff(unique(c(deps_parent, deps_child)), settings$dimensions)
   branch_new(
+    name = name,
     command = command,
+    seed = tar_seed_create(name),
+    deps = deps,
     settings = settings,
     cue = cue,
-    value = value,
-    metrics = NULL,
     store = store,
-    subpipeline = NULL,
-    pedigree = pedigree
+    file = file_init(),
+    index = index
   )
 }
 
 branch_new <- function(
+  name = NULL,
   command = NULL,
+  seed = NULL,
+  deps = NULL,
   settings = NULL,
   cue = NULL,
-  value = NULL,
-  metrics = NULL,
   store = NULL,
-  subpipeline = NULL,
-  pedigree = NULL
+  file = NULL,
+  index = NULL
 ) {
-  force(command)
-  force(settings)
-  force(cue)
-  force(value)
-  force(metrics)
-  force(store)
-  force(subpipeline)
-  force(pedigree)
-  enclass(environment(), c("tar_branch", "tar_builder", "tar_target"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$name <- name
+  out$command <- command
+  out$seed <- seed
+  out$deps <- deps
+  out$settings <- settings
+  out$cue <- cue
+  out$store <- store
+  out$file <- file
+  out$index <- index
+  enclass(out, branch_s3_class)
 }
 
-#' @export
-target_get_parent.tar_branch <- function(target) {
-  target$pedigree$parent
-}
+branch_s3_class <- c("tar_branch", "tar_builder", "tar_target")
 
 #' @export
 target_get_type.tar_branch <- function(target) {
@@ -60,13 +55,13 @@ target_get_type.tar_branch <- function(target) {
 
 #' @export
 target_produce_record.tar_branch <- function(target, pipeline, meta) {
-  file <- target$store$file
+  file <- target$file
   record_init(
     name = target_get_name(target),
     parent = target_get_parent(target),
     type = "branch",
     command = target$command$hash,
-    seed = target$command$seed,
+    seed = target$seed,
     depend = meta$get_depend(target_get_name(target)),
     path = file$path,
     data = file$hash,
@@ -92,9 +87,23 @@ target_restore_buds.tar_branch <- function(target, pipeline, scheduler, meta) {
 
 #' @export
 target_validate.tar_branch <- function(target) {
-  tar_assert_correct_fields(target, branch_new)
-  pedigree_validate(target$pedigree)
+  tar_assert_correct_fields(
+    target,
+    branch_new,
+    optional = c("value", "metrics", "subpipeline")
+  )
   NextMethod()
+  command_validate(target$command)
+  tar_assert_dbl(target$seed)
+  tar_assert_scalar(target$seed)
+  tar_assert_none_na(target$seed)
+  tar_assert_chr(target$deps)
+  store_validate(target$store)
+  file_validate(target$file)
+  tar_assert_int(target$index)
+  tar_assert_scalar(target$index)
+  tar_assert_finite(target$index)
+  tar_assert_ge(target$index, 1L)
 }
 
 #' @export
@@ -133,4 +142,15 @@ target_patternview_errored.tar_branch <- function(
 ) {
   parent <- pipeline_get_target(pipeline, target_get_parent(target))
   patternview_register_errored(parent$patternview, parent, scheduler)
+}
+
+#' @export
+target_produce_reference.tar_branch <- function(target) {
+  file <- .subset2(target, "file")
+  reference_init(
+    parent = target_get_parent(target),
+    path = .subset2(file, "path"),
+    stage = .subset2(file, "stage"),
+    hash = .subset2(file, "hash")
+  )
 }

@@ -10,31 +10,36 @@ runtime_new <- function(
   file_exist = NULL,
   file_info = NULL,
   file_info_exist = NULL,
-  nanonext = NULL,
   inventories = NULL,
   traceback = NULL,
   pid_parent = NULL,
   file_systems = NULL,
-  trust_timestamps_store = NULL
+  trust_timestamps_store = NULL,
+  number_targets_run = NULL,
+  installed_packages = NULL,
+  meta = NULL
 ) {
-  force(target)
-  force(frames)
-  force(interactive)
-  force(script)
-  force(store)
-  force(working_directory)
-  force(fun)
-  force(gcp_auth)
-  force(file_exist)
-  force(file_info)
-  force(file_info_exist)
-  force(nanonext)
-  force(inventories)
-  force(traceback)
-  force(pid_parent)
-  force(file_systems)
-  force(trust_timestamps_store)
-  environment()
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$target <- target
+  out$frames <- frames
+  out$interactive <- interactive
+  out$script <- script
+  out$store <- store
+  out$working_directory <- working_directory
+  out$fun <- fun
+  out$gcp_auth <- gcp_auth
+  out$file_exist <- file_exist
+  out$file_info <- file_info
+  out$file_info_exist <- file_info_exist
+  out$inventories <- inventories
+  out$traceback <- traceback
+  out$pid_parent <- pid_parent
+  out$file_systems <- file_systems
+  out$trust_timestamps_store <- trust_timestamps_store
+  out$number_targets_run <- number_targets_run
+  out$installed_packages <- installed_packages
+  out$meta <- meta
+  out
 }
 
 runtime_validate <- function(x) {
@@ -75,6 +80,12 @@ runtime_validate_basics <- function(x) {
     tar_assert_chr(x$fun)
     tar_assert_nzchar(x$fun)
   }
+  if (!is.null(x$number_targets_run)) {
+    tar_assert_scalar(x$number_targets_run)
+    tar_assert_int(x$number_targets_run)
+    tar_assert_none_na(x$number_targets_run)
+    tar_assert_ge(x$number_targets_run, 1L)
+  }
 }
 
 runtime_validate_extras <- function(x) {
@@ -91,10 +102,6 @@ runtime_validate_extras <- function(x) {
   }
   if (!is.null(x$file_info_exist)) {
     tar_assert_envir(x$file_info_exist)
-  }
-  if (!is.null(x$nanonext)) {
-    tar_assert_scalar(x$nanonext)
-    tar_assert_lgl(x$nanonext)
   }
   if (!is.null(x$inventories)) {
     tar_assert_list(x$inventories)
@@ -113,6 +120,9 @@ runtime_validate_extras <- function(x) {
   }
   if (!is.null(x$trust_timestamps_store)) {
     tar_assert_lgl(x$trust_timestamps_store)
+  }
+  if (!is.null(x$meta)) {
+    tar_assert_envir(x$meta)
   }
 }
 
@@ -144,6 +154,15 @@ runtime_file_systems <- function() {
   out <- .subset2(info, "fstype")
   names(out) <- .subset2(info, "mountpoint")
   out
+}
+
+runtime_increment_targets_run <- function(x) {
+  count <- .subset2(x, "number_targets_run")
+  if (is.null(count)) {
+    count <- 0L
+  }
+  count <- count + 1L
+  x$number_targets_run <- count
 }
 
 runtime_reset <- function(x) {

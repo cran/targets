@@ -18,12 +18,15 @@ resources_network_new <- function(
   max_tries = NULL,
   verbose = NULL
 ) {
-  force(seconds_interval)
-  force(seconds_timeout)
-  force(max_tries)
-  force(verbose)
-  enclass(environment(), c("tar_resources_network", "tar_resources"))
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$seconds_interval <- seconds_interval
+  out$seconds_timeout <- seconds_timeout
+  out$max_tries <- max_tries
+  out$verbose <- verbose
+  enclass(out, resources_network_s3_class)
 }
+
+resources_network_s3_class <- c("tar_resources_network", "tar_resources")
 
 #' @export
 resources_validate.tar_resources_network <- function(resources) {

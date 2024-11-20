@@ -153,11 +153,11 @@ tar_test("deprecated error = \"workspace\"", {
 })
 
 tar_test("memory", {
-  expect_equal(tar_option_get("memory"), "persistent")
+  expect_equal(tar_option_get("memory"), "auto")
   tar_option_set(memory = "transient")
   expect_equal(tar_option_get("memory"), "transient")
   tar_option_reset()
-  expect_equal(tar_option_get("memory"), "persistent")
+  expect_equal(tar_option_get("memory"), "auto")
   expect_error(
     tar_option_set(memory = "invalid"),
     class = "tar_condition_validate"
@@ -165,13 +165,13 @@ tar_test("memory", {
 })
 
 tar_test("garbage_collection", {
-  expect_false(tar_option_get("garbage_collection"))
-  tar_option_set(garbage_collection = TRUE)
-  expect_true(tar_option_get("garbage_collection"))
+  expect_equal(tar_option_get("garbage_collection"), 1000L)
+  tar_option_set(garbage_collection = 5L)
+  expect_equal(tar_option_get("garbage_collection"), 5L)
   tar_option_reset()
-  expect_false(tar_option_get("garbage_collection"))
+  expect_equal(tar_option_get("garbage_collection"), 1000L)
   expect_error(
-    tar_option_set(garbage_collection = 0),
+    suppressWarnings(tar_option_set(garbage_collection = "abc")),
     class = "tar_condition_validate"
   )
 })

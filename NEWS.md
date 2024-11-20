@@ -1,3 +1,33 @@
+# targets 1.9.0
+
+## Improvements
+
+* Un-break workflows that use `format = "file_fast"` (#1339, @koefoeden).
+* Fix deadlock in `error = "trim"` (#1340, @koefoeden).
+* Remove tailored debugging message (#1341, @koefoeden).
+* Store warnings while writing to storage (#1345, @Aariq).
+* Allow `garbage_collection` to be a non-negative integer to control the frequency of garbage collection in a performant, convenient, unified way (#1351).
+* Deprecate the `garbage_collection` argument of `tar_make()`, `tar_make_future()`, and `tar_make_clusterm()` (#1351).
+* Instrument `target_run()`, `target_prepare()`, and `target_conclude()` using `autometric`.
+* Avoid sending problematic error classes such as `"vctrs_error_subscript_oob"` to `rlang::abort()` (#1354, @Jiefei-Wang).
+* Reduce memory consumption by ~23% in large pipelines by avoiding the accumulation of promise objects (#1352).
+* Avoid `store_assert_format()` and `store_convert_object()` is `storage` is `"none"`.
+* Add a `list()` method to `tar_repository_cas()` to make it easier and more efficient to specify custom CAS repositories (#1366).
+* Improve speed and reduce memory consumption by avoiding deep copies of inner environments of target definition objects (#1368).
+* Reduce memory consumption by storing buds and branches as lightweight references when `memory` is `"transient"` (#1364).
+* Replace the `memory` class with the new `lookup` class.
+* Implement `memory = "auto"` to select transient memory for dynamic branches and persistent memory for other targets (#1371).
+* Omit whole pattern targets from branch subpipelines when possible. Should reduce memory consumption in some cases.
+* Omit whole stem targets from branch subpipelines when `retrieval` is `"main"` and only a bud is actually used. The same cannot be done with branches because each branch may need to be (un)marshaled individually.
+* Compress branches into references when `retrieval` is `"worker"` and the whole pattern is part of the subpipeline.
+* Avoid duplicated branch aggregation: just send the branches over the network.
+* Back-compatibly switch `format = "qs"` from `qs` to `qs2` (#1373).
+* Add `tar_unblock_process()`.
+
+## Potentially invalidating changes
+
+* Add `"keepNA"` and `"keepInteger"` to `.deparseOpts()` (#1375). This may cause existing pipelines to rerun, but it makes add-ons like `tarchetypes::tar_map()` much easier to use.
+
 # targets 1.8.0
 
 * Wrap `tar_watch()` UI module in `bslib::page()` (#1302, @kwbyron-lilly).

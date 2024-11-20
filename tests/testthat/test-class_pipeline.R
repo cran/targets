@@ -80,7 +80,7 @@ tar_test("pipeline_upstream_edges(targets_only = FALSE)", {
   expect_true(all(edges$to %in% names))
 })
 
-tar_test("pipeline_register_loaded(pipeline, )", {
+tar_test("pipeline_register_loaded()", {
   x <- target_init("x", quote(1), memory = "persistent")
   y <- target_init("y", quote(1), memory = "transient")
   pipeline <- pipeline_init(list(x, y))
@@ -154,7 +154,11 @@ tar_test("pipeline_produce_subpipeline()", {
   )
   local <- local_init(pipeline)
   local$run()
-  subpipeline <- pipeline_produce_subpipeline(pipeline, "summary")
+  target <- target_init(
+    name = "summary",
+    expr = quote(c(map, data0))
+  )
+  subpipeline <- pipeline_produce_subpipeline(pipeline, target)
   out <- sort(pipeline_get_names(subpipeline))
   branches <- target_get_children(pipeline_get_target(pipeline, "map"))
   exp <- sort(c("data0", "map", branches))
@@ -228,7 +232,7 @@ tar_test("pipeline_get_packages()", {
   y <- tar_target(y, 1, format = "qs", packages = character(0))
   pipeline <- pipeline_init(list(x, y))
   out <- pipeline_get_packages(pipeline)
-  exp <- sort(c("fst", "qs", "tibble", "tidyr"))
+  exp <- sort(c("fst", "qs2", "tibble", "tidyr"))
   expect_equal(out, exp)
 })
 
@@ -276,4 +280,77 @@ tar_test("automatically ignore non-target objects", {
   out <- tar_manifest(callr_function = NULL)
   expect_equal(nrow(out), 1L)
   expect_equal(out$name, "x")
+})
+
+tar_test("managing lightweight references to targets in pipelines", {
+  skip_cran()
+  pipeline <- pipeline_init(
+    list(
+      target_init(
+        name = "data",
+        expr = quote(seq_len(3L))
+      ),
+      target_init(
+        name = "map",
+        expr = quote(data),
+        pattern = quote(map(data))
+      )
+    )
+  )
+  local <- local_init(pipeline)
+  local$run()
+  data <- pipeline_get_target(local$pipeline, "data")
+  map <- pipeline_get_target(local$pipeline, "map")
+  for (index in seq_len(2L)) {
+    bud_name <- junction_splits(data$junction)[index]
+    branch_name <- junction_splits(map$junction)[index]
+    bud <- pipeline_get_target(local$pipeline, bud_name)
+    branch <- pipeline_get_target(local$pipeline, branch_name)
+    reference <- pipeline$targets[[bud_name]]
+    expect_equal(reference_parent(reference), "data")
+    expect_equal(reference_path(reference), NA_character_)
+    expect_equal(reference_stage(reference), NA_character_)
+    expect_equal(reference_hash(reference), NA_character_)
+    reference <- pipeline$targets[[branch_name]]
+    expect_equal(reference_parent(reference), "map")
+    expect_equal(reference_path(reference), branch$file$path)
+    expect_equal(reference_stage(reference), branch$file$stage)
+    expect_equal(reference_hash(reference), branch$file$hash)
+    expect_s3_class(bud, "tar_bud")
+    expect_s3_class(branch, "tar_branch")
+    target_load_value(bud, local$pipeline)
+    expect_equal(bud$value$object, index)
+    target_load_value(branch, local$pipeline)
+    expect_equal(branch$value$object, index)
+    expect_s3_class(local$pipeline$targets[[bud_name]], "tar_bud")
+    expect_s3_class(local$pipeline$targets[[branch_name]], "tar_branch")
+    pipeline_unload_loaded(local$pipeline)
+    reference <- pipeline$targets[[bud_name]]
+    expect_equal(reference_parent(reference), "data")
+    expect_equal(reference_path(reference), NA_character_)
+    expect_equal(reference_stage(reference), NA_character_)
+    expect_equal(reference_hash(reference), NA_character_)
+    reference <- pipeline$targets[[branch_name]]
+    expect_equal(reference_parent(reference), "map")
+    expect_equal(reference_path(reference), branch$file$path)
+    expect_equal(reference_stage(reference), branch$file$stage)
+    expect_equal(reference_hash(reference), branch$file$hash)
+  }
+})
+
+tar_test("subpiplines can be compressed with references", {
+  tar_script({
+    library(targets)
+    tar_option_set(memory = "transient")
+    list(
+      tar_target(x, seq_len(2L)),
+      tar_target(y, x, pattern = map(x)),
+      tar_target(z, y, pattern = map(y)),
+      tar_target(a, z)
+    )
+  })
+  for (retrieval in c("worker", "main")) {
+    tar_make(callr_function = NULL)
+    expect_equal(as.integer(tar_read(a)), seq_len(2L))
+  }
 })

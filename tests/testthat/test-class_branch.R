@@ -1,35 +1,37 @@
-tar_test("branch$pedigree", {
+tar_test("branch creation", {
   command <- command_init(quote(1 + 1))
   settings <- settings_init(name = "x", pattern = quote(map(y)))
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "y",
-    1L
+    name = "x",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    index = 1L
   )
   expect_true(inherits(branch, "tar_branch"))
 })
 
-tar_test("branch$pedigree", {
+tar_test("branch name vs parent name", {
   command <- command_init(quote(1 + 1))
   settings <- settings_init(name = "x", pattern = quote(map(y)))
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "x_1",
-    1L
+    name = "x_1",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    index = 1L
   )
-  expect_silent(pedigree_validate(branch$pedigree))
   expect_equal(settings$name, "x")
-  expect_equal(branch$settings$name, "x_1")
+  expect_equal(branch$settings$name, "x")
+  expect_equal(branch$name, "x_1")
+  settings$name <- "y"
+  expect_equal(branch$settings$name, "y")
 })
 
 tar_test("branch priority", {
@@ -41,13 +43,13 @@ tar_test("branch priority", {
   )
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "y",
-    1L
+    name = "y",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    index = 1L
   )
   expect_equal(branch$settings$priority, 0.5)
 })
@@ -57,13 +59,13 @@ tar_test("branches are not branchable", {
   settings <- settings_init(name = "x", pattern = quote(map(y)))
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "y",
-    1L
+    name = "y",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    index = 1L
   )
   expect_false(target_is_branchable(branch))
 })
@@ -73,13 +75,13 @@ tar_test("target_get_name()", {
   settings <- settings_init(name = "x", pattern = quote(map(y)))
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "y",
-    1L
+    name = "y",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    index = 1L
   )
   expect_equal(settings$name, "x")
   expect_equal(target_get_name(branch), "y")
@@ -90,18 +92,18 @@ tar_test("target_get_parent(branch)", {
   settings <- settings_init(name = "x", pattern = quote(map(y)))
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "y",
-    1L
+    name = "y",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    index = 1L
   )
   expect_equal(target_get_parent(branch), "x")
 })
 
-tar_test("target_deps_deep()", {
+tar_test("target_deps_deep() with worker retrieval", {
   pipeline <- pipeline_init(
     list(
       target_init(
@@ -115,7 +117,8 @@ tar_test("target_deps_deep()", {
       target_init(
         name = "map",
         expr = quote(c(data0, data)),
-        pattern = quote(map(data))
+        pattern = quote(map(data)),
+        retrieval = "worker"
       )
     )
   )
@@ -130,6 +133,36 @@ tar_test("target_deps_deep()", {
   )
 })
 
+tar_test("target_deps_deep() with main retrieval", {
+  pipeline <- pipeline_init(
+    list(
+      target_init(
+        name = "data0",
+        expr = quote(seq_len(3L))
+      ),
+      target_init(
+        name = "data",
+        expr = quote(seq_len(3L))
+      ),
+      target_init(
+        name = "map",
+        expr = quote(c(data0, data)),
+        pattern = quote(map(data)),
+        retrieval = "main"
+      )
+    )
+  )
+  local <- local_init(pipeline)
+  local$run()
+  name <- target_get_children(pipeline_get_target(pipeline, "map"))[2]
+  branch <- pipeline_get_target(pipeline, name)
+  bud <- target_get_children(pipeline_get_target(pipeline, "data"))[2]
+  expect_equal(
+    sort(target_deps_deep(branch, pipeline)),
+    sort(c("data0", bud))
+  )
+})
+
 tar_test("branch$produce_record() of a successful branch", {
   stem <- target_init("x", quote(sample.int(4)))
   map <- target_init("y", quote(x), pattern = quote(map(x)))
@@ -138,6 +171,8 @@ tar_test("branch$produce_record() of a successful branch", {
   local$run()
   meta <- local$meta
   target <- pipeline_get_target(pipeline, target_get_children(map)[2L])
+  target$file$hash <- hash_object(123L)
+  target$file$bytes <- 16
   record <- target_produce_record(target, pipeline, meta)
   expect_silent(record_validate(record))
   expect_true(grepl("^y_", record$name))
@@ -163,13 +198,14 @@ tar_test("branch_validate()", {
   settings <- settings_init(name = "x", pattern = quote(map(y)))
   cue <- cue_init()
   branch <- branch_init(
-    command,
-    settings,
-    cue,
-    NULL,
-    character(0),
-    "x_f4acd87c52d4e62b",
-    1L
+    name = "x_f4acd87c52d4e62b",
+    command = command,
+    deps_parent = character(0L),
+    deps_child = character(0L),
+    settings = settings,
+    cue = cue,
+    store = settings_produce_store(settings),
+    index = 1L
   )
   expect_silent(target_validate(branch))
 })

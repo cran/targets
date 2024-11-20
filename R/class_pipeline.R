@@ -15,17 +15,20 @@ pipeline_new <- function(
   loaded = NULL,
   transient = NULL
 ) {
-  force(targets)
-  force(imports)
-  force(loaded)
-  force(transient)
-  enclass(environment(), "tar_pipeline")
+  out <- new.env(parent = emptyenv(), hash = FALSE)
+  out$targets <- targets
+  out$imports <- imports
+  out$loaded <- loaded
+  out$transient <- transient
+  enclass(out, pipeline_s3_class)
 }
+
+pipeline_s3_class <- "tar_pipeline"
 
 pipeline_targets_init <- function(targets, clone_targets) {
   targets <- targets %|||% list()
   tar_assert_target_list(targets)
-  names <- map_chr(targets, ~.x$settings$name)
+  names <- map_chr(targets, ~target_get_name(.x))
   tar_assert_unique_targets(names)
   if (clone_targets) {
     # If the user has target objects in the global environment,
@@ -38,11 +41,41 @@ pipeline_targets_init <- function(targets, clone_targets) {
 }
 
 pipeline_get_target <- function(pipeline, name) {
-  pipeline$targets[[name]]
+  out <- .subset2(.subset2(pipeline, "targets"), name)
+  if (is_reference(out)) {
+    out <- reference_produce_target(out, pipeline, name)
+  }
+  out
+}
+
+pipeline_set_target <- function(pipeline, target) {
+  envir <- .subset2(pipeline, "targets")
+  name <- target_get_name(target)
+  envir[[name]] <- target
+  NULL
+}
+
+pipeline_set_reference <- function(pipeline, target) {
+  envir <- .subset2(pipeline, "targets")
+  name <- target_get_name(target)
+  envir[[name]] <- target_produce_reference(target)
+  NULL
+}
+
+pipeline_initialize_references_children <- function(
+  pipeline,
+  name_parent,
+  names_children
+) {
+  envir <- .subset2(pipeline, "targets")
+  for (name in names_children) {
+    envir[[name]] <- reference_init(parent = name_parent)
+  }
+  NULL
 }
 
 pipeline_get_names <- function(pipeline) {
-  names(pipeline$targets)
+  names(.subset2(pipeline, "targets"))
 }
 
 pipeline_get_priorities <- function(pipeline) {
@@ -75,20 +108,12 @@ pipeline_reset_deployment <- function(pipeline, name) {
   target$settings$deployment <- "main"
 }
 
-pipeline_set_target <- function(pipeline, target) {
-  assign(
-    x = target$settings$name,
-    value = target,
-    envir = pipeline$targets,
-    inherits = FALSE,
-    immediate = TRUE
-  )
-  invisible()
-}
-
 pipeline_exists_target <- function(pipeline, name) {
-  envir <- pipeline$targets %|||% tar_empty_envir
-  exists(x = name, envir = envir, inherits = FALSE)
+  envir <- .subset2(pipeline, "targets")
+  if (is.null(envir)) {
+    envir <- tar_envir_base
+  }
+  !is.null(.subset2(envir, name))
 }
 
 pipeline_exists_import <- function(pipeline, name) {
@@ -105,7 +130,10 @@ pipeline_targets_only_edges <- function(edges) {
 }
 
 pipeline_upstream_edges <- function(pipeline, targets_only = TRUE) {
-  edge_list <- map(pipeline$targets, ~target_upstream_edges(.x))
+  edge_list <- map(
+    pipeline_get_names(pipeline),
+    ~target_upstream_edges(pipeline_get_target(pipeline, .x))
+  )
   from <- map(edge_list, ~.x$from)
   to <- map(edge_list, ~.x$to)
   from <- unlist(from, recursive = FALSE, use.names = FALSE)
@@ -124,7 +152,7 @@ pipeline_produce_igraph <- function(pipeline, targets_only = TRUE) {
   igraph::simplify(igraph::graph_from_data_frame(edges))
 }
 
-pipeline_register_loaded_target <- function(pipeline, name) { # nolint
+pipeline_register_loaded <- function(pipeline, name) { # nolint
   counter_set_name(pipeline$loaded, name)
   target <- pipeline_get_target(pipeline, name)
   if (identical(target$settings$memory, "transient")) {
@@ -132,13 +160,12 @@ pipeline_register_loaded_target <- function(pipeline, name) { # nolint
   }
 }
 
-pipeline_register_loaded <- function(pipeline, names) {
-  lapply(names, pipeline_register_loaded_target, pipeline = pipeline)
-}
-
 pipeline_unload_target <- function(pipeline, name) {
-  target <- pipeline_get_target(pipeline, name)
-  store_unload(target$store, target)
+  target <- .subset2(.subset2(pipeline, "targets"), name)
+  if (!is_reference(target)) {
+    store_unload(target$store, target)
+    pipeline_set_reference(pipeline, target)
+  }
   counter_del_name(pipeline$loaded, name)
   counter_del_name(pipeline$transient, name)
 }
@@ -159,8 +186,11 @@ pipeline_unload_transient <- function(pipeline) {
   }
 }
 
-pipeline_produce_subpipeline <- function(pipeline, name, keep_value = NULL) {
-  target <- pipeline_get_target(pipeline, name)
+pipeline_produce_subpipeline <- function(
+  pipeline,
+  target,
+  keep_value = NULL
+) {
   deps <- target_deps_deep(target, pipeline)
   targets <- new.env(parent = emptyenv())
   keep_value <- keep_value %|||% identical(target$settings$retrieval, "main")
@@ -171,17 +201,30 @@ pipeline_produce_subpipeline <- function(pipeline, name, keep_value = NULL) {
     envir = targets,
     keep_value = keep_value
   )
-  pipeline_new(
+  subpipeline <- pipeline_new(
     targets = targets,
     loaded = counter_init(),
     transient = counter_init()
   )
+  pipeline_compress_subpipeline(subpipeline)
+  subpipeline
 }
 
 pipeline_assign_target_copy <- function(pipeline, name, envir, keep_value) {
   target <- pipeline_get_target(pipeline, name)
   copy <- target_subpipeline_copy(target, keep_value)
-  assign(name, copy, envir = envir)
+  envir[[name]] <- copy
+}
+
+pipeline_compress_subpipeline <- function(pipeline) {
+  for (name in pipeline_get_names(pipeline)) {
+    target <- pipeline_get_target(pipeline, name)
+    null_value <- is.null(.subset2(target, "value"))
+    has_parent <- pipeline_exists_target(pipeline, target_get_parent(target))
+    if (null_value && has_parent) {
+      pipeline_set_reference(pipeline, target)
+    }
+  }
 }
 
 pipeline_marshal_values <- function(pipeline) {
@@ -209,7 +252,11 @@ pipeline_prune_targets <- function(pipeline, names) {
   graph <- pipeline_produce_igraph(pipeline, targets_only = TRUE)
   keep <- upstream_vertices(graph = graph, from = names)
   discard <- setdiff(pipeline_get_names(pipeline), keep)
-  remove(list = discard, envir = pipeline$targets, inherits = FALSE)
+  remove(
+    list = discard,
+    envir = .subset2(pipeline, "targets"),
+    inherits = FALSE
+  )
 }
 
 pipeline_prune_shortcut <- function(pipeline, names, shortcut) {
@@ -230,7 +277,7 @@ pipeline_get_packages <- function(pipeline) {
 }
 
 pipeline_bootstrap_deps <- function(pipeline, meta, names) {
-  deps <- map(names, ~pipeline_get_target(pipeline, .x)$command$deps)
+  deps <- map(names, ~pipeline_get_target(pipeline, .x)$deps)
   deps <- intersect(unique(unlist(deps)), pipeline_get_names(pipeline))
   deps <- setdiff(x = deps, y = names)
   branched_over <- map(
@@ -274,7 +321,10 @@ pipeline_validate_dag <- function(igraph) {
 }
 
 pipeline_validate_conflicts <- function(pipeline) {
-  conflicts <- intersect(names(pipeline$imports), names(pipeline$targets))
+  conflicts <- intersect(
+    names(.subset2(pipeline, "imports")),
+    pipeline_get_names(pipeline)
+  )
   msg <- paste0(
     "Targets and globals must have unique names. ",
     "Ignoring global objects that conflict with target names: ",

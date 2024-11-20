@@ -10,12 +10,12 @@ tar_test("fst_dt format", {
     expr = quote(f()),
     format = "fst_dt"
   )
-  store_update_stage_early(x$store, "abc", path_store_default())
+  store_update_stage_early(x$store, x$file, "abc", path_store_default())
   builder_update_build(x, envir = envir)
   builder_update_paths(x, path_store_default())
   builder_update_object(x)
   exp <- envir$f()
-  file <- x$store$file
+  file <- x$file
   out <- fst::read_fst(file$path, as.data.table = TRUE)
   expect_equal(out, exp)
   expect_equal(target_read_value(x)$object, exp)
@@ -70,9 +70,11 @@ tar_test("does not inherit from tar_external", {
 tar_test("store_row_path()", {
   skip_if_not_installed("data.table")
   skip_if_not_installed("fst")
-  store <- tar_target(x, "x_value", format = "fst_dt")$store
-  store$file$path <- "path"
-  expect_equal(store_row_path(store), NA_character_)
+  target <- tar_target(x, "x_value", format = "fst_dt")
+  store <- target$store
+  file <- target$file
+  file$path <- "path"
+  expect_equal(store_row_path(store, file), NA_character_)
 })
 
 tar_test("store_path_from_record()", {

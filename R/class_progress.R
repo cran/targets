@@ -6,7 +6,8 @@ progress_init <- function(
   skipped = counter_init(),
   errored = counter_init(),
   warned = counter_init(),
-  canceled = counter_init()
+  canceled = counter_init(),
+  trimmed = counter_init()
 ) {
   database <- database_progress(path_store = path_store)
   progress_new(
@@ -17,7 +18,8 @@ progress_init <- function(
     skipped = skipped,
     errored = errored,
     warned = warned,
-    canceled = canceled
+    canceled = canceled,
+    trimmed = trimmed
   )
 }
 
@@ -29,7 +31,8 @@ progress_new <- function(
   completed = NULL,
   errored = NULL,
   warned = NULL,
-  canceled = NULL
+  canceled = NULL,
+  trimmed = NULL
 ) {
   progress_class$new(
     database = database,
@@ -39,7 +42,8 @@ progress_new <- function(
     completed = completed,
     errored = errored,
     warned = warned,
-    canceled = canceled
+    canceled = canceled,
+    trimmed = trimmed
   )
 }
 
@@ -57,6 +61,7 @@ progress_class <- R6::R6Class(
     errored = NULL,
     warned = NULL,
     canceled = NULL,
+    trimmed = NULL,
     initialize = function(
       database = NULL,
       queued = NULL,
@@ -65,7 +70,8 @@ progress_class <- R6::R6Class(
       completed = NULL,
       errored = NULL,
       warned = NULL,
-      canceled = NULL
+      canceled = NULL,
+      trimmed = NULL
     ) {
       self$database <- database
       self$queued <- queued
@@ -75,43 +81,42 @@ progress_class <- R6::R6Class(
       self$errored <- errored
       self$warned <- warned
       self$canceled <- canceled
+      self$trimmed <- trimmed
     },
-    assign_dequeued = function(target) {
-      counter_del_name(self$queued, target_get_name(target))
+    assign_dequeued = function(name) {
+      counter_del_name(self$queued, name)
     },
-    assign_queued = function(target) {
-      counter_set_name(self$queued, target_get_name(target))
+    assign_queued = function(name) {
+      counter_set_name(self$queued, name)
     },
-    assign_skipped = function(target) {
-      name <- target_get_name(target)
+    assign_skipped = function(name) {
       counter_del_name(self$queued, name)
       counter_set_name(self$skipped, name)
     },
-    assign_dispatched = function(target) {
-      name <- target_get_name(target)
+    assign_dispatched = function(name) {
       counter_del_name(self$queued, name)
       counter_set_name(self$dispatched, name)
     },
-    assign_completed = function(target) {
-      name <- target_get_name(target)
+    assign_completed = function(name) {
       counter_del_name(self$queued, name)
       counter_del_name(self$dispatched, name)
       counter_set_name(self$completed, name)
     },
-    assign_canceled = function(target) {
-      name <- target_get_name(target)
+    assign_canceled = function(name) {
       counter_del_name(self$dispatched, name)
       counter_set_name(self$canceled, name)
     },
-    assign_errored = function(target) {
-      name <- target_get_name(target)
+    assign_errored = function(name) {
       counter_del_name(self$dispatched, name)
       counter_set_name(self$errored, name)
     },
-    assign_warned = function(target) {
-      name <- target_get_name(target)
+    assign_warned = function(name) {
       counter_del_name(self$dispatched, name)
       counter_set_name(self$warned, name)
+    },
+    assign_trimmed = function(names) {
+      counter_del_names(self$queued, names)
+      counter_set_names(self$trimmed, names)
     },
     produce_row = function(target, progress) {
       name <- target_get_name(target)
@@ -148,23 +153,23 @@ progress_class <- R6::R6Class(
       self$buffer_progress(target, progress = "canceled")
     },
     register_skipped = function(target) {
-      self$assign_skipped(target)
+      self$assign_skipped(target_get_name(target))
       self$buffer_skipped(target)
     },
     register_dispatched = function(target) {
-      self$assign_dispatched(target)
+      self$assign_dispatched(target_get_name(target))
       self$buffer_dispatched(target)
     },
     register_completed = function(target) {
-      self$assign_completed(target)
+      self$assign_completed(target_get_name(target))
       self$buffer_completed(target)
     },
     register_errored = function(target) {
-      self$assign_errored(target)
+      self$assign_errored(target_get_name(target))
       self$buffer_errored(target)
     },
     register_canceled = function(target) {
-      self$assign_canceled(target)
+      self$assign_canceled(target_get_name(target))
       self$buffer_canceled(target)
     },
     uptodate = function() {
@@ -230,6 +235,7 @@ progress_class <- R6::R6Class(
       counter_validate(self$skipped)
       counter_validate(self$errored)
       counter_validate(self$canceled)
+      counter_validate(self$trimmed)
     }
   )
 )

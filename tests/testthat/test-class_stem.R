@@ -7,7 +7,7 @@ tar_test("target_load_value()", {
   x <- target_init(name = "abc", expr = quote(2L), format = "rds")
   tmp <- tempfile()
   saveRDS("abc", tmp)
-  file <- x$store$file
+  file <- x$file
   file$path <- tmp
   pipeline <- pipeline_init(list(x))
   expect_equal(counter_get_names(pipeline$loaded), character(0))
@@ -24,18 +24,18 @@ tar_test("stem$update_junction() on a good stem", {
   pipeline <- pipeline_init(list(x))
   stem_update_junction(x, pipeline)
   expect_silent(junction_validate(x$junction))
-  out <- x$junction$splits
+  out <- junction_splits(x$junction)
   expect_length(out, 10L)
   expect_true(all(grepl("abc_", out)))
 })
 
-tar_test("stem_produce_buds()", {
+tar_test("stem produce buds", {
   x <- target_init(name = "abc", expr = quote(letters))
   tar_option_set(envir = baseenv())
   target_run(x, tar_option_get("envir"), path_store_default())
   pipeline <- pipeline_init(list(x))
   stem_update_junction(x, pipeline)
-  children <- stem_produce_buds(x)
+  children <- map(target_get_children(x), ~stem_produce_bud(x, .x))
   expect_true(is.list(children))
   expect_length(children, length(letters))
   for (index in seq_along(letters)) {
@@ -81,24 +81,68 @@ tar_test("target_update_queue() updates queue correctly", {
 
 tar_test("target_deps_deep()", {
   skip_cran()
+  tar_option_set(retrieval = "worker")
   pipeline <- pipeline_init(
     list(
       target_init(
         name = "data0",
-        expr = quote(seq_len(3L))
+        expr = quote(seq_len(3L)),
+        retrieval = "main"
       ),
       target_init(
         name = "data",
-        expr = quote(seq_len(3L))
+        expr = quote(seq_len(3L)),
+        retrieval = "main"
       ),
       target_init(
         name = "map",
         expr = quote(data),
-        pattern = quote(map(data))
+        pattern = quote(map(data)),
+        retrieval = "main"
       ),
       target_init(
         name = "summary",
-        expr = quote(c(map, data0))
+        expr = quote(c(map, data0)),
+        retrieval = "main"
+      )
+    )
+  )
+  local <- local_init(pipeline)
+  local$run()
+  target <- pipeline_get_target(pipeline, "summary")
+  out <- sort(target_deps_deep(target, pipeline))
+  children <- target_get_children(pipeline_get_target(pipeline, "map"))
+  exp <- sort(
+    c("data0", "map", children)
+  )
+  expect_equal(out, exp)
+})
+
+tar_test("target_deps_deep() with retrieval 'main'", {
+  skip_cran()
+  tar_option_set()
+  pipeline <- pipeline_init(
+    list(
+      target_init(
+        name = "data0",
+        expr = quote(seq_len(3L)),
+        retrieval = "main"
+      ),
+      target_init(
+        name = "data",
+        expr = quote(seq_len(3L)),
+        retrieval = "main"
+      ),
+      target_init(
+        name = "map",
+        expr = quote(data),
+        pattern = quote(map(data)),
+        retrieval = "main"
+      ),
+      target_init(
+        name = "summary",
+        expr = quote(c(map, data0)),
+        retrieval = "main"
       )
     )
   )

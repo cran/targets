@@ -18,7 +18,7 @@ tar_test("target_run() on a good builder", {
   expect_silent(value_validate(x$value))
   expect_equal(x$value$object, "x")
   builder_update_object(x)
-  expect_true(file.exists(x$store$file$path))
+  expect_true(file.exists(x$file$path))
 })
 
 tar_test("target_run() on a errored builder", {
@@ -76,7 +76,7 @@ tar_test("builders with different names use different seeds", {
 tar_test("read and write objects", {
   x <- target_init(name = "abc", expr = quote(a), format = "rds")
   tmp <- tempfile()
-  file <- x$store$file
+  file <- x$file
   file$path <- tmp
   file$stage <- tempfile()
   builder_update_build(x, tmpenv(a = "123"))
@@ -91,11 +91,11 @@ tar_test("error = \"stop\" means stop on error", {
   y <- target_init("y", expr = quote(stop(456)), error = "stop")
   pipeline <- pipeline_init(list(x, y))
   expect_error(local_init(pipeline)$run(), class = "tar_condition_run")
-  expect_equal(x$store$file$path, character(0))
+  expect_equal(x$file$path, character(0))
   meta <- meta_init()$database$read_condensed_data()
   expect_true(all(nzchar(meta$error)))
-  expect_equal(x$store$file$path, character(0))
-  expect_equal(y$store$file$path, character(0))
+  expect_equal(x$file$path, character(0))
+  expect_equal(y$file$path, character(0))
 })
 
 tar_test("error = \"continue\" means continue on error", {
@@ -109,12 +109,12 @@ tar_test("error = \"continue\" means continue on error", {
       class = "tar_condition_run"
     )
   )
-  expect_equal(x$store$file$path, character(0))
-  expect_equal(y$store$file$path, character(0))
+  expect_equal(x$file$path, character(0))
+  expect_equal(y$file$path, character(0))
   meta <- meta_init()$database$read_condensed_data()
   expect_true(all(nzchar(meta$error)))
-  expect_equal(x$store$file$path, character(0))
-  expect_equal(y$store$file$path, character(0))
+  expect_equal(x$file$path, character(0))
+  expect_equal(y$file$path, character(0))
 })
 
 tar_test("error = \"abridge\" means do not schedule new targets", {
@@ -168,13 +168,13 @@ tar_test("builder writing from main", {
   pipeline <- pipeline_init(list(x))
   scheduler <- scheduler_init(pipeline, meta_init())
   target_run(x, tar_option_get("envir"), path_store_default())
-  expect_false(file.exists(x$store$file$path))
-  expect_true(is.na(x$store$file$hash))
+  expect_false(file.exists(x$file$path))
+  expect_true(is.na(x$file$hash))
   meta <- meta_init()
-  memory_set_object(meta$depends, "abc", NA_character_)
+  lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
-  expect_true(file.exists(x$store$file$path))
-  expect_false(is.na(x$store$file$hash))
+  expect_true(file.exists(x$file$path))
+  expect_false(is.na(x$file$hash))
   path <- file.path("_targets", "objects", "abc")
   expect_equal(readRDS(path), "123")
   expect_equal(target_read_value(x)$object, "123")
@@ -194,15 +194,15 @@ tar_test("builder writing from worker", {
     deployment = "worker"
   )
   target_run(x, tar_option_get("envir"), path_store_default())
-  expect_true(file.exists(x$store$file$path))
-  expect_false(is.na(x$store$file$hash))
+  expect_true(file.exists(x$file$path))
+  expect_false(is.na(x$file$hash))
   path <- file.path("_targets", "objects", "abc")
   expect_equal(readRDS(path), "123")
   expect_equal(target_read_value(x)$object, "123")
   pipeline <- pipeline_init(list(x))
   scheduler <- scheduler_init(pipeline, meta_init())
   meta <- meta_init()
-  memory_set_object(meta$depends, "abc", NA_character_)
+  lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
 })
 
@@ -303,12 +303,12 @@ tar_test("dynamic file writing from main", {
     file
   }
   target_run(x, tar_option_get("envir"), path_store_default())
-  expect_true(file.exists(x$store$file$path))
-  expect_false(is.na(x$store$file$hash))
+  expect_true(file.exists(x$file$path))
+  expect_false(is.na(x$file$hash))
   pipeline <- pipeline_init(list(x))
   scheduler <- scheduler_init(pipeline, meta_init())
   meta <- meta_init()
-  memory_set_object(meta$depends, "abc", NA_character_)
+  lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
 })
 
@@ -365,12 +365,12 @@ tar_test("dynamic file writing from worker", {
   }
   target_run(x, tar_option_get("envir"), path_store_default())
   expect_null(x$value)
-  expect_true(file.exists(x$store$file$path))
-  expect_false(is.na(x$store$file$hash))
+  expect_true(file.exists(x$file$path))
+  expect_false(is.na(x$file$hash))
   pipeline <- pipeline_init(list(x))
   meta <- meta_init()
   scheduler <- scheduler_init(pipeline, meta = meta)
-  memory_set_object(meta$depends, "abc", NA_character_)
+  lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
 })
 
@@ -517,7 +517,7 @@ tar_test("validate with nonmissing file and value", {
   skip_cran()
   x <- target_init(name = "abc", expr = quote(1L + 1L))
   x$value <- value_init(123)
-  file <- x$store$file
+  file <- x$file
   file$path <- tempfile()
   expect_silent(tmp <- target_validate(x))
 })
@@ -592,6 +592,7 @@ tar_test("error = \"null\" with branching", {
   skip_cran()
   tar_script({
     library(targets)
+    tar_option_set(memory = "transient")
     f <- function(x) {
       stopifnot(x < 1.5)
       x
@@ -705,4 +706,35 @@ tar_test("error = \"trim\" on a dynamic branch", {
   expect_equal(unique(progress$progress), "errored")
   progress <- tar_progress(names = tidyselect::any_of(names))
   expect_equal(unique(progress$progress), "skipped")
+})
+
+tar_test("capture storage warnings", {
+  skip_cran()
+  tar_script(
+    list(
+      tar_target(
+        x, {
+          warning("run_warning")
+          123L
+        },
+        format = tar_format(
+          read = function(path) {
+            readRDS(path)
+          },
+          write = function(object, path) {
+            warning("storage_warning")
+            saveRDS(object, path)
+          }
+        )
+      )
+    )
+  )
+  suppressWarnings(
+    expect_warning(
+      tar_make(callr_function = NULL),
+      class = "tar_condition_run"
+    )
+  )
+  expect_equal(tar_read(x), 123L)
+  expect_equal(tar_meta(x)$warnings, "run_warning. storage_warning")
 })

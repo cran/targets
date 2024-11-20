@@ -74,10 +74,10 @@
 #'   CAS system based on a local folder on disk.
 #'   It uses [tar_cas_u()] for uploads,
 #'   [tar_cas_d()] for downloads, and
-#'   [tar_cas_e()] for existence.
+#'   [tar_cas_l()] for listing keys.
 #' @section Repository functions:
 #'   In [tar_repository_cas()], functions `upload`, `download`,
-#'   and `exists` must be completely pure and self-sufficient.
+#'   `exists`, and `keys` must be completely pure and self-sufficient.
 #'   They must load or namespace all their own packages,
 #'   and they must not depend on any custom user-defined
 #'   functions or objects in the global environment of your pipeline.
@@ -142,13 +142,31 @@
 #'   (e.g. please avoid `file.rename()`).
 #'
 #'   See the "Repository functions" section for more details.
-#' @param exists A function with a single argument `key`.
-#'   This function should check if there is an object at `key` in
-#'   the CAS system.
+#' @param exists A function with a single argument `key`,
+#'   where `key` is a single character string (`length(key)` is 1)
+#'   to identify a single object in the CAS system.
 #'
-#'   For efficiency, `exists` can maintain an in-memory cache of keys.
-#'   New lookups can check the cache and potentially avoid expensive
-#'   queries to the CAS system. See the source code of [tar_cas_e()]
+#'   The `exists` function should check if there is a single object at
+#'   a single `key` in the CAS system.
+#'   It is ignored if `list` is given and `consistent` is `TRUE`.
+#'
+#'   See the "Repository functions" section for more details.
+#' @param list Either `NULL` or an optional function with a single
+#'   argument named `keys`.
+#'
+#'   The `list` function increases efficiency by reducing repeated calls
+#'   to the `exists` function (see above) or entirely avoiding them
+#'   if `consistent` is `TRUE.
+#'
+#'   The `list` function should return a character vector of keys that
+#'   already exist in the CAS system.
+#'   The `keys` argument of `list` is a character vector of
+#'   CAS keys (hashes) which are already recorded in the pipeline metadata
+#'   (`tar_meta()`).
+#'   For greater efficiency, the `list` function can restrict its query
+#'   to these existing keys instead of trying to list the billions of keys
+#'   that could exist in a CAS system.
+#'   See the source code of [tar_cas_l()]
 #'   for an example of how this can work for a local file system CAS.
 #'
 #'   See the "Repository functions" section for more details.
@@ -215,7 +233,11 @@
 #'     },
 #'     exists = function(key) {
 #'       file.exists(file.path("cas", key))
-#'     }
+#'     },
+#'     list = function(keys) {
+#'       keys[file.exists(file.path("cas", keys))]
+#'     },
+#'     consistent = FALSE
 #'   )
 #'   write_file <- function(object) {
 #'     writeLines(as.character(object), "file.txt")
@@ -243,24 +265,51 @@
 tar_repository_cas <- function(
   upload,
   download,
-  exists,
+  exists = NULL,
+  list = NULL,
   consistent = FALSE,
-  substitute = list()
+  substitute = base::list()
 ) {
-  tar_assert_function(upload)
-  tar_assert_function(download)
-  tar_assert_function(exists)
-  tar_assert_function_arguments(upload, c("key", "path"))
-  tar_assert_function_arguments(download, c("key", "path"))
-  tar_assert_function_arguments(exists, "key")
   tar_assert_scalar(consistent)
   tar_assert_lgl(consistent)
   tar_assert_none_na(consistent)
+  tar_assert_function(upload)
+  tar_assert_function(download)
+  tar_assert_function_arguments(upload, c("key", "path"))
+  tar_assert_function_arguments(download, c("key", "path"))
+  list_function <- environment()$list
+  if (!is.null(list_function) && consistent) {
+    exists <- NULL
+  } else {
+    tar_assert_function(
+      exists,
+      msg = paste(
+        "In tar_repository_cas(), 'exists' must be a function",
+        "if 'list' is NULL or 'consistent' is 'FALSE'"
+      )
+    )
+    tar_assert_function_arguments(exists, "key")
+  }
+  if (!is.null(list_function)) {
+    tar_assert_function(list_function)
+    tar_assert_function_arguments(list_function, "keys")
+  }
+  exists_field <- if_any(
+    is.null(exists),
+    tar_repository_cas_field("exists", NULL),
+    tar_repository_cas_field("exists", tar_sub_body(exists, substitute))
+  )
+  list_field <- if_any(
+    is.null(list_function),
+    tar_repository_cas_field("list", NULL),
+    tar_repository_cas_field("list", tar_sub_body(list_function, substitute))
+  )
   paste(
     "repository_cas",
     tar_repository_cas_field("upload", tar_sub_body(upload, substitute)),
     tar_repository_cas_field("download", tar_sub_body(download, substitute)),
-    tar_repository_cas_field("exists", tar_sub_body(exists, substitute)),
+    exists_field,
+    list_field,
     tar_repository_cas_field("consistent", consistent),
     sep = "&"
   )
