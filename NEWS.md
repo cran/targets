@@ -1,3 +1,16 @@
+# targets 1.9.1
+
+## Bug fixes
+
+* Allow branch references to contain multi-element `path` vectors with cloud metadata (#1382, @n8layman).
+* Avoid partial matches in internal code (#1384, @olivroy).
+* Add error handling around calls to `ps::ps_disk_partitions()` and `ps::ps_fs_mount_point()`.
+* Do not store `_targets/objects/` paths in metadata for CAS repositories (#1391).
+
+## Compatibility
+
+* Ensure compatibility with `igraph` >= 2.1.2.
+
 # targets 1.9.0
 
 ## Improvements

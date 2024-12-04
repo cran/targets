@@ -42,7 +42,7 @@ pipeline_targets_init <- function(targets, clone_targets) {
 
 pipeline_get_target <- function(pipeline, name) {
   out <- .subset2(.subset2(pipeline, "targets"), name)
-  if (is_reference(out)) {
+  if (is_reference_not_target(out)) {
     out <- reference_produce_target(out, pipeline, name)
   }
   out
@@ -69,7 +69,7 @@ pipeline_initialize_references_children <- function(
 ) {
   envir <- .subset2(pipeline, "targets")
   for (name in names_children) {
-    envir[[name]] <- reference_init(parent = name_parent)
+    envir[[name]] <- reference_new(parent = name_parent)
   }
   NULL
 }
@@ -162,7 +162,7 @@ pipeline_register_loaded <- function(pipeline, name) { # nolint
 
 pipeline_unload_target <- function(pipeline, name) {
   target <- .subset2(.subset2(pipeline, "targets"), name)
-  if (!is_reference(target)) {
+  if (!is_reference_not_target(target)) {
     store_unload(target$store, target)
     pipeline_set_reference(pipeline, target)
   }

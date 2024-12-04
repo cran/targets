@@ -20,15 +20,36 @@ nbhd_vertices <- function(graph, vertices, mode, order) {
   vertices
 }
 
-targets_adjacent_vertices <- function(graph, v, mode) {
+targets_adjacent_vertices <- function(graph, v, mode, offset = NULL) {
   opt <- igraph::igraph_opt("return.vs.es")
   on.exit(igraph::igraph_options(return.vs.es = opt))
   igraph::igraph_options(return.vs.es = FALSE)
   index <- igraph::adjacent_vertices(graph = graph, v = v, mode = mode)
   index <- unlist(index, use.names = FALSE)
   index <- unique(index)
-  igraph::V(graph)$name[index + 1]
+  igraph::V(graph)$name[index + get_igraph_offset()]
 }
+
+get_igraph_offset <- function() {
+  if (!is.null(igraph_offset$offset)) {
+    return(igraph_offset$offset)
+  }
+  opt <- igraph::igraph_opt("return.vs.es")
+  on.exit(igraph::igraph_options(return.vs.es = opt))
+  igraph::igraph_options(return.vs.es = FALSE)
+  test_graph <- igraph::make_graph(edges = c("a", "b"))
+  adjacent <- igraph::adjacent_vertices(
+    graph = test_graph,
+    v = "a",
+    mode = "out"
+  )
+  adjacent <- as.integer(adjacent)
+  offset <- 2L - adjacent
+  igraph_offset$offset <- offset
+  offset
+}
+
+igraph_offset <- new.env(parent = emptyenv())
 
 igraph_leaves <- function(igraph) {
   is_leaf <- igraph::degree(igraph, mode = "in") == 0L
