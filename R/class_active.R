@@ -34,8 +34,10 @@ active_class <- R6::R6Class(
     exports = NULL,
     process = NULL,
     seconds_start = NULL,
-    seconds_meta_appended = NULL,
-    seconds_meta_uploaded = NULL,
+    seconds_appended_meta = -Inf,
+    seconds_appended_progress = -Inf,
+    seconds_meta_uploaded = -Inf,
+    skipping = TRUE,
     initialize = function(
       pipeline = NULL,
       meta = NULL,
@@ -78,34 +80,45 @@ active_class <- R6::R6Class(
       self$meta$database$flush_rows()
       self$scheduler$progress$database$flush_rows()
     },
+    flush_meta_time = function() {
+      now <- time_seconds_local()
+      if ((now - seconds_appended_meta) >= seconds_meta_append) {
+        .subset2(.subset2(meta, "database"), "flush_rows")()
+        self$seconds_appended_meta <- now
+      }
+      if (skipping) {
+        threshold <- max(min_seconds_appended_progress, seconds_meta_append)
+      } else {
+        threshold <- seconds_meta_append
+      }
+      if ((now - seconds_appended_progress) >= threshold) {
+        .subset2(
+          .subset2(.subset2(scheduler, "progress"), "database"),
+          "flush_rows"
+        )()
+        self$seconds_appended_progress <- now
+        self$skipping <- TRUE
+      }
+    },
     upload_meta = function() {
       self$meta$database$upload_staged()
       self$scheduler$progress$database$upload_staged()
     },
-    sync_meta_time = function() {
-      self$flush_meta_time()
-      self$upload_meta_time()
-    },
-    flush_meta_time = function() {
-      self$seconds_meta_appended <- self$seconds_meta_appended %|||% -Inf
-      now <- time_seconds_local()
-      if ((now - self$seconds_meta_appended) >= self$seconds_meta_append) {
-        self$flush_meta()
-        self$seconds_meta_appended <- time_seconds_local()
-      }
-    },
     upload_meta_time = function() {
-      self$seconds_meta_uploaded <- self$seconds_meta_uploaded %|||% -Inf
       now <- time_seconds_local()
-      if ((now - self$seconds_meta_uploaded) >= self$seconds_meta_upload) {
-        self$upload_meta()
-        self$seconds_meta_uploaded <- time_seconds_local()
+      if ((now - seconds_meta_uploaded) >= seconds_meta_upload) {
+        upload_meta()
+        self$seconds_meta_uploaded <- now
       }
+    },
+    sync_meta_time = function() {
+      flush_meta_time()
+      upload_meta_time()
     },
     flush_upload_meta_file = function(target) {
       if (target_allow_meta(target)) {
-        self$flush_meta()
-        self$upload_meta()
+        flush_meta()
+        upload_meta()
       }
     },
     write_gitignore = function() {
@@ -188,6 +201,7 @@ active_class <- R6::R6Class(
         self$scheduler$trim(target, self$pipeline)
         counter_del_name(self$scheduler$progress$queued, name)
       } else if (target_should_run(target, self$meta)) {
+        self$skipping <- inherits(target, "tar_pattern")
         self$flush_upload_meta_file(target)
         runtime_increment_targets_run(tar_runtime)
         target_gc(target)
@@ -210,6 +224,7 @@ active_class <- R6::R6Class(
       self$scheduler$reporter$report_start()
     },
     end = function() {
+      scheduler$reporter$report_finalize(scheduler$progress)
       scheduler <- self$scheduler
       pipeline_unload_loaded(self$pipeline)
       self$flush_meta()
@@ -229,3 +244,5 @@ active_class <- R6::R6Class(
     }
   )
 )
+
+min_seconds_appended_progress <- 1

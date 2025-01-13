@@ -46,17 +46,16 @@ set_names <- function(x, names) {
   x
 }
 
+setdiff_chr <- function(x, y) {
+  x[!duplicated.default(x) & (match(x, y, 0L) == 0L)]
+}
+
 sort_chr <- function(x) {
   old_locale <- Sys.getlocale(category = "LC_COLLATE")
   on.exit(Sys.setlocale(category = "LC_COLLATE", locale = old_locale))
   Sys.setlocale(category = "LC_COLLATE", locale = "C")
-  sort.int(
-    x = as.character(x),
-    decreasing = FALSE,
-    na.last = NA,
-    method = "radix",
-    index.return = FALSE
-  )
+  x <- as.character(x)
+  x[order(x, na.last = NA, decreasing = FALSE, method = "radix")]
 }
 
 enclass <- function(x, class) {
@@ -73,3 +72,5 @@ supported_args <- function(fun, args) {
 tar_envir_base <- new.env(parent = baseenv())
 
 tar_envir_empty <- new.env(parent = emptyenv())
+
+character0 <- character(0L)

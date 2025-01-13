@@ -31,7 +31,11 @@ summary_class <- R6::R6Class(
       self$report_progress(progress)
     },
     report_skipped = function(target = NULL, progress) {
-      self$report_progress(progress)
+      now <- time_seconds_local()
+      if ((now - seconds_skipped) > reporter_seconds_skipped) {
+        report_progress(progress)
+        self$seconds_skipped <- now
+      }
     },
     report_errored = function(target = NULL, progress) {
       self$report_progress(progress)
@@ -39,9 +43,11 @@ summary_class <- R6::R6Class(
     report_canceled = function(target = NULL, progress) {
       self$report_progress(progress)
     },
-    report_end = function(progress, seconds_elapsed = NULL) {
+    report_finalize = function(progress) {
       self$report_progress(progress)
       self$flush_messages()
+    },
+    report_end = function(progress, seconds_elapsed = NULL) {
       message("")
     }
   )

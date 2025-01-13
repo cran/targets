@@ -9,7 +9,7 @@ meta_init <- function(path_store = path_store_default()) {
 }
 
 meta_new <- function(database = NULL, depends = NULL, store = NULL) {
-  meta_class$new(database, depends, store = store)
+  meta_class$new(database, depends, store = store, lookup = database$lookup)
 }
 
 meta_class <- R6::R6Class(
@@ -21,23 +21,29 @@ meta_class <- R6::R6Class(
     database = NULL,
     depends = NULL,
     store = NULL,
+    lookup = NULL,
     repository_cas_lookup_table = NULL,
     initialize = function(
       database = NULL,
       depends = NULL,
-      store = NULL
+      store = NULL,
+      lookup = NULL
     ) {
       self$database <- database
       self$depends <- depends
       self$store <- store
+      self$lookup <- lookup
     },
     get_depend = function(name) {
-      lookup_get(.subset2(self, "depends"), name)
+      .subset2(depends, name)
+    },
+    get_row = function(name) {
+      .subset2(database, "get_row")(name)
     },
     get_record = function(name) {
       record_from_row(
-        row = self$database$get_row(name),
-        path_store = self$store
+        row = get_row(name),
+        path_store = store
       )
     },
     set_record = function(record) {
@@ -45,6 +51,9 @@ meta_class <- R6::R6Class(
     },
     insert_record = function(record) {
       self$database$buffer_row(record_produce_row(record))
+    },
+    insert_row = function(row) {
+      .subset2(database, "buffer_row")(row)
     },
     exists_record = function(name) {
       self$database$exists_row(name)
@@ -58,34 +67,32 @@ meta_class <- R6::R6Class(
     restrict_records = function(pipeline) {
       names_envir <- names(pipeline$imports)
       names_records <- self$list_records()
-      names_children <- fltr(
-        names_records,
-        ~self$database$get_row(.x)$type == "branch"
-      )
+      index <- 1L
+      n <- length(names_records)
+      get_row <- database$get_row
+      is_branch <- vector(mode = "logical", length = n)
+      while (index <= n) {
+        name <- .subset(names_records, index)
+        is_branch[index] <- .subset2(get_row(name), "type") == "branch"
+        index <- index + 1L
+      }
+      names_children <- names_records[is_branch]
       names_targets <- pipeline_get_names(pipeline)
       names_parents <- intersect(names_records, names_targets)
       names_current <- c(names_envir, names_targets, names_children)
       remove <- setdiff(names_records, names_current)
       self$del_records(remove)
     },
-    hash_dep = function(name, pipeline) {
-      exists <- self$exists_record(name) &&
-        pipeline_exists_object(pipeline, name)
-      if_any(
-        exists,
-        self$get_record(name)$data,
-        ""
-      )
-    },
     hash_deps = function(deps, pipeline) {
-      hashes <- vapply(
-        X = sort_chr(deps),
-        FUN = self$hash_dep,
-        pipeline = pipeline,
-        FUN.VALUE = character(1L),
-        USE.NAMES = TRUE
-      )
-      hashes <- hashes[nzchar(hashes)]
+      hashes <- list()
+      index <- 1L
+      n <- length(deps)
+      while (index <= n) {
+        name <- .subset(deps, index)
+        hashes[[name]] <- .subset2(.subset2(lookup, name), "data")
+        index <- index + 1L
+      }
+      hashes <- unlist(hashes, use.names = TRUE)
       string <- paste(c(names(hashes), hashes), collapse = "")
       hash_object(string)
     },
@@ -130,7 +137,8 @@ meta_class <- R6::R6Class(
       }
     },
     update_repository_cas_lookup_table = function(data) {
-      data <- data[!is.na(data$repository), c("data", "repository")]
+      rows <- !(data$repository %in% c("local", "aws", "gcp"))
+      data <- data[rows, c("data", "repository")]
       hashes <- split(x = data$data, f = data$repository)
       lookup_table <- lookup_new()
       for (name in names(hashes)) {

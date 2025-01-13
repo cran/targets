@@ -111,18 +111,9 @@ pipeline_reset_deployment <- function(pipeline, name) {
 pipeline_exists_target <- function(pipeline, name) {
   envir <- .subset2(pipeline, "targets")
   if (is.null(envir)) {
-    envir <- tar_envir_base
+    return(FALSE)
   }
   !is.null(.subset2(envir, name))
-}
-
-pipeline_exists_import <- function(pipeline, name) {
-  exists(x = name, envir = pipeline$imports, inherits = FALSE)
-}
-
-pipeline_exists_object <- function(pipeline, name) {
-  pipeline_exists_target(pipeline, name) ||
-    pipeline_exists_import(pipeline, name)
 }
 
 pipeline_targets_only_edges <- function(edges) {
@@ -348,6 +339,7 @@ pipeline_validate <- function(pipeline) {
 pipeline_validate_lite <- function(pipeline) {
   tar_assert_inherits(pipeline, "tar_pipeline", msg = "invalid pipeline.")
   tar_assert_correct_fields(pipeline, pipeline_new)
+  tar_assert_target_name_case(pipeline_get_names(pipeline))
   pipeline_validate_conflicts(pipeline)
 }
 

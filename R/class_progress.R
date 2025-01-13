@@ -121,11 +121,11 @@ progress_class <- R6::R6Class(
     produce_row = function(target, progress) {
       name <- target_get_name(target)
       type <- target_get_type(target)
-      branches <- if_any(
-        identical(type, "stem"),
-        0L,
-        length(omit_na(target_get_children(target)))
-      )
+      if (type == "pattern") {
+        branches <- length(omit_na(target_get_children(target)))
+      } else {
+        branches <- 0L
+      }
       list(
         name = name,
         type = type,
@@ -135,7 +135,8 @@ progress_class <- R6::R6Class(
       )
     },
     buffer_progress = function(target, progress) {
-      self$database$buffer_row(self$produce_row(target, progress))
+      row <- produce_row(target, progress)
+      .subset2(database, "buffer_row")(row, fill_missing = FALSE)
     },
     buffer_skipped = function(target) {
       self$buffer_progress(target, progress = "skipped")
@@ -227,6 +228,10 @@ progress_class <- R6::R6Class(
     },
     abridge = function() {
       counter_del_names(self$queued, counter_get_names(self$queued))
+    },
+    count_unfinished = function(names) {
+      counter_count_exists(queued, names) +
+        counter_count_exists(dispatched, names)
     },
     validate = function() {
       counter_validate(self$queued)

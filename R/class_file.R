@@ -1,6 +1,6 @@
 file_init <- function(
-  path = character(0),
-  stage = character(0),
+  path = character0,
+  stage = character0,
   hash = NA_character_,
   time = NA_character_,
   size = NA_character_,
@@ -47,9 +47,10 @@ file_new <- function(
 }
 
 file_exists_path <- function(file) {
-  length(file$path) > 0L &&
-    all(!anyNA(file$path)) &&
-    all(file_exists_runtime(file$path))
+  path <- .subset2(file, "path")
+  length(path) > 0L &&
+    all(!anyNA(path)) &&
+    all(file_exists_runtime(path))
 }
 
 file_exists_stage <- function(file) {
@@ -78,16 +79,27 @@ file_update_hash <- function(file) {
 }
 
 file_should_rehash <- function(file, time, size, trust_timestamps) {
-  if_any(
-    .subset2(tar_options, "trust_timestamps") %|||% trust_timestamps,
-    !identical(time, file$time) || !identical(size, file$size),
-    TRUE
-  )
+  trust <- .subset2(tar_options, "trust_timestamps")
+  if (is.null(trust)) {
+    trust <- trust_timestamps
+  }
+  if (trust) {
+    file_time <- .subset2(file, "time")
+    file_size <- .subset2(file, "size")
+    if (anyNA(file_time) || anyNA(file_size)) {
+      out <- TRUE
+    } else {
+      out <- (time != file_time) || (size != file_size)
+    }
+  } else {
+    out <- TRUE
+  }
+  out
 }
 
-file_repopulate <- function(file, record) {
-  file$path <- record$path
-  file$hash <- record$data
+file_repopulate <- function(file, path, data) {
+  file$path <- path
+  file$hash <- data
 }
 
 file_ensure_hash <- function(file) {
@@ -110,7 +122,7 @@ file_ensure_hash <- function(file) {
 }
 
 file_has_correct_hash <- function(file) {
-  files <- file_list_files(file$path)
+  files <- file_list_files(.subset2(file, "path"))
   info <- file_info_runtime(files)
   time <- file_time(info)
   bytes <- file_bytes(info)
@@ -119,9 +131,19 @@ file_has_correct_hash <- function(file) {
     file = file,
     time = time,
     size = size,
-    trust_timestamps = all(info$trust_timestamps)
+    trust_timestamps = all(.subset2(info, "trust_timestamps"))
   )
-  if_any(do, identical(file$hash, file_hash(files)), TRUE)
+  if (do) {
+    file_hash <- .subset2(file, "hash")
+    if (anyNA(file_hash)) {
+      out <- FALSE
+    } else {
+      out <- file_hash == file_hash(files)
+    }
+  } else {
+    out <- TRUE
+  }
+  out
 }
 
 file_validate_path <- function(path) {
@@ -188,11 +210,12 @@ file_info <- function(files, trust_timestamps = NULL) {
   } else {
     out$trust_timestamps <- rep(trust_timestamps, nrow(out))
   }
+  out$path <- rownames(out)
   out
 }
 
 file_time <- function(info) {
-  file_diff_chr(max(info$mtime_numeric %||% 0))
+  file_diff_chr(max(.subset2(info, "mtime_numeric") %||% 0))
 }
 
 file_time_now <- function() {
@@ -211,11 +234,11 @@ file_time_numeric <- function(time) {
 
 file_bytes <- function(info) {
   # Cannot be integer because of large value.
-  round(sum(replace_na(info$size, 0)), 6)
+  round(sum(replace_na(.subset2(info, "size"), 0)), 6)
 }
 
 file_size <- function(bytes) {
-  hash_object(bytes)
+  sprintf("s%sb", as.character(bytes))
 }
 
 file_diff_chr <- function(dbl) {

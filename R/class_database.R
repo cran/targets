@@ -78,6 +78,7 @@ database_class <- R6::R6Class(
     list_column_modes = NULL,
     resources = NULL,
     buffer = NULL,
+    buffer_length = NULL,
     staged = NULL,
     initialize = function(
       lookup = NULL,
@@ -89,8 +90,7 @@ database_class <- R6::R6Class(
       numeric_columns = NULL,
       list_columns = NULL,
       list_column_modes = NULL,
-      resources = NULL,
-      buffer = NULL
+      resources = NULL
     ) {
       self$lookup <- lookup
       self$path <- path
@@ -102,20 +102,17 @@ database_class <- R6::R6Class(
       self$list_columns <- list_columns
       self$list_column_modes <- list_column_modes
       self$resources <- resources
-      self$buffer <- buffer
+      self$buffer <- new.env(parent = emptyenv(), hash = FALSE)
+      self$buffer_length <- 0L
     },
     get_row = function(name) {
-      lookup_get(.subset2(self, "lookup"), name)
+      lookup_get(lookup, name)
     },
     set_row = function(row) {
-      lookup_set(
-        .subset2(self, "lookup"),
-        names = as.character(.subset2(row, "name")),
-        object = as.list(row)
-      )
+      lookup[[.subset2(row, "name")]] <- as.list(row)
     },
     del_rows = function(names) {
-      lookup_remove(.subset2(self, "lookup"), names)
+      lookup_remove(lookup, names)
     },
     get_data = function() {
       rows <- self$list_rows()
@@ -125,7 +122,7 @@ database_class <- R6::R6Class(
       out <- map(
         rows,
         ~database_repair_list_columns(
-          .subset2(self, "get_row")(.x),
+          get_row(.x),
           list_columns,
           list_column_mode_list
         )
@@ -136,16 +133,28 @@ database_class <- R6::R6Class(
     },
     set_data = function(data) {
       list <- lapply(data, as.list)
-      map(seq_along(list$name), ~self$set_row(lapply(list, `[[`, i = .x)))
+      index <- 1L
+      n <- nrow(data)
+      names <- .subset2(data, "name")
+      while (index <= n) {
+        name <- .subset(names, index)
+        lookup[[name]] <- lapply(list, `[[`, i = index)
+        index <- index + 1L
+      }
     },
     exists_row = function(name) {
-      lookup_exists(.subset2(self, "lookup"), name)
+      lookup_exists(lookup, name)
     },
     list_rows = function() {
-      lookup_list(.subset2(self, "lookup"))
+      lookup_list(lookup)
     },
     condense_data = function(data) {
-      data[!duplicated(data$name, fromLast = TRUE), ]
+      repeats <- duplicated(data$name, fromLast = TRUE)
+      if (any(repeats)) {
+        data[!repeats, ]
+      } else {
+        data
+      }
     },
     read_condensed_data = function() {
       self$condense_data(self$read_data())
@@ -167,24 +176,39 @@ database_class <- R6::R6Class(
       self$set_data(data)
     },
     select_cols = function(data) {
-      fill <- setdiff(self$header, names(data))
-      na_col <- rep(NA_character_, length(data$name))
+      fill <- setdiff(header, names(data))
+      na_col <- rep(NA_character_, length(.subset2(data, "name")))
       for (col in fill) {
         data[[col]] <- na_col
       }
-      as.list(data)[self$header]
+      as.list(data)[header]
     },
-    buffer_row = function(row) {
-      self$set_row(row)
-      line <- self$produce_line(self$select_cols(row))
-      self$buffer[length(self$buffer) + 1L] <- line
+    buffer_row = function(row, fill_missing = TRUE) {
+      set_row(row)
+      if (fill_missing) {
+        row <- select_cols(row)
+      }
+      sublines <- produce_sublines(row)
+      new_length <- buffer_length + 1L
+      buffer[[as.character(new_length)]] <- sublines
+      self$buffer_length <- new_length
     },
     flush_rows = function() {
-      if (length(self$buffer)) {
-        self$append_lines(self$buffer)
-        self$buffer <- NULL
-        self$staged <- TRUE
+      if (buffer_length == 0L) {
+        return()
       }
+      lines_list <- vector(mode = "list", length = buffer_length)
+      index <- 1L
+      while (index <= buffer_length) {
+        line <- .subset2(buffer, as.character(index))
+        lines_list[[index]] <- paste(line, collapse = database_sep_outer)
+        index <- index + 1L
+      }
+      lines <- as.character(lines_list)
+      append_lines(lines)
+      self$buffer <- new.env(parent = emptyenv(), hash = FALSE)
+      self$buffer_length <- 0L
+      self$staged <- TRUE
     },
     upload_staged = function() {
       if (!is.null(self$staged) && self$staged) {
@@ -246,18 +270,31 @@ database_class <- R6::R6Class(
       )
       file_move(from = tmp, to = self$path)
     },
-    produce_line = function(row) {
+    produce_sublines = function(row) {
       old <- options(OutDec = ".")
       on.exit(options(old))
-      sublines <- vapply(row, self$produce_subline, FUN.VALUE = character(1))
+      index <- 1L
+      n <- length(row)
+      sublines <- character(length = n)
+      while (index <= n) {
+        sublines[index] <- produce_subline(.subset2(row, index))
+        index <- index + 1L
+      }
+      sublines
+    },
+    produce_line = function(row) {
+      sublines <- produce_sublines(row)
       paste(sublines, collapse = database_sep_outer)
     },
     produce_subline = function(element) {
-      element <- replace_na(element, "")
-      if (is.list(element)) {
-        element <- paste(unlist(element), collapse = database_sep_inner)
+      if (anyNA(element)) {
+        element <- replace_na(element, "")
       }
-      as.character(element)
+      element <- as.character(unlist(element))
+      if (length(element) != 1L) {
+        element <- paste(element, collapse = database_sep_inner)
+      }
+      element
     },
     reset_storage = function() {
       dir_create(dirname(self$path))
@@ -275,20 +312,23 @@ database_class <- R6::R6Class(
         self$produce_mock_data()
       )
     },
-    read_existing_data = function() {
-      # TODO: use sep2 once implemented:
-      # https://github.com/Rdatatable/data.table/issues/1162
+    get_encoding = function() {
       encoding <- getOption("encoding")
       encoding <- if_any(
         identical(tolower(encoding), "latin1"),
         "Latin-1",
         encoding
       )
-      encoding <- if_any(
+      if_any(
         encoding %in% c("unknown", "UTF-8", "Latin-1"),
         encoding,
         "unknown"
       )
+    },
+    read_existing_data = function() {
+      # TODO: use sep2 once implemented:
+      # https://github.com/Rdatatable/data.table/issues/1162
+      encoding <- self$get_encoding()
       out <- data.table::fread(
         file = self$path,
         sep = database_sep_outer,
@@ -334,16 +374,35 @@ database_class <- R6::R6Class(
       out
     },
     deduplicate_storage = function() {
-      exists <- file.exists(self$path)
-      overwrite <- !exists
-      if (exists) {
-        old <- self$read_data()
-        data <- self$condense_data(old)
-        overwrite <- (nrow(data) != nrow(old))
+      if (!all(file.exists(self$path))) {
+        return()
       }
-      if (overwrite) {
-        data <- data[order(data$name),, drop = FALSE] # nolint
-        self$overwrite_storage(data)
+      lines <- readLines(
+        con = self$path,
+        encoding = self$get_encoding(),
+        warn = FALSE
+      )
+      tar_assert_match(
+        x = lines[1L],
+        pattern = paste0("^name", database_sep_outer_grep),
+        msg = paste(
+          "bug in targets: cannot deduplicate storage for the database at",
+          self$path,
+          "because the header does not begin with \"name\"."
+        )
+      )
+      names <- gsub(
+        pattern = paste0(database_sep_outer_grep, ".*"),
+        replacement = "",
+        x = lines
+      )
+      line_duplicated <- c(FALSE, duplicated(names[-1L], fromLast = TRUE))
+      if (any(line_duplicated)) {
+        dir <- dirname(self$path)
+        dir_create(dir)
+        tmp <- tempfile(pattern = "tar_temp_", tmpdir = dir)
+        writeLines(text = lines[!line_duplicated], con = tmp)
+        file_move(from = tmp, to = self$path)
       }
       invisible()
     },
@@ -523,5 +582,6 @@ database_repair_list_columns <- function(x, columns, list_column_mode_list) {
   x
 }
 
-database_sep_outer <- "|"
 database_sep_inner <- "*"
+database_sep_outer <- "|"
+database_sep_outer_grep <- "\\|"

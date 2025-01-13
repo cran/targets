@@ -704,15 +704,7 @@ tar_assert_script <- function(script) {
 }
 
 tar_assert_objects_files <- function(store) {
-  objects <- path_objects_dir(store)
-  files <- list.files(
-    objects,
-    full.names = TRUE,
-    all.files = TRUE,
-    include.dirs = TRUE,
-    no.. = TRUE
-  )
-  directories <- files[dir.exists(files)]
+  directories <- list.dirs(path = path_objects_dir(store), recursive = FALSE)
   if (length(directories) > 0L) {
     tar_throw_run(
       "the write() function in tar_format() ",
@@ -878,4 +870,23 @@ tar_assert_meta <- function(store) {
   if ((length(store) < 1L || !all(file.exists(path_meta(store))))) {
     tar_throw_validate(message = message)
   }
+}
+
+tar_assert_target_name_case <- function(names) {
+  index <- duplicated(tolower(names))
+  if (!any(index)) {
+    return()
+  }
+  problems <- paste(names[index], collapse = ", ")
+  message <- paste0(
+    "In most pipelines, a target name is the name of its data file in ",
+    "storage. Some file systems are not case sensitive, so targets ",
+    "should not have duplicate names when converting to lower case. ",
+    "Found problematic names: ",
+    problems
+  )
+  tar_warning(
+    message = message,
+    class = c("tar_condition_validate", "tar_condition_targets")
+  )
 }

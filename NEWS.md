@@ -1,3 +1,40 @@
+# targets 1.10.0
+
+## Invalidating changes
+
+These changes invalidate certain targets in a pipeline and cause them to rerun on the next `tar_make()`.
+
+* Exclude function signatures from `tar_repository_cas()` output strings to reduce the size of pipeline metadata (#1390).
+* Exclude function signatures from `tar_format()` output strings to reduce the size of pipeline metadata (#1390).
+
+## Summary of performance gains
+
+`tar_make()` and `tar_outdated()` run much faster in this release. Extensive profiling was done on a real-world simulation pipeline with 66002 up-to-date targets. For `tar_make()` using all the default settings:
+
+Machine | Before (seconds) | After (seconds) | Speedup
+---|---|---|---
+M2 Macbook | 413.16 | 35.538 | 11.62587
+RHEL9 | 450.66 | 94.08 | 4.790
+
+And for `tar_outdated()` using all the default settings
+
+Machine | Before (seconds) | After (seconds) | Speedup
+---|---|---|---
+M2 Macbook | 91.314 | 16.636 | 5.48894
+RHEL9 | 167.809 | 37.395 | 4.487472
+
+To take advantage of these speed gains for an existing pipeline, you may have to run `tar_make()` to convert the time stamps and file sizes to a new format. This initial `tar_make()` is slow, but subsequent `tar_make()` calls should be much faster than before the upgrade.
+
+## Other/specific changes
+
+* Speed up `tar_make()` and `tar_outdated()` by avoiding excessive buffering and disk writes for metadata and reporters when the pipeline is just skipping targets.
+* Use a more lookup-efficient data structure for `tar_runtime$file_info` (#1398).
+* Fall back on vector aggregation without names (#1401, @guglicap).
+* Speed up representation of file sizes in metadata (#1408).
+* Add a new `"forecast_interactive"` reporter to `tar_outdated()` to choose `"forecast"` for interactive sessions and `"silent"` for non-interactive ones.
+* Add a new `seconds_reporter_outdated` argument to `tar_config_set()` with a default of 1 to control the time interval of the reporter of `tar_outdated()` and other passive algorithm functions.
+* Remove target descriptions from the default labels of graph visualizations.
+
 # targets 1.9.1
 
 ## Bug fixes

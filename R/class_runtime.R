@@ -9,7 +9,6 @@ runtime_new <- function(
   gcp_auth = NULL,
   file_exist = NULL,
   file_info = NULL,
-  file_info_exist = NULL,
   inventories = NULL,
   traceback = NULL,
   pid_parent = NULL,
@@ -30,7 +29,6 @@ runtime_new <- function(
   out$gcp_auth <- gcp_auth
   out$file_exist <- file_exist
   out$file_info <- file_info
-  out$file_info_exist <- file_info_exist
   out$inventories <- inventories
   out$traceback <- traceback
   out$pid_parent <- pid_parent
@@ -100,9 +98,6 @@ runtime_validate_extras <- function(x) {
     tar_assert_list(x$file_info)
     tar_assert_named(x$file_info)
   }
-  if (!is.null(x$file_info_exist)) {
-    tar_assert_envir(x$file_info_exist)
-  }
   if (!is.null(x$inventories)) {
     tar_assert_list(x$inventories)
   }
@@ -135,18 +130,17 @@ runtime_set_file_info <- function(runtime, store) {
     no.. = TRUE
   )
   runtime$file_systems <- runtime_file_systems()
-  file_info <- file_info(objects, trust_timestamps = FALSE)
-  file_info <- as.list(file_info[, c("size", "mtime_numeric")])
+  file_info <- as.list(file_info(objects, trust_timestamps = FALSE))
+  file_info <- file_info[c("path", "size", "mtime_numeric")]
   file_info$trust_timestamps <- rep(
     runtime$trust_timestamps_store,
     length(objects)
   )
-  names(file_info$size) <- objects
-  names(file_info$mtime_numeric) <- objects
-  names(file_info$trust_timestamps) <- objects
   runtime$file_info <- file_info
+  file_info_index <- seq_along(objects)
+  names(file_info_index) <- objects
+  runtime$file_info_index <- list2env(as.list(file_info_index), hash = TRUE)
   runtime$file_exist <- tar_counter(names = objects)
-  runtime$file_info_exist <- tar_counter(names = objects)
 }
 
 runtime_file_systems <- function() {

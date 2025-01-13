@@ -24,11 +24,10 @@ builder_s3_class <- c("tar_builder", "tar_target")
 
 #' @export
 target_update_depend.tar_builder <- function(target, pipeline, meta) {
-  lookup_set(
-    lookup = .subset2(meta, "depends"),
-    names = target_get_name(target),
-    object = .subset2(meta, "produce_depend")(target, pipeline)
-  )
+  lookup <- .subset2(meta, "depends")
+  name <- target_get_name(target)
+  object <- meta$produce_depend(target, pipeline)
+  lookup[[name]] <- object
 }
 
 #' @export
@@ -105,19 +104,19 @@ target_should_run.tar_builder <- function(target, meta) {
 # Willing to ignore high cyclomatic complexity score.
 # nolint start
 builder_should_run <- function(target, meta) {
-  cue <- target$cue
-  if (cue_record_exists(cue, target, meta)) return(TRUE)
-  record <- meta$get_record(target_get_name(target))
-  if (cue_record(cue, target, meta, record)) return(TRUE)
+  cue <- .subset2(target, "cue")
+  if (cue_meta_exists(cue, target, meta)) return(TRUE)
+  row <- .subset2(meta, "get_row")(target_get_name(target))
+  if (cue_meta(cue, target, meta, row)) return(TRUE)
   if (cue_always(cue, target, meta)) return(TRUE)
   if (cue_never(cue, target, meta)) return(FALSE)
-  if (cue_command(cue, target, meta, record)) return(TRUE)
-  if (cue_depend(cue, target, meta, record)) return(TRUE)
-  if (cue_format(cue, target, meta, record)) return(TRUE)
-  if (cue_repository(cue, target, meta, record)) return(TRUE)
-  if (cue_iteration(cue, target, meta, record)) return(TRUE)
-  if (cue_seed(cue, target, meta, record)) return(TRUE)
-  if (cue_file(cue, target, meta, record)) return(TRUE)
+  if (cue_command(cue, target, meta, row)) return(TRUE)
+  if (cue_depend(cue, target, meta, row)) return(TRUE)
+  if (cue_format(cue, target, meta, row)) return(TRUE)
+  if (cue_repository(cue, target, meta, row)) return(TRUE)
+  if (cue_iteration(cue, target, meta, row)) return(TRUE)
+  if (cue_seed(cue, target, meta, row)) return(TRUE)
+  if (cue_file(cue, target, meta, row)) return(TRUE)
   FALSE
 }
 # nolint end
@@ -194,7 +193,20 @@ target_skip.tar_builder <- function(
   active
 ) {
   target_update_queue(target, scheduler)
-  file_repopulate(target$file, meta$get_record(target_get_name(target)))
+  name <- target_get_name(target)
+  row <- .subset2(meta, "get_row")(name)
+  path <- store_path_from_name(
+    store = .subset2(target, "store"),
+    format = .subset2(row, "format"),
+    name = name,
+    path = unlist(.subset2(row, "path")),
+    path_store = .subset2(meta, "store")
+  )
+  file_repopulate(
+    file = .subset2(target, "file"),
+    path = path,
+    data = .subset2(row, "data")
+  )
   pipeline_set_target(pipeline, target)
   if (active) {
     builder_ensure_workspace(
@@ -204,12 +216,16 @@ target_skip.tar_builder <- function(
       meta = meta
     )
   }
+  progress <- .subset2(scheduler, "progress")
   if_any(
     active,
-    scheduler$progress$register_skipped(target),
-    scheduler$progress$assign_skipped(target_get_name(target))
+    .subset2(progress, "register_skipped")(target),
+    .subset2(progress, "assign_skipped")(target_get_name(target))
   )
-  scheduler$reporter$report_skipped(target, scheduler$progress)
+  .subset2(.subset2(scheduler, "reporter"), "report_skipped")(
+    target,
+    .subset2(scheduler, "progress")
+  )
 }
 
 #' @export
@@ -389,10 +405,10 @@ builder_ensure_workspace <- function(target, pipeline, scheduler, meta) {
 
 builder_should_save_workspace <- function(target) {
   names <- c(target_get_name(target), target_get_parent(target))
-  because_named <- any(names %in% tar_options$get_workspaces())
-  has_error <- metrics_has_error(target$metrics)
-  if_error <- tar_options$get_workspace_on_error() ||
-    identical(target$settings$error, "workspace")
+  because_named <- any(names %in% .subset2(tar_options, "workspaces"))
+  has_error <- metrics_has_error(.subset2(target, "metrics"))
+  if_error <- .subset2(tar_options, "get_workspace_on_error")() ||
+    identical(.subset2(.subset2(target, "settings"), "error"), "workspace")
   because_error <- if_error && has_error
   because_named || because_error
 }
@@ -564,36 +580,36 @@ builder_unmarshal_value <- function(target) {
 
 builder_sitrep <- function(target, meta) {
   cue <- target$cue
-  exists <- meta$exists_record(target_get_name(target))
-  record <- if_any(
-    exists,
-    meta$get_record(target_get_name(target)),
-    NA
+  missing <- cue_meta_exists(cue, target, meta)
+  row <- if_any(
+    missing,
+    NA,
+    meta$get_row(target_get_name(target))
   )
-  cue_record <- if_any(
-    exists,
-    cue_record(cue, target, meta, record),
-    TRUE
+  cue_meta <- if_any(
+    missing,
+    TRUE,
+    cue_meta(cue, target, meta, row)
   )
   list(
     name = target_get_name(target),
-    record = if_any(exists, cue_record, TRUE),
+    meta = cue_meta,
     always = cue_always(cue, target, meta),
     never = cue_never(cue, target, meta),
-    command = if_any(cue_record, NA, cue_command(cue, target, meta, record)),
-    depend = if_any(cue_record, NA, cue_depend(cue, target, meta, record)),
-    format = if_any(cue_record, NA, cue_format(cue, target, meta, record)),
+    command = if_any(cue_meta, NA, cue_command(cue, target, meta, row)),
+    depend = if_any(cue_meta, NA, cue_depend(cue, target, meta, row)),
+    format = if_any(cue_meta, NA, cue_format(cue, target, meta, row)),
     repository = if_any(
-      cue_record,
+      cue_meta,
       NA,
-      cue_repository(cue, target, meta, record)
+      cue_repository(cue, target, meta, row)
     ),
     iteration = if_any(
-      cue_record,
+      cue_meta,
       NA,
-      cue_iteration(cue, target, meta, record)
+      cue_iteration(cue, target, meta, row)
     ),
-    file = if_any(cue_record, NA, cue_file(cue, target, meta, record)),
-    seed = if_any(cue_record, NA, cue_seed(cue, target, meta, record))
+    file = if_any(cue_meta, NA, cue_file(cue, target, meta, row)),
+    seed = if_any(cue_meta, NA, cue_seed(cue, target, meta, row))
   )
 }

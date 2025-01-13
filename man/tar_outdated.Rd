@@ -10,7 +10,7 @@ tar_outdated(
   branches = FALSE,
   targets_only = TRUE,
   reporter = targets::tar_config_get("reporter_outdated"),
-  seconds_reporter = targets::tar_config_get("seconds_reporter"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter_outdated"),
   seconds_interval = targets::tar_config_get("seconds_interval"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
@@ -50,17 +50,26 @@ created by running the target script file (default: \verb{_targets.R}).}
 
 \item{reporter}{Character of length 1, name of the reporter to user.
 Controls how messages are printed as targets are checked. Choices:
-\itemize{
-\item \code{"silent"}: print nothing.
-\item \code{"forecast"}: print running totals of the checked and outdated
-targets found so far.
-}}
+* \code{"forecast_interactive"} (default): use the forecast reporter if the
+session is interactive (see \code{\link[base:interactive]{base::interactive()}}),
+otherwise use the silent reporter.
+* \code{"silent"}: print nothing.
+* \code{"forecast"}: print running totals of the checked and outdated
+targets found so far.}
 
 \item{seconds_reporter}{Positive numeric of length 1 with the minimum
 number of seconds between times when the reporter prints progress
-messages to the R console.}
+messages to the R console.
+This is an aggressive optimization setting not recommended
+for most users: higher values might make some pipelines run faster,
+but it becomes less clear which targets are actually running
+at any given moment.
+When the pipeline is just skipping targets,
+the actual interval between messages is \code{max(1, seconds_reporter)}
+to reduce overhead.}
 
-\item{seconds_interval}{Deprecated on 2023-08-24 (version 1.2.2.9001).
+\item{seconds_interval}{Deprecated on 2023-08-24
+(targets version 1.2.2.9001).
 Use \code{seconds_meta_append}, \code{seconds_meta_upload},
 and \code{seconds_reporter} instead.}
 

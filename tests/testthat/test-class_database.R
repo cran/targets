@@ -333,13 +333,18 @@ tar_test("database$select_cols()", {
 })
 
 tar_test("database$deduplicate_storage()", {
-  lines <- c("name|col", "x|1", "x|2", "y|2", "y|1")
+  lines <- c("name|col", "x|1", "x|2", "y|2", "y|1", "name|y", "name|z")
   tmp <- tempfile()
   writeLines(lines, tmp)
   db <- database_init(path = tmp, header = c("name", "col"))
   db$deduplicate_storage()
   out <- readLines(tmp)
-  expect_equal(out, c("name|col", "x|2", "y|1"))
+  expect_equal(out, c("name|col", "x|2", "y|1", "name|z"))
+})
+
+tar_test("database$deduplicate_storage() on non-existent file", {
+  db <- database_init(path = tempfile(), header = c("name", "col"))
+  expect_silent(db$deduplicate_storage())
 })
 
 tar_test("database$validate()", {
@@ -388,20 +393,20 @@ tar_test("fail to validate incompatible header", {
 
 tar_test("database buffer", {
   db <- database_init()
-  expect_null(db$buffer)
+  expect_true(is.environment(db$buffer))
   expect_equal(lookup_list(db$lookup), character(0L))
   db$buffer_row(list(name = "x"))
   expect_equal(lookup_list(db$lookup), "x")
   db$buffer_row(list(name = "y"))
-  expect_equal(sort(db$buffer), sort(c("x", "y")))
+  expect_equal(sort(as.character(as.list(db$buffer))), sort(c("x", "y")))
   expect_equal(sort(lookup_list(db$lookup)), sort(c("x", "y")))
   expect_false(file.exists(db$path))
   db$flush_rows()
   lines <- readLines(db$path)
-  expect_equal(lines, c("x", "y"))
+  expect_equal(sort(lines), sort(c("x", "y")))
   db$flush_rows()
   lines <- readLines(db$path)
-  expect_equal(lines, c("x", "y"))
+  expect_equal(sort(lines), sort(c("x", "y")))
 })
 
 tar_test("compare_working_directories()", {

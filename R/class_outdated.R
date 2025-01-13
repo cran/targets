@@ -7,7 +7,7 @@ outdated_init <- function(
   reporter = "silent",
   seconds_meta_append = 0,
   seconds_meta_upload = 15,
-  seconds_reporter = 0
+  seconds_reporter = 0.5
 ) {
   outdated_new(
     pipeline = pipeline,
@@ -98,9 +98,10 @@ outdated_class <- R6::R6Class(
       counter_exists_name(self$outdated, name)
     },
     reset_hash = function(name) {
-      record <- self$meta$get_record(name)
-      record$data <- NA_character_
-      self$meta$set_record(record)
+      database <- .subset2(meta, "database")
+      row <- .subset2(database, "get_row")(name)
+      row$data <- NA_character_
+      .subset2(database, "set_row")(row)
     },
     reset_junction = function(target) {
       if (!is.null(target$junction)) {
@@ -167,22 +168,27 @@ outdated_class <- R6::R6Class(
         self$register_outdated(target_get_name(target))
       }
     },
-    process_target = function(name) {
-      target <- pipeline_get_target(self$pipeline, name)
+    process_target = function(name, pipeline) {
+      target <- pipeline_get_target(pipeline, name)
       if_any(
         inherits(target, "tar_pattern"),
-        self$process_pattern(target),
-        self$process_builder(target)
+        process_pattern(target),
+        process_builder(target)
       )
-      self$register_checked(name)
-      self$scheduler$reporter$report_outdated(self)
+      register_checked(name)
+      scheduler$reporter$report_outdated(self)
     },
     run = function() {
       self$start()
       queue <- self$scheduler$queue
-      while (queue$should_dequeue()) {
-        self$process_target(self$scheduler$queue$dequeue())
+      should_dequeue <- queue$should_dequeue
+      dequeue <- queue$dequeue
+      pipeline <- self$pipeline
+      while (should_dequeue()) {
+        name <- dequeue()
+        self$process_target(name, pipeline)
       }
+      scheduler$reporter$report_outdated_end(self)
       self$end()
     },
     validate = function() {

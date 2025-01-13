@@ -64,13 +64,16 @@ tar_test("store_row_path()", {
   expect_equal(store_row_path(store, file), "path")
 })
 
-tar_test("store_path_from_record()", {
+tar_test("store_path_from_name()", {
   store <- tar_target(x, "x_value", format = "file")$store
-  record <- record_init(path = "path", format = "file")
-  expect_equal(
-    store_path_from_record(store, record, path_store_default()),
-    "path"
+  out <- store_path_from_name(
+    store,
+    format = store$format,
+    name = "x",
+    path = "path",
+    path_store = path_store_default()
   )
+  expect_equal(out, "path")
 })
 
 tar_test("files can be empty (#728)", {
@@ -115,4 +118,16 @@ tar_test("store_class_format.file_fast()", {
     store_class_format.file_fast("file_fast"),
     c("tar_store_file", "tar_external", "tar_store")
   )
+})
+
+tar_test("file info caching works with multiple external files", {
+  skip_cran()
+  file.create(c("temp1", "temp2"))
+  on.exit(unlink(c("temp1", "temp2"), recursive = TRUE))
+  tar_script(tar_target(x, c("temp1", "temp1"), format = "file"))
+  tar_make(callr_function = NULL)
+  expect_equal(tar_progress(x)$progress, "completed")
+  tar_make(callr_function = NULL)
+  expect_equal(tar_progress(x)$progress, "skipped")
+  expect_equal(tar_outdated(callr_function = NULL), character(0L))
 })

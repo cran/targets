@@ -28,16 +28,16 @@ reporter_class <- R6::R6Class(
   public = list(
     seconds_interval = NULL,
     buffer = NULL,
-    seconds_flushed = NULL,
+    seconds_flushed = -Inf,
+    seconds_skipped = -Inf,
     initialize = function(seconds_interval = NULL) {
       self$seconds_interval <- seconds_interval
     },
     poll = function() {
-      self$seconds_flushed <- self$seconds_flushed %|||% -Inf
       now <- time_seconds_local()
-      if ((now - self$seconds_flushed) > self$seconds_interval) {
-        self$flush_messages()
-        self$seconds_flushed <- time_seconds_local()
+      if ((now - seconds_flushed) > seconds_interval) {
+        flush_messages()
+        self$seconds_flushed <- now
       }
     },
     report_start = function() {
@@ -69,9 +69,15 @@ reporter_class <- R6::R6Class(
     },
     report_outdated = function(outdated) {
     },
+    report_outdated_end = function(outdated) {
+    },
     report_workspace = function(target) {
+    },
+    report_finalize = function(progress = NULL) {
     },
     validate = function() {
     }
   )
 )
+
+reporter_seconds_skipped <- 1

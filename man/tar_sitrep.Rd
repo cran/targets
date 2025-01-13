@@ -9,6 +9,7 @@ tar_sitrep(
   fields = NULL,
   shortcut = targets::tar_config_get("shortcut"),
   reporter = targets::tar_config_get("reporter_outdated"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter_outdated"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
   envir = parent.frame(),
@@ -32,7 +33,7 @@ The \code{name} column is always included first
 no matter what you select. Choices:
 \itemize{
 \item \code{name}: name of the target or global object.
-\item \code{record}: Whether the \code{record} cue is activated:
+\item \code{meta}: Whether the \code{meta} cue is activated:
 \code{TRUE} if the target is not in the metadata (\code{\link[=tar_meta]{tar_meta()}}),
 or if the target errored during the last \code{\link[=tar_make]{tar_make()}},
 or if the class of the target changed.
@@ -40,9 +41,9 @@ or if the class of the target changed.
 If \code{TRUE}, \code{\link[=tar_make]{tar_make()}} always runs the target.
 \item \code{never}: Whether \code{mode} in \code{\link[=tar_cue]{tar_cue()}} is \code{"never"}.
 If \code{TRUE}, \code{\link[=tar_make]{tar_make()}} will only run if the
-\code{record} cue activates.
+\code{meta} cue activates.
 \item \code{command}: Whether the target's command changed since last time.
-Always \code{TRUE} if the \code{record} cue is activated.
+Always \code{TRUE} if the \code{meta} cue is activated.
 Otherwise, always \code{FALSE} if the \code{command} cue is suppressed.
 \item \code{depend}: Whether the data/output of at least one of the target's
 dependencies changed since last time.
@@ -51,23 +52,23 @@ and global objects directly upstream.
 Call \code{tar_outdated(targets_only = FALSE)} or
 \code{tar_visnetwork(targets_only = FALSE)} to see exactly which
 dependencies are outdated.
-Always \code{NA} if the \code{record} cue is activated.
+Always \code{NA} if the \code{meta} cue is activated.
 Otherwise, always \code{FALSE} if the \code{depend} cue is suppressed.
 \item \code{format}: Whether the storage format of the target
 is different from last time.
-Always \code{NA} if the \code{record} cue is activated.
+Always \code{NA} if the \code{meta} cue is activated.
 Otherwise, always \code{FALSE} if the \code{format} cue is suppressed.
 \item \code{repository}: Whether the storage repository of the target
 is different from last time.
-Always \code{NA} if the \code{record} cue is activated.
+Always \code{NA} if the \code{meta} cue is activated.
 Otherwise, always \code{FALSE} if the \code{format} cue is suppressed.
 \item \code{iteration}: Whether the iteration mode of the target
 is different from last time.
-Always \code{NA} if the \code{record} cue is activated.
+Always \code{NA} if the \code{meta} cue is activated.
 Otherwise, always \code{FALSE} if the \code{iteration} cue is suppressed.
 \item \code{file}: Whether the file(s) with the target's return value
 are missing or different from last time.
-Always \code{NA} if the \code{record} cue is activated.
+Always \code{NA} if the \code{meta} cue is activated.
 Otherwise, always \code{FALSE} if the \code{file} cue is suppressed.
 }}
 
@@ -83,11 +84,23 @@ Use with caution. \code{shortcut = TRUE} only works if you set \code{names}.}
 
 \item{reporter}{Character of length 1, name of the reporter to user.
 Controls how messages are printed as targets are checked. Choices:
-\itemize{
-\item \code{"silent"}: print nothing.
-\item \code{"forecast"}: print running totals of the checked and outdated
-targets found so far.
-}}
+* \code{"forecast_interactive"} (default): use the forecast reporter if the
+session is interactive (see \code{\link[base:interactive]{base::interactive()}}),
+otherwise use the silent reporter.
+* \code{"silent"}: print nothing.
+* \code{"forecast"}: print running totals of the checked and outdated
+targets found so far.}
+
+\item{seconds_reporter}{Positive numeric of length 1 with the minimum
+number of seconds between times when the reporter prints progress
+messages to the R console.
+This is an aggressive optimization setting not recommended
+for most users: higher values might make some pipelines run faster,
+but it becomes less clear which targets are actually running
+at any given moment.
+When the pipeline is just skipping targets,
+the actual interval between messages is \code{max(1, seconds_reporter)}
+to reduce overhead.}
 
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session

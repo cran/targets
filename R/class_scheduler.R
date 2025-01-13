@@ -40,7 +40,7 @@ scheduler_topo_sort <- function(igraph, priorities, queue) {
 }
 
 initial_ranks <- function(names, graph, priorities) {
-  graph$produce_degrees(names, "upstream") + rank_offset(priorities[names])
+  graph$produce_degrees_upstream(names) + rank_offset(priorities[names])
 }
 
 rank_offset <- function(priorities) {
@@ -82,16 +82,8 @@ scheduler_class <- R6::R6Class(
       self$backoff <- backoff
     },
     count_unfinished_deps = function(name) {
-      deps <- self$graph$produce_upstream(name)
-      deps_queued <- counter_filter_exists(
-        self$progress$queued,
-        deps
-      )
-      deps_dispatched <- counter_filter_exists(
-        self$progress$dispatched,
-        deps
-      )
-      length(deps_queued) + length(deps_dispatched)
+      deps <- .subset2(graph, "produce_upstream")(name)
+      .subset2(progress, "count_unfinished")(deps)
     },
     abridge = function(target) {
       self$reporter$report_error(target$metrics$error)

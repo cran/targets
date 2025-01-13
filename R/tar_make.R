@@ -46,17 +46,24 @@
 #'     steps like data retrieval and output storage.
 #'   * `"verbose_positives"`: same as the `"verbose"` reporter
 #'     except without messages for skipped targets.
-#' @param seconds_interval Deprecated on 2023-08-24 (version 1.2.2.9001).
+#' @param seconds_interval Deprecated on 2023-08-24
+#'   (targets version 1.2.2.9001).
 #'   Use `seconds_meta_append`, `seconds_meta_upload`,
 #'   and `seconds_reporter` instead.
 #' @param seconds_meta_append Positive numeric of length 1 with the minimum
 #'   number of seconds between saves to the local metadata and progress files
 #'   in the data store.
-#'   Higher values generally make the pipeline run faster, but unsaved
+#'   his is an aggressive optimization setting not recommended
+#'   for most users:
+#'   higher values generally make the pipeline run faster, but unsaved
 #'   work (in the event of a crash) is not up to date.
 #'   When the pipeline ends,
 #'   all the metadata and progress data is saved immediately,
 #'   regardless of `seconds_meta_append`.
+#'
+#'   When the pipeline is just skipping targets, the actual interval
+#'   between saves is `max(1, seconds_meta_append)` to reduce
+#'   overhead.
 #' @param seconds_meta_upload Positive numeric of length 1 with the minimum
 #'   number of seconds between uploads of the metadata and progress data
 #'   to the cloud
@@ -69,6 +76,13 @@
 #' @param seconds_reporter Positive numeric of length 1 with the minimum
 #'   number of seconds between times when the reporter prints progress
 #'   messages to the R console.
+#'   This is an aggressive optimization setting not recommended
+#'   for most users: higher values might make some pipelines run faster,
+#'   but it becomes less clear which targets are actually running
+#'   at any given moment.
+#'   When the pipeline is just skipping targets,
+#'   the actual interval between messages is `max(1, seconds_reporter)`
+#'   to reduce overhead.
 #' @param garbage_collection Deprecated. Use the `garbage_collection`
 #'   argument of [tar_option_set()] instead to run garbage collection
 #'   at regular intervals in a pipeline, or use the argument of the same
@@ -175,7 +189,7 @@ tar_make <- function(
     NULL,
     tar_warn_deprecate(
       "The garbage_collection argument of tar_make() was deprecated ",
-      "in version 1.8.0.9004 (2024-10-22). The garbage_collection ",
+      "in targets version 1.8.0.9004 (2024-10-22). The garbage_collection ",
       "argument of tar_option_set() is more unified and featureful now. ",
       "Please have a look at its documentation."
     )

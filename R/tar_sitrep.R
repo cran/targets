@@ -41,7 +41,7 @@
 #'   The `name` column is always included first
 #'   no matter what you select. Choices:
 #'   * `name`: name of the target or global object.
-#'   * `record`: Whether the `record` cue is activated:
+#'   * `meta`: Whether the `meta` cue is activated:
 #'     `TRUE` if the target is not in the metadata ([tar_meta()]),
 #'     or if the target errored during the last [tar_make()],
 #'     or if the class of the target changed.
@@ -49,9 +49,9 @@
 #'     If `TRUE`, [tar_make()] always runs the target.
 #'   * `never`: Whether `mode` in [tar_cue()] is `"never"`.
 #'     If `TRUE`, [tar_make()] will only run if the
-#'     `record` cue activates.
+#'     `meta` cue activates.
 #'   * `command`: Whether the target's command changed since last time.
-#'     Always `TRUE` if the `record` cue is activated.
+#'     Always `TRUE` if the `meta` cue is activated.
 #'     Otherwise, always `FALSE` if the `command` cue is suppressed.
 #'   * `depend`: Whether the data/output of at least one of the target's
 #'     dependencies changed since last time.
@@ -60,23 +60,23 @@
 #'     Call `tar_outdated(targets_only = FALSE)` or
 #'     `tar_visnetwork(targets_only = FALSE)` to see exactly which
 #'     dependencies are outdated.
-#'     Always `NA` if the `record` cue is activated.
+#'     Always `NA` if the `meta` cue is activated.
 #'     Otherwise, always `FALSE` if the `depend` cue is suppressed.
 #'   * `format`: Whether the storage format of the target
 #'     is different from last time.
-#'     Always `NA` if the `record` cue is activated.
+#'     Always `NA` if the `meta` cue is activated.
 #'     Otherwise, always `FALSE` if the `format` cue is suppressed.
 #'   * `repository`: Whether the storage repository of the target
 #'     is different from last time.
-#'     Always `NA` if the `record` cue is activated.
+#'     Always `NA` if the `meta` cue is activated.
 #'     Otherwise, always `FALSE` if the `format` cue is suppressed.
 #'   * `iteration`: Whether the iteration mode of the target
 #'     is different from last time.
-#'     Always `NA` if the `record` cue is activated.
+#'     Always `NA` if the `meta` cue is activated.
 #'     Otherwise, always `FALSE` if the `iteration` cue is suppressed.
 #'   * `file`: Whether the file(s) with the target's return value
 #'     are missing or different from last time.
-#'     Always `NA` if the `record` cue is activated.
+#'     Always `NA` if the `meta` cue is activated.
 #'     Otherwise, always `FALSE` if the `file` cue is suppressed.
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
@@ -97,6 +97,7 @@ tar_sitrep <- function(
   fields = NULL,
   shortcut = targets::tar_config_get("shortcut"),
   reporter = targets::tar_config_get("reporter_outdated"),
+  seconds_reporter = targets::tar_config_get("seconds_reporter_outdated"),
   callr_function = callr::r,
   callr_arguments = targets::tar_callr_args_default(callr_function, reporter),
   envir = parent.frame(),
@@ -110,6 +111,7 @@ tar_sitrep <- function(
   tar_assert_scalar(shortcut)
   tar_assert_lgl(shortcut)
   tar_assert_flag(reporter, tar_reporters_outdated())
+  reporter <- tar_outdated_reporter(reporter)
   tar_assert_callr_function(callr_function)
   tar_assert_list(callr_arguments)
   tar_message_meta(store = store)
@@ -118,7 +120,8 @@ tar_sitrep <- function(
     names_quosure = rlang::enquo(names),
     shortcut = shortcut,
     fields_quosure = rlang::enquo(fields),
-    reporter = reporter
+    reporter = reporter,
+    seconds_reporter = seconds_reporter
   )
   callr_outer(
     targets_function = tar_sitrep_inner,
@@ -138,7 +141,8 @@ tar_sitrep_inner <- function(
   names_quosure,
   shortcut,
   fields_quosure,
-  reporter
+  reporter,
+  seconds_reporter
 ) {
   names_all <- pipeline_get_names(pipeline)
   names <- tar_tidyselect_eval(names_quosure, names_all)
@@ -148,7 +152,8 @@ tar_sitrep_inner <- function(
     names = names,
     shortcut = shortcut,
     queue = "sequential",
-    reporter = reporter
+    reporter = reporter,
+    seconds_reporter = seconds_reporter
   )
   sitrep$run()
   out <- tibble::as_tibble(data.table::rbindlist(as.list(sitrep$sitrep)))

@@ -44,105 +44,106 @@ cue_new <- function(
 
 cue_s3_class <- "tar_cue"
 
-cue_record_exists <- function(cue, target, meta) {
-  !meta$exists_record(target_get_name(target))
+cue_meta_exists <- function(cue, target, meta) {
+  !.subset2(meta, "exists_record")(target_get_name(target))
 }
 
-cue_record <- function(cue, target, meta, record) {
-  if (record_has_error(record)) {
+cue_meta <- function(cue, target, meta, row) {
+  if (row_has_error(row)) {
     # Not sure why covr does not catch this.
     # A test in tests/testthat/test-class_builder.R # nolint
     # definitely covers it (errored targets are always outdated).
     return(TRUE) # nocov
   }
-  if (!identical(record$type, target_get_type(target))) {
-    # Again, not sure why covr does not catch this.
-    # A test in tests/testthat/test-class_cue.R # nolint
-    # definitely covers it (conflicting import and target).
-    return(TRUE) # nocov
-  }
-  FALSE
+  .subset2(row, "type") != target_get_type(target)
 }
 
 cue_always <- function(cue, target, meta) {
-  identical(cue$mode, "always")
+  .subset2(cue, "mode") == "always"
 }
 
 cue_never <- function(cue, target, meta) {
-  identical(cue$mode, "never")
+  .subset2(cue, "mode") == "never"
 }
 
-cue_command <- function(cue, target, meta, record) {
-  if (!cue$command) {
+cue_command <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "command")) {
     return(FALSE)
   }
-  old <- record$command
-  new <- target$command$hash
-  !identical(old, new)
+  .subset2(.subset2(target, "command"), "hash") != .subset2(row, "command")
 }
 
-cue_depend <- function(cue, target, meta, record) {
-  if (!cue$depend) {
+cue_depend <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "depend")) {
     return(FALSE)
   }
-  old <- record$depend
-  new <- meta$get_depend(target_get_name(target))
-  !identical(old, new)
+  name <- target_get_name(target)
+  .subset2(meta, "get_depend")(name) != .subset2(row, "depend")
 }
 
-cue_format <- function(cue, target, meta, record) {
-  if (!cue$format) {
+cue_format <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "format")) {
     return(FALSE)
   }
-  old <- record$format
-  new <- target$settings$format
-  up_to_date <- identical(old, new) ||
-    (identical(new, "auto") && (old %in% c("file", "qs")))
-  !up_to_date
+  new <- .subset2(.subset2(target, "settings"), "format")
+  old <- .subset2(row, "format")
+  if (new == old) {
+    return(FALSE)
+  }
+  if (new == "auto") {
+    return(!(old %in% c("file", "qs")))
+  } else {
+    return(TRUE)
+  }
 }
 
-cue_repository <- function(cue, target, meta, record) {
-  if (!cue$repository) {
+cue_repository <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "repository")) {
     return(FALSE)
   }
-  old <- record$repository
-  new <- target$settings$repository
-  !identical(old, new)
+  .subset2(.subset2(target, "settings"), "repository") !=
+    .subset(row, "repository")
 }
 
-cue_iteration <- function(cue, target, meta, record) {
-  if (!cue$iteration) {
+cue_iteration <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "iteration")) {
     return(FALSE)
   }
-  old <- record$iteration
-  new <- target$settings$iteration
-  !identical(old, new)
+  .subset2(.subset2(target, "settings"), "iteration") !=
+    .subset(row, "iteration")
 }
 
-cue_file <- function(cue, target, meta, record) {
-  if (!cue$file) {
+cue_file <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "file")) {
     return(FALSE)
   }
-  file_current <- target$file
+  path <- store_path_from_name(
+    store = .subset2(target, "store"),
+    format = .subset2(row, "format"),
+    name = target_get_name(target),
+    path = .subset2(row, "path"),
+    path_store = .subset2(meta, "store")
+  )
+  file_current <- .subset2(target, "file")
   file_recorded <- file_new(
-    path = record$path,
-    hash = record$data,
-    time = record$time,
-    size = record$size,
-    bytes = record$bytes
+    path = path,
+    hash = .subset2(row, "data"),
+    time = .subset2(row, "time"),
+    size = .subset2(row, "size"),
+    bytes = .subset2(row, "bytes")
   )
   on.exit(target$file <- file_current)
   target$file <- file_recorded
-  !store_has_correct_hash(target$store, target$file)
+  !store_has_correct_hash(.subset2(target, "store"), .subset2(target, "file"))
 }
 
-cue_seed <- function(cue, target, meta, record) {
-  if (!cue$seed) {
+cue_seed <- function(cue, target, meta, row) {
+  if (!.subset2(cue, "seed")) {
     return(FALSE)
   }
-  old <- as.integer(record$seed)
-  new <- as.integer(target$seed)
-  anyNA(new) || !identical(old, new)
+  old <- as.integer(.subset2(row, "seed"))
+  new <- as.integer(.subset2(target, "seed"))
+  anyNA(new) || (new != old)
 }
 
 cue_validate <- function(cue) {

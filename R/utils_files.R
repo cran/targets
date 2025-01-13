@@ -18,31 +18,84 @@ dir_create_runtime <- function(x) {
 }
 
 file_exists_runtime <- function(x) {
-  if (is.null(tar_runtime$file_exist)) {
+  file_exist <- .subset2(tar_runtime, "file_exist")
+  if (is.null(file_exist)) {
     return(file.exists(x))
   }
-  out <- counter_exist_names(tar_runtime$file_exist, x)
+  out <- counter_exist_names(file_exist, x)
   out[!out] <- file.exists(x[!out])
   out
 }
 
 file_info_runtime <- function(x) {
-  if_any(
-    !is.null(tar_runtime$file_info) &&
-      !is.null(tar_runtime$file_info_exist) &&
-      all(counter_exist_names(tar_runtime$file_info_exist, x)),
-    file_info_runtime_select(tar_runtime$file_info, x), # nolint
-    file_info(x)
+  if (length(x) < 1L) {
+    return(file_info_0)
+  }
+  file_info <- .subset2(tar_runtime, "file_info")
+  if (is.null(file_info)) {
+    out <- as.list(file_info(x))
+    out$hit <- rep(FALSE, length(x))
+    return(out)
+  }
+  file_info_index <- .subset2(tar_runtime, "file_info_index")
+  n <- length(x)
+  i <- 1L
+  index <- integer(length = n)
+  while (i <= n) {
+    index[i] <- file_info_runtime_index(.subset(x, i), file_info_index)
+    i <- i + 1L
+  }
+  hit <- index > 0L
+  index_hit <- index[hit]
+  cache <- list(
+    path = .subset2(file_info, "path")[index_hit],
+    size = .subset2(file_info, "size")[index_hit],
+    mtime_numeric = .subset2(file_info, "mtime_numeric")[index_hit],
+    trust_timestamps = .subset2(file_info, "trust_timestamps")[index_hit],
+    hit = rep(TRUE, sum(hit))
+  )
+  if (all(hit)) {
+    return(cache)
+  }
+  miss <- !hit
+  read <- file_info(x[miss])
+  list(
+    path = c(
+      .subset2(cache, "path"),
+      .subset2(read, "path")
+    ),
+    size = c(
+      .subset2(cache, "size"),
+      .subset2(read, "size")
+    ),
+    mtime_numeric = c(
+      .subset2(cache, "mtime_numeric"),
+      .subset2(read, "mtime_numeric")
+    ),
+    trust_timestamps = c(
+      .subset2(cache, "trust_timestamps"),
+      .subset2(read, "trust_timestamps")
+    ),
+    hit = c(rep(TRUE, sum(hit)), rep(FALSE, sum(miss)))
   )
 }
 
-file_info_runtime_select <- function(info, x) {
-  list(
-    size = .subset2(info, "size")[x],
-    mtime_numeric = .subset2(info, "mtime_numeric")[x],
-    trust_timestamps = .subset2(info, "trust_timestamps")[x]
-  )
+file_info_runtime_index <- function(x, file_info_index) {
+  out <- .subset2(file_info_index, x)
+  if (is.null(out)) {
+    out <- 0L
+  }
+  out
 }
+
+file_info_0 <- data.frame(
+  path = character(0L),
+  size = numeric(0L),
+  mtime_numeric = numeric(0L),
+  trust_timestamps = logical(0L),
+  hit = logical(0L),
+  stringsAsFactors = FALSE
+)
 
 file_move <- function(from, to) {
   dir_create(dirname(to))

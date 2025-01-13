@@ -1,3 +1,7 @@
+lookup_init <- function(list, parent = emptyenv()) {
+  list2env(x = list, parent = parent, hash = TRUE)
+}
+
 lookup_new <- function(parent = emptyenv()) {
   new.env(parent = parent, hash = TRUE)
 }
@@ -23,14 +27,20 @@ lookup_count <- function(lookup) {
 }
 
 lookup_set <- function(lookup, names, object) {
-  for (name in names) {
-    lookup[[name]] <- object
+  index <- 1L
+  n <- length(names)
+  while (index <= n) {
+    lookup[[.subset(names, index)]] <- object
+    index <- index + 1L
   }
 }
 
 lookup_unset <- function(lookup, names) {
-  for (name in names) {
-    lookup[[name]] <- NULL
+  index <- 1L
+  n <- length(names)
+  while (index <= n) {
+    lookup[[.subset(names, index)]] <- NULL
+    index <- index + 1L
   }
 }
 

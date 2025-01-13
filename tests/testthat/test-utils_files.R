@@ -75,11 +75,15 @@ tar_test("file_exists_runtime() with no files registered", {
   )
 })
 
+tar_test("file_info_runtime() with no files", {
+  out <- file_info_runtime(character(0L))
+  expect_true(is.data.frame(out))
+  expect_equal(nrow(out), 0L)
+})
+
 tar_test("file_info_runtime() with no caches", {
   old_info <- tar_runtime$file_info
-  old_info_exist <- tar_runtime$file_info_exist
   on.exit(tar_runtime$file_info <- old_info)
-  on.exit(tar_runtime$file_info_exist <- old_info_exist, add = TRUE)
   tmp1 <- tempfile()
   tmp2 <- tempfile()
   files <- c(tmp1, tmp2)
@@ -87,76 +91,73 @@ tar_test("file_info_runtime() with no caches", {
   file.create(tmp2)
   on.exit(unlink(c(tmp1, tmp2)), add = TRUE)
   tar_runtime$file_info <- NULL
-  tar_runtime$file_info_exist <- NULL
   out <- file_info_runtime(files)
-  expect_true(is.data.frame(out))
+  expect_true(is.list(out))
+  fields <- c(
+    "path",
+    "size",
+    "mtime_numeric",
+    "trust_timestamps",
+    "hit"
+  )
+  for (field in fields) {
+    expect_equal(length(out[[field]]), 2L)
+  }
+  expect_false(any(out$hit))
 })
 
 tar_test("file_info_runtime() with all files registered", {
   old_info <- tar_runtime$file_info
-  old_info_exist <- tar_runtime$file_info_exist
   on.exit(tar_runtime$file_info <- old_info)
-  on.exit(tar_runtime$file_info_exist <- old_info_exist, add = TRUE)
-  tmp1 <- tempfile()
-  tmp2 <- tempfile()
-  files <- c(tmp1, tmp2)
-  file.create(tmp1)
-  file.create(tmp2)
-  on.exit(unlink(c(tmp1, tmp2)), add = TRUE)
-  tar_runtime$file_info <- file.info(c(tmp1, tmp2))
-  tar_runtime$file_info_exist <- counter_init(names = c(tmp1, tmp2))
-  out <- file_info_runtime(tmp1)
-  expect_false(is.data.frame(out))
+  store <- tempfile()
+  on.exit(unlink(store, recursive = TRUE), add = TRUE)
+  dir.create(path_objects_dir(store), recursive = TRUE)
+  file.create(path_objects(store, "a"))
+  file.create(path_objects(store, "b"))
+  runtime_set_file_info(tar_runtime, store)
+  out <- file_info_runtime(path_objects(store, "a"))
+  expect_true(is.list(out))
+  fields <- c(
+    "path",
+    "size",
+    "mtime_numeric",
+    "trust_timestamps",
+    "hit"
+  )
+  for (field in fields) {
+    expect_equal(length(out[[field]]), 1L)
+  }
+  expect_true(all(out$hit))
 })
 
 tar_test("file_info_runtime() with not all files registered", {
   old_info <- tar_runtime$file_info
-  old_info_exist <- tar_runtime$file_info_exist
   on.exit(tar_runtime$file_info <- old_info)
-  on.exit(tar_runtime$file_info_exist <- old_info_exist, add = TRUE)
-  tmp1 <- tempfile()
-  tmp2 <- tempfile()
-  files <- c(tmp1, tmp2)
-  file.create(tmp1)
-  file.create(tmp2)
-  on.exit(unlink(c(tmp1, tmp2)), add = TRUE)
-  tar_runtime$file_info <- file.info(tmp1)
-  tar_runtime$file_info_exist <- counter_init(names = tmp1)
-  out <- file_info_runtime(c(tmp1, tmp2))
-  expect_true(is.data.frame(out))
+  store <- tempfile()
+  on.exit(unlink(store, recursive = TRUE), add = TRUE)
+  dir.create(path_objects_dir(store), recursive = TRUE)
+  file.create(path_objects(store, "a"))
+  runtime_set_file_info(tar_runtime, store)
+  file.create(path_objects(store, "b"))
+  out_a <- file_info_runtime(path_objects(store, "a"))
+  out_b <- file_info_runtime(path_objects(store, "b"))
+  expect_true(out_a$hit)
+  expect_false(out_b$hit)
 })
 
 tar_test("file_info_runtime() with no files registered", {
   old_info <- tar_runtime$file_info
-  old_info_exist <- tar_runtime$file_info_exist
   on.exit(tar_runtime$file_info <- old_info)
-  on.exit(tar_runtime$file_info_exist <- old_info_exist, add = TRUE)
-  tmp1 <- tempfile()
-  tmp2 <- tempfile()
-  files <- c(tmp1, tmp2)
-  file.create(tmp1)
-  file.create(tmp2)
-  on.exit(unlink(c(tmp1, tmp2)), add = TRUE)
-  tar_runtime$file_info <- file.info(character(0L))
-  tar_runtime$file_info_exist <- counter_init(names = character(0L))
-  out <- file_info_runtime(c(tmp1, tmp2))
-  expect_true(is.data.frame(out))
-})
-
-tar_test("file_info_runtime_select()", {
-  files <- unlist(replicate(6, tempfile()))
-  file.create(files)
-  on.exit(unlink(files))
-  info <- list(
-    mtime_numeric = seq_along(files),
-    size = file.size(files) + seq_along(files)
-  )
-  names(info$mtime_numeric) <- files
-  names(info$size) <- files
-  index <- c(2L, 3L, 5L)
-  out <- file_info_runtime_select(info, files[index])
-  expect_equal(out$mtime_numeric, info$mtime_numeric[index])
-  expect_equal(out$size, info$size[index])
+  store <- tempfile()
+  on.exit(unlink(store, recursive = TRUE), add = TRUE)
+  dir.create(path_objects_dir(store), recursive = TRUE)
+  runtime_set_file_info(tar_runtime, store)
+  file.create(path_objects(store, "a"))
+  file.create(path_objects(store, "b"))
+  out_a <- file_info_runtime(path_objects(store, "a"))
+  out_b <- file_info_runtime(path_objects(store, "b"))
+  expect_false(out_a$hit)
+  expect_false(out_b$hit)
 })
 
 tar_test("file_move() on files", {
