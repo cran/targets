@@ -36,7 +36,7 @@ reporter_class <- R6::R6Class(
     poll = function() {
       now <- time_seconds_local()
       if ((now - seconds_flushed) > seconds_interval) {
-        flush_messages()
+        .subset2(self, "flush_messages")()
         self$seconds_flushed <- now
       }
     },
@@ -73,7 +73,11 @@ reporter_class <- R6::R6Class(
     },
     report_workspace = function(target) {
     },
+    report_retry = function(target = NULL, progress = NULL) {
+    },
     report_finalize = function(progress = NULL) {
+    },
+    flush_messages = function() {
     },
     validate = function() {
     }

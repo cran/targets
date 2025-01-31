@@ -1,3 +1,9 @@
+# targets 1.10.1
+
+* Restore explicit references to "self" in `R6` classes.
+* Perform `crew` task retries.
+* Try to handle `NA` buckets in `store_delete_objects.tar_aws()` and `store_delete_objects.tar_gcp()`.
+
 # targets 1.10.0
 
 ## Invalidating changes

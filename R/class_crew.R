@@ -217,7 +217,6 @@ crew_class <- R6::R6Class(
       } else {
         self$controller$wait(
           mode = "one",
-          seconds_interval = 0.5,
           seconds_timeout = 0.5,
           scale = TRUE,
           throttle = TRUE
@@ -231,6 +230,18 @@ crew_class <- R6::R6Class(
       if (is.null(result)) {
         return()
       }
+      # Tested in tests/testthat/test-crew_retries.R.
+      # nocov start
+      if (result$status == "crash") {
+        target <- pipeline_get_target(self$pipeline, result$name)
+        self$scheduler$reporter$report_retry(
+          target = target,
+          progress = self$scheduler$progress
+        )
+        self$run_target(target)
+        return()
+      }
+      # nocov end
       tar_assert_all_na(
         result$error,
         msg = paste("target", result$name, "error:", result$error)
@@ -308,7 +319,6 @@ crew_summary <- function(controller) {
   summary <- controller$summary()
   data_frame(
     controller = summary$controller,
-    worker = summary$worker,
     seconds = summary$seconds,
     targets = summary$tasks
   )
@@ -318,7 +328,7 @@ database_crew <- function(path_store) {
   database_init(
     path = file.path(path_meta_dir(path_store), "crew"),
     subkey = file.path(basename(path_meta("")), "crew"),
-    header = c("controller", "worker", "seconds", "targets"),
+    header = c("controller", "seconds", "targets"),
     integer_columns = "targets",
     numeric_columns = "seconds"
   )
