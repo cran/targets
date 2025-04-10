@@ -67,6 +67,30 @@ database_aws_class <- R6::R6Class(
       )
       invisible()
     },
+    download_workspace = function(name, store, verbose = TRUE) {
+      path <- path_workspace(store, name)
+      key <- path_workspace(dirname(dirname(self$key)), name)
+      aws <- self$resources$aws
+      if (verbose) {
+        tar_print(
+          "Downloading AWS workspace file ",
+          key,
+          " to local file ",
+          path
+        )
+      }
+      dir_create(dirname(path))
+      aws_s3_download(
+        file = path,
+        key = key,
+        bucket = aws$bucket,
+        region = aws$region,
+        endpoint = aws$endpoint,
+        args = aws$args,
+        max_tries = aws$max_tries %|||% 5L
+      )
+      invisible()
+    },
     upload = function(verbose = TRUE) {
       if (verbose) {
         tar_print(
@@ -94,6 +118,24 @@ database_aws_class <- R6::R6Class(
         args = aws$args,
         max_tries = aws$max_tries %|||% 5L
       )
+      invisible()
+    },
+    upload_workspace = function(target, meta, reporter) {
+      name <- target_get_name(target)
+      path <- path_workspace(meta$store, name)
+      key <- path_workspace(dirname(dirname(self$key)), name)
+      aws <- self$resources$aws
+      aws_s3_upload(
+        file = path,
+        key = key,
+        bucket = aws$bucket,
+        region = aws$region,
+        endpoint = aws$endpoint,
+        part_size = aws$part_size,
+        args = aws$args,
+        max_tries = aws$max_tries %|||% 5L
+      )
+      reporter$report_workspace_upload(target)
       invisible()
     },
     head = function() {
@@ -126,6 +168,39 @@ database_aws_class <- R6::R6Class(
         args = aws$args,
         max_tries = aws$max_tries %|||% 5L
       )
+    },
+    delete_cloud_workspaces = function() {
+      prefix <- dirname(path_workspace(dirname(dirname(self$key)), "x"))
+      aws <- self$resources$aws
+      names <- names(
+        aws_s3_list_etags(
+          prefix = prefix,
+          bucket = aws$bucket,
+          page_size = 1000L,
+          verbose = FALSE,
+          region = aws$region,
+          endpoint = aws$endpoint,
+          args = aws$args,
+          max_tries = aws$max_tries %|||% 5L,
+          seconds_timeout = aws$seconds_timeout,
+          close_connection = aws$close_connection,
+          s3_force_path_style = aws$s3_force_path_style
+        )
+      )
+      aws_s3_delete_objects(
+        objects = lapply(names, function(x) list(Key = x)),
+        bucket = aws$bucket,
+        batch_size = 1000L,
+        region = aws$region,
+        endpoint = aws$endpoint,
+        args = aws$args,
+        max_tries = aws$max_tries %|||% 5L,
+        seconds_timeout = aws$seconds_timeout,
+        close_connection = aws$close_connection,
+        s3_force_path_style = aws$s3_force_path_style,
+        verbose = FALSE
+      )
+      invisible()
     }
   )
 )

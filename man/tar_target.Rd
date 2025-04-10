@@ -191,22 +191,27 @@ to learn how to debug targets using saved workspaces.)
 
 \item{memory}{Character of length 1, memory strategy. Possible values:
 \itemize{
-\item \code{"auto"}: new in \code{targets} version 1.8.0.9011, \code{memory = "auto"}
-is equivalent to \code{memory = "transient"} for dynamic branching
-(a non-null \code{pattern} argument) and \code{memory = "persistent"}
-for targets that do not use dynamic branching.
+\item \code{"auto"} (default): equivalent to \code{memory = "transient"} in almost
+all cases. But to avoid superfluous reads from disk,
+\code{memory = "auto"} is equivalent to \code{memory = "persistent"} for
+for non-dynamically-branched targets that other targets
+dynamically branch over. For example: if your pipeline has
+\code{tar_target(name = y, command = x, pattern = map(x))},
+then \code{tar_target(name = x, command = f(), memory = "auto")}
+will use persistent memory in order to avoid rereading all of \code{x}
+for every branch of \code{y}.
+\item \code{"transient"}: the target gets unloaded
+after every new target completes.
+Either way, the target gets automatically loaded into memory
+whenever another target needs the value.
 \item \code{"persistent"}: the target stays in memory
 until the end of the pipeline (unless \code{storage} is \code{"worker"},
 in which case \code{targets} unloads the value from memory
 right after storing it in order to avoid sending
 copious data over a network).
-\item \code{"transient"}: the target gets unloaded
-after every new target completes.
-Either way, the target gets automatically loaded into memory
-whenever another target needs the value.
 }
 
-For cloud-based dynamic files
+For cloud-based file targets
 (e.g. \code{format = "file"} with \code{repository = "aws"}),
 the \code{memory} option applies to the
 temporary local copy of the file:
@@ -217,16 +222,13 @@ The former conserves bandwidth,
 and the latter conserves local storage.}
 
 \item{garbage_collection}{Logical: \code{TRUE} to run \code{base::gc()}
-just before the target runs,
+just before the target runs, in whatever R process it is about to run
+(which could be a parallel worker).
 \code{FALSE} to omit garbage collection.
-In the case of high-performance computing,
-\code{gc()} runs both locally and on the parallel worker.
-All this garbage collection is skipped if the actual target
-is skipped in the pipeline.
-Non-logical values of \code{garbage_collection} are converted to \code{TRUE} or
-\code{FALSE} using \code{isTRUE()}. In other words, non-logical values are
-converted \code{FALSE}. For example, \code{garbage_collection = 2}
-is equivalent to \code{garbage_collection = FALSE}.}
+Numeric values get converted to \code{FALSE}.
+The \code{garbage_collection} option in \code{\link[=tar_option_set]{tar_option_set()}}
+is independent of the
+argument of the same name in \code{\link[=tar_target]{tar_target()}}.}
 
 \item{deployment}{Character of length 1. If \code{deployment} is
 \code{"main"}, then the target will run on the central controlling R process.
@@ -236,10 +238,12 @@ the target runs on a parallel worker. For more on distributed/parallel
 computing in \code{targets}, please visit
 \url{https://books.ropensci.org/targets/crew.html}.}
 
-\item{priority}{Numeric of length 1 between 0 and 1. Controls which
-targets get deployed first when multiple competing targets are ready
-simultaneously. Targets with priorities closer to 1 get dispatched earlier
-(and polled earlier in \code{\link[=tar_make_future]{tar_make_future()}}).}
+\item{priority}{Deprecated on 2025-04-08 (\code{targets} version 1.10.1.9013).
+\code{targets} has moved to a more efficient scheduling algorithm
+(\url{https://github.com/ropensci/targets/issues/1458})
+which cannot support priorities.
+The \code{priority} argument of \code{\link[=tar_target]{tar_target()}} no longer has a reliable
+effect on execution order.}
 
 \item{resources}{Object returned by \code{tar_resources()}
 with optional settings for high-performance computing
@@ -252,9 +256,9 @@ is saved to storage. Only relevant when using \code{targets}
 with parallel workers (\url{https://books.ropensci.org/targets/crew.html}).
 Must be one of the following values:
 \itemize{
+\item \code{"worker"} (default): the worker saves/uploads the value.
 \item \code{"main"}: the target's return value is sent back to the
 host machine and saved/uploaded locally.
-\item \code{"worker"}: the worker saves/uploads the value.
 \item \code{"none"}: \code{targets} makes no attempt to save the result
 of the target to storage in the location where \code{targets}
 expects it to be. Saving to storage is the responsibility
@@ -268,9 +272,17 @@ depends on.) Only relevant when using \code{targets}
 with parallel workers (\url{https://books.ropensci.org/targets/crew.html}).
 Must be one of the following values:
 \itemize{
+\item \code{"auto"} (default): equivalent to \code{retrieval = "worker"} in almost all
+cases. But to avoid unnecessary reads from disk, \code{retrieval = "auto"}
+is equivalent to \code{retrieval = "main"} for dynamic branches that
+branch over non-dynamic targets. For example: if your pipeline has
+\code{tar_target(x, command = f())}, then
+\code{tar_target(y, command = x, pattern = map(x), retrieval = "auto")}
+will use \code{"main"} retrieval in order to avoid rereading all of \code{x}
+for every branch of \code{y}.
+\item \code{"worker"}: the worker loads the target's dependencies.
 \item \code{"main"}: the target's dependencies are loaded on the host machine
 and sent to the worker before the target runs.
-\item \code{"worker"}: the worker loads the target's dependencies.
 \item \code{"none"}: \code{targets} makes no attempt to load its
 dependencies. With \code{retrieval = "none"}, loading dependencies
 is the responsibility of the user. Use with caution.
@@ -362,6 +374,11 @@ of the target. If the return value is a character vector of
 existing files (and/or directories), then the format becomes
 \code{"file"} before \code{\link[=tar_make]{tar_make()}} saves the target. Otherwise,
 the format becomes \code{"qs"}.
+
+NOTE: \code{format = "auto"} slows down pipelines with 10000+ targets
+because it creates deep copies of 20000+ internal data objects.
+Pipelines of this size should use a more explicit format instead of
+\code{"auto"}.
 \item \code{"qs"}: Uses \code{qs2::qs_save()} and \code{qs2::qs_read()}. Should work for
 most objects, much faster than \code{"rds"}. Optionally configure settings
 through \code{tar_resources()} and \code{tar_resources_qs()}.
@@ -405,7 +422,7 @@ Uses \code{torch::torch_save()} and \code{torch::torch_load()}.
 The value must be an object from the \code{torch} package
 such as a tensor or neural network module.
 Requires the \code{torch} package (not installed by default).
-\item \code{"file"}: A dynamic file. To use this format,
+\item \code{"file"}: A file target. To use this format,
 the target needs to manually identify or save some data
 and return a character vector of paths
 to the data (must be a single file path if \code{repository}
@@ -425,11 +442,11 @@ If the target does not create any files, the return value should be
 If \code{repository} is not \code{"local"} and \code{format} is \code{"file"},
 then the character vector returned by the target must be of length 1
 and point to a single file. (Directories and vectors of multiple
-file paths are not supported for dynamic files on the cloud.)
+file paths are not supported for file targets on the cloud.)
 That output file is uploaded to the cloud and tracked for changes
 where it exists in the cloud. The local file is deleted after
 the target runs.
-\item \code{"url"}: A dynamic input URL. For this storage format,
+\item \code{"url"}: An input URL. For this storage format,
 \code{repository} is implicitly \code{"local"},
 URL format is like \code{format = "file"}
 except the return value of the target is a URL that already exists

@@ -119,22 +119,20 @@ tar_print <- function(...) {
 #' @export
 #' @rdname tar_condition
 tar_error <- function(message, class) {
-  old_cli_number_ansi_colors <- getOption("cli.num_colors")
-  on.exit(options(cli.num_colors = old_cli_number_ansi_colors))
-  options(cli.num_colors = cli_number_ansi_colors)
   old <- options(rlang_backtrace_on_error = "none")
   on.exit(options(old), add = TRUE)
   message <- cli::col_red(message)
   class <- safe_condition_class(class)
-  rlang::abort(message = message, class = class, call = tar_envir_base)
+  rlang::abort(
+    message = message,
+    class = class,
+    call = tar_envir_base
+  )
 }
 
 #' @export
 #' @rdname tar_condition
 tar_warning <- function(message, class) {
-  old_cli_number_ansi_colors <- getOption("cli.num_colors")
-  on.exit(options(cli.num_colors = old_cli_number_ansi_colors))
-  options(cli.num_colors = cli_number_ansi_colors)
   old <- options(rlang_backtrace_on_error = "none")
   on.exit(options(old), add = TRUE)
   message <- cli::col_red(message)
@@ -201,7 +199,7 @@ custom_error_classes <- function(class) {
 }
 
 default_error_classes <- tryCatch(
-  rlang::abort("msg", class = NULL),
+  rlang::abort("msg", class = NULL, call = tar_envir_base),
   error = function(condition) class(condition)
 )
 

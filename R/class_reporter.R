@@ -1,23 +1,17 @@
-reporter_init <- function(reporter = "verbose", seconds_interval = 0.5) {
+reporter_init <- function(reporter = "verbose") {
   switch(
     reporter,
-    forecast = forecast_new(seconds_interval = seconds_interval),
+    balanced = balanced_new(),
+    terse = terse_new(),
     silent = silent_new(),
-    summary = summary_new(seconds_interval = seconds_interval),
-    timestamp = timestamp_new(seconds_interval = seconds_interval),
-    timestamp_positives = timestamp_positives_new(
-      seconds_interval = seconds_interval
-    ),
-    verbose = verbose_new(seconds_interval = seconds_interval),
-    verbose_positives = verbose_positives_new(
-      seconds_interval = seconds_interval
-    ),
+    timestamp = timestamp_new(),
+    verbose = verbose_new(),
     tar_throw_validate("unsupported reporter")
   )
 }
 
-reporter_new <- function(seconds_interval = 0.5) {
-  reporter_class$new(seconds_interval = seconds_interval)
+reporter_new <- function() {
+  reporter_class$new()
 }
 
 reporter_class <- R6::R6Class(
@@ -26,20 +20,7 @@ reporter_class <- R6::R6Class(
   portable = FALSE,
   cloneable = FALSE,
   public = list(
-    seconds_interval = NULL,
-    buffer = NULL,
-    seconds_flushed = -Inf,
     seconds_skipped = -Inf,
-    initialize = function(seconds_interval = NULL) {
-      self$seconds_interval <- seconds_interval
-    },
-    poll = function() {
-      now <- time_seconds_local()
-      if ((now - seconds_flushed) > seconds_interval) {
-        .subset2(self, "flush_messages")()
-        self$seconds_flushed <- now
-      }
-    },
     report_start = function() {
     },
     report_error = function(error) {
@@ -47,17 +28,30 @@ reporter_class <- R6::R6Class(
     },
     report_end = function(progress = NULL, seconds_elapsed = NULL) {
       if (any(progress$errored$count > 1L)) {
-        cli_errored(progress$errored$count)
+        tar_warn_run(
+          progress$errored$count,
+          " targets produced errors. ",
+          "Run targets::tar_meta(fields = error, complete_only = TRUE) ",
+          "for the messages."
+        )
       }
       if (any(progress$warned$count > 0L)) {
-        cli_warned(progress$warned$count)
+        tar_warn_run(
+          progress$warned$count,
+          " targets produced warnings. ",
+          "Run targets::tar_meta(fields = warnings, complete_only = TRUE) ",
+          "for the messages."
+        )
       }
+      cli_reset()
     },
     report_dispatched = function(
       target = NULL,
       progress = NULL,
       pending = FALSE
     ) {
+    },
+    report_pattern = function(target = NULL, progress = NULL) {
     },
     report_completed = function(target = NULL, progress = NULL) {
     },
@@ -73,11 +67,9 @@ reporter_class <- R6::R6Class(
     },
     report_workspace = function(target) {
     },
+    report_workspace_upload = function(target) {
+    },
     report_retry = function(target = NULL, progress = NULL) {
-    },
-    report_finalize = function(progress = NULL) {
-    },
-    flush_messages = function() {
     },
     validate = function() {
     }

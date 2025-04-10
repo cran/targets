@@ -23,11 +23,6 @@ tar_test("junction_splits()", {
   expect_equal(junction_splits(x), letters)
 })
 
-tar_test("junction_extract_index()", {
-  x <- junction_init("x", letters, list(a = LETTERS, b = rev(letters)))
-  expect_equal(junction_extract_index(x, "j"), 10L)
-})
-
 tar_test("junction_extract_deps()", {
   x <- junction_init("x", letters, list(a = LETTERS, b = rev(letters)))
   expect_equal(junction_extract_deps(x, 10L), c("J", "q"))
@@ -36,7 +31,7 @@ tar_test("junction_extract_deps()", {
 tar_test("junction_invalidate()", {
   x <- junction_init("x", letters, list(a = LETTERS, b = rev(letters)))
   junction_invalidate(x)
-  expect_equal(junction_splits(x), rep(NA_character_, length(x$index)))
+  expect_equal(junction_splits(x), rep(NA_character_, length(x$splits)))
 })
 
 tar_test("junction_upstream_edges()", {

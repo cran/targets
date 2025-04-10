@@ -49,29 +49,40 @@ or to include functions and other global objects from the environment
 created by running the target script file (default: \verb{_targets.R}).}
 
 \item{reporter}{Character of length 1, name of the reporter to user.
-Controls how messages are printed as targets are checked. Choices:
-* \code{"forecast_interactive"} (default): use the forecast reporter if the
-session is interactive (see \code{\link[base:interactive]{base::interactive()}}),
-otherwise use the silent reporter.
-* \code{"silent"}: print nothing.
-* \code{"forecast"}: print running totals of the checked and outdated
-targets found so far.}
+Controls how messages are printed as targets are checked.
 
-\item{seconds_reporter}{Positive numeric of length 1 with the minimum
-number of seconds between times when the reporter prints progress
-messages to the R console.
-This is an aggressive optimization setting not recommended
-for most users: higher values might make some pipelines run faster,
-but it becomes less clear which targets are actually running
-at any given moment.
-When the pipeline is just skipping targets,
-the actual interval between messages is \code{max(1, seconds_reporter)}
-to reduce overhead.}
+The default of \code{tar_config_get("reporter_make")} is \code{"terse"}
+if running inside a literate programming document
+(i.e. the \code{knitr.in.progress} global option is \code{TRUE}).
+Otherwise, the default is \code{"balanced"}. Choices:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{* `"balanced"`: a reporter that balances efficiency
+  with informative detail.
+  Uses a `cli` progress bar instead of printing messages
+  for individual dynamic branches.
+  To the right of the progress bar is a text string like
+  "22.6s, 4510+, 124-" (22.6 seconds elapsed, 4510 targets
+  detected as outdated so far,
+  124 targets detected as up to date so far).
+
+  For best results with the balanced reporter, you may need to
+  adjust your `cli` settings. See global options `cli.num_colors`
+  and `cli.dynamic` at
+  <https://cli.r-lib.org/reference/cli-config.html>.
+  On that page is also the `CLI_TICK_TIME` environment variable
+  which controls the time delay between progress bar updates.
+  If the delay is too low, then overhead from printing to the console
+  may slow down the pipeline.
+* `"terse"`: like `"balanced"`, except without a progress bar.
+* `"silent"`: print nothing.
+}\if{html}{\out{</div>}}}
+
+\item{seconds_reporter}{Deprecated on 2025-03-31
+(\code{targets} version 1.10.1.9010).}
 
 \item{seconds_interval}{Deprecated on 2023-08-24
 (targets version 1.2.2.9001).
-Use \code{seconds_meta_append}, \code{seconds_meta_upload},
-and \code{seconds_reporter} instead.}
+Use \code{seconds_meta_append} and \code{seconds_meta_upload} instead.}
 
 \item{callr_function}{A function from \code{callr} to start a fresh clean R
 process to do the work. Set to \code{NULL} to run in the current session

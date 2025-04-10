@@ -180,11 +180,15 @@ progress_class <- R6::R6Class(
         self$errored$count == 0L &&
         self$canceled$count == 0L
     },
-    cli_end = function(time_stamp = FALSE, seconds_elapsed = NULL) {
+    cli_end = function(
+      time_stamp = FALSE,
+      seconds_elapsed = NULL
+    ) {
       if (self$uptodate()) {
         cli_pipeline_uptodate(
           time_stamp = time_stamp,
-          seconds_elapsed = seconds_elapsed
+          seconds_elapsed = seconds_elapsed,
+          skipped = self$skipped$count
         )
       } else if (!self$any_targets()) {
         cli_pipeline_empty(
@@ -194,12 +198,16 @@ progress_class <- R6::R6Class(
       } else if (self$errored$count > 0L) {
         cli_pipeline_errored(
           time_stamp = time_stamp,
-          seconds_elapsed = seconds_elapsed
+          seconds_elapsed = seconds_elapsed,
+          completed = self$completed$count,
+          skipped = self$skipped$count
         )
       } else {
         cli_pipeline_done(
           time_stamp = time_stamp,
-          seconds_elapsed = seconds_elapsed
+          seconds_elapsed = seconds_elapsed,
+          completed = self$completed$count,
+          skipped = self$skipped$count
         )
       }
     },
@@ -214,18 +222,6 @@ progress_class <- R6::R6Class(
         self$warned$count +
         self$canceled$count
       count > 0L
-    },
-    cli_data = function() {
-      list(
-        queued = self$queued$count,
-        skipped = self$skipped$count,
-        dispatched = self$dispatched$count,
-        completed = self$completed$count,
-        errored = self$errored$count,
-        warned = self$warned$count,
-        canceled = self$canceled$count,
-        time = time_stamp_short()
-      )
     },
     abridge = function() {
       counter_del_names(self$queued, counter_get_names(self$queued))

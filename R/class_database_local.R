@@ -37,7 +37,16 @@ database_local_class <- R6::R6Class(
       }
       invisible()
     },
+    upload_workspace = function(target, meta, reporter) {
+      invisible()
+    },
     download = function(verbose = TRUE) {
+      if (verbose) {
+        tar_print(self$path, " not configured to download from the cloud.")
+      }
+      invisible()
+    },
+    download_workspace = function(name, store, verbose = TRUE) {
       if (verbose) {
         tar_print(self$path, " not configured to download from the cloud.")
       }
@@ -47,6 +56,9 @@ database_local_class <- R6::R6Class(
       if (verbose) {
         tar_print("Not configured to delete cloud object ", self$key)
       }
+      invisible()
+    },
+    delete_cloud_workspaces = function() {
       invisible()
     }
   )

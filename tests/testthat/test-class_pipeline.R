@@ -299,6 +299,7 @@ tar_test("managing lightweight references to targets in pipelines", {
   )
   local <- local_init(pipeline)
   local$run()
+  pipeline_unload_loaded(local$pipeline)
   data <- pipeline_get_target(local$pipeline, "data")
   map <- pipeline_get_target(local$pipeline, "map")
   for (index in seq_len(2L)) {
@@ -352,5 +353,38 @@ tar_test("subpiplines can be compressed with references", {
   for (retrieval in c("worker", "main")) {
     tar_make(callr_function = NULL)
     expect_equal(as.integer(tar_read(a)), seq_len(2L))
+  }
+})
+
+tar_test("resolve auto memory and retrieval (#1426)", {
+  tar_option_set(memory = "auto", retrieval = "auto")
+  on.exit(tar_option_reset())
+  pipeline <- pipeline_init(
+    list(
+      tar_target(a, 1),
+      tar_target(b, 1),
+      tar_target(c, b, pattern = map(b)),
+      tar_target(d, b + c, pattern = map(b, c)),
+      tar_target(e, c, pattern = map(c)),
+      tar_target(f, d, pattern= map(c))
+    )
+  )
+  targets <- pipeline$targets
+  for (name in c("a", "b", "c", "d", "e", "f")) {
+    expect_equal(targets[[name]]$settings$memory, "auto")
+    expect_equal(targets[[name]]$settings$retrieval, "auto")
+  }
+  pipeline_resolve_auto(pipeline)
+  for (name in c("b")) {
+    expect_equal(targets[[name]]$settings$memory, "persistent")
+  }
+  for (name in c("a", "c", "d", "e", "f")) {
+    expect_equal(targets[[name]]$settings$memory, "transient")
+  }
+  for (name in c("a", "b", "e", "f")) {
+    expect_equal(targets[[name]]$settings$retrieval, "worker")
+  }
+  for (name in c("c", "d")) {
+    expect_equal(targets[[name]]$settings$retrieval, "main")
   }
 })

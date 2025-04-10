@@ -40,6 +40,32 @@ pipeline_targets_init <- function(targets, clone_targets) {
   list2env(targets, parent = emptyenv(), hash = TRUE)
 }
 
+pipeline_resolve_auto <- function(pipeline) {
+  # eapply() is fine here because pipeline_resolve_auto()
+  # is called before any dynamic branching occurs.
+  targets <- .subset2(pipeline, "targets")
+  eapply(
+    targets,
+    function(target) {
+      branching_over <- .subset2(.subset2(target, "settings"), "dimensions")
+      for (name_upstream in branching_over) {
+        upstream <- .subset2(targets, name_upstream)
+        if (inherits(upstream, "tar_stem")) {
+          target_resolve_auto(upstream, "memory", value = "persistent")
+          target_resolve_auto(target, "retrieval", value = "main")
+        }
+      }
+    }
+  )
+  eapply(
+    targets,
+    function(target) {
+      target_resolve_auto(target, "memory", value = "transient")
+      target_resolve_auto(target, "retrieval", value = "worker")
+    }
+  )
+}
+
 pipeline_get_target <- function(pipeline, name) {
   out <- .subset2(.subset2(pipeline, "targets"), name)
   if (is_reference_not_target(out)) {
@@ -68,8 +94,9 @@ pipeline_initialize_references_children <- function(
   names_children
 ) {
   envir <- .subset2(pipeline, "targets")
-  for (name in names_children) {
-    envir[[name]] <- reference_new(parent = name_parent)
+  for (index in seq_along(names_children)) {
+    name <- .subset(names_children, index)
+    envir[[name]] <- reference_new(parent = name_parent, index = index)
   }
   NULL
 }

@@ -3,7 +3,6 @@ scheduler_init <- function(
   meta = meta_init(),
   queue = "parallel",
   reporter = "verbose",
-  seconds_reporter = 0.5,
   names = NULL,
   shortcut = FALSE
 ) {
@@ -20,7 +19,7 @@ scheduler_init <- function(
     path_store = meta$store,
     queued = queued
   )
-  reporter <- reporter_init(reporter, seconds_interval = seconds_reporter)
+  reporter <- reporter_init(reporter)
   backoff <- tar_options$get_backoff()
   scheduler_new(
     graph = graph,
@@ -43,6 +42,11 @@ initial_ranks <- function(names, graph, priorities) {
   graph$produce_degrees_upstream(names) + rank_offset(priorities[names])
 }
 
+# Technically superfluous as of `targets` >= 1.10.1.9013
+# because priorities were deprecated
+# (https://github.com/ropensci/targets/issues/1458).
+# But keeping the infrastructure in case there is an efficient queue
+# structure that allows priorities.
 rank_offset <- function(priorities) {
   - priorities / 2
 }
@@ -88,7 +92,7 @@ scheduler_class <- R6::R6Class(
     abridge = function(target) {
       self$reporter$report_error(target$metrics$error)
       self$progress$abridge()
-      self$queue$abridge()
+      self$queue$reset()
     },
     trim = function(target, pipeline) {
       parent_name <- target_get_parent(target)

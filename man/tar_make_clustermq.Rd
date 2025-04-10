@@ -41,24 +41,38 @@ It relies on stored metadata for information about upstream dependencies.
 
 \item{reporter}{Character of length 1, name of the reporter to user.
 Controls how messages are printed as targets run in the pipeline.
-Defaults to \code{tar_config_get("reporter_make")}. Choices:
+Defaults to \code{tar_config_get("reporter_make")}.
+
+The default of \code{tar_config_get("reporter_make")} is \code{"terse"}
+if running inside a literate programming document
+(i.e. the \code{knitr.in.progress} global option is \code{TRUE}).
+Otherwise, the default is \code{"balanced"}. Choices:
 \itemize{
+\item \code{"balanced"}: a reporter that balances efficiency
+with informative detail.
+Uses a \code{cli} progress bar instead of printing messages
+for individual dynamic branches.
+To the right of the progress bar is a text string like
+"22.6s, 4510+, 124-" (22.6 seconds elapsed, 4510 targets
+completed successfully so far, 124 targets skipped so far).
+
+For best results with the balanced reporter, you may need to
+adjust your \code{cli} settings. See global options \code{cli.num_colors}
+and \code{cli.dynamic} at
+\url{https://cli.r-lib.org/reference/cli-config.html}.
+On that page is also the \code{CLI_TICK_TIME} environment variable
+which controls the time delay between progress bar updates.
+If the delay is too low, then overhead from printing to the console
+may slow down the pipeline.
+\item \code{"terse"}: like the \code{"balanced"} reporter, but without a progress bar.
 \item \code{"silent"}: print nothing.
-\item \code{"summary"}: print a running total of the number of each targets in
-each status category (queued, dispatched, skipped, completed, canceled,
-or errored). Also show a timestamp (\code{"\%H:\%M \%OS2"} \code{strptime()} format)
-of the last time the progress changed and printed to the screen.
 \item \code{"timestamp"}: same as the \code{"verbose"} reporter except that each
-.message begins with a time stamp.
-\item \code{"timestamp_positives"}: same as the \code{"timestamp"} reporter
-except without messages for skipped targets.
+message begins with a time stamp.
 \item \code{"verbose"}: print messages for individual targets
-as they start, finish, or are skipped. Each individual
+as they dispatch or complete. Each individual
 target-specific time (e.g. "3.487 seconds") is strictly the
 elapsed runtime of the target and does not include
 steps like data retrieval and output storage.
-\item \code{"verbose_positives"}: same as the \code{"verbose"} reporter
-except without messages for skipped targets.
 }}
 
 \item{seconds_meta_append}{Positive numeric of length 1 with the minimum
@@ -86,21 +100,12 @@ When the pipeline ends,
 all the metadata and progress data is uploaded immediately,
 regardless of \code{seconds_meta_upload}.}
 
-\item{seconds_reporter}{Positive numeric of length 1 with the minimum
-number of seconds between times when the reporter prints progress
-messages to the R console.
-This is an aggressive optimization setting not recommended
-for most users: higher values might make some pipelines run faster,
-but it becomes less clear which targets are actually running
-at any given moment.
-When the pipeline is just skipping targets,
-the actual interval between messages is \code{max(1, seconds_reporter)}
-to reduce overhead.}
+\item{seconds_reporter}{Deprecated on 2025-03-31
+(\code{targets} version 1.10.1.9010).}
 
 \item{seconds_interval}{Deprecated on 2023-08-24
 (targets version 1.2.2.9001).
-Use \code{seconds_meta_append}, \code{seconds_meta_upload},
-and \code{seconds_reporter} instead.}
+Use \code{seconds_meta_append} and \code{seconds_meta_upload} instead.}
 
 \item{workers}{Positive integer, number of persistent \code{clustermq} workers
 to create.}

@@ -84,16 +84,24 @@ meta_class <- R6::R6Class(
       self$del_records(remove)
     },
     hash_deps = function(deps, pipeline) {
-      hashes <- list()
-      index <- 1L
-      n <- length(deps)
-      lookup <- .subset2(self, "lookup")
-      while (index <= n) {
-        name <- .subset(deps, index)
-        hashes[[name]] <- .subset2(.subset2(lookup, name), "data")
-        index <- index + 1L
-      }
-      hashes <- unlist(hashes, use.names = TRUE)
+      hash_list <- .subset2(self, "produce_hash_list")(deps, pipeline)
+      .subset2(self, "hash_hash_list")(hash_list)
+    },
+    # produce_hash_list() could be a bottleneck.
+    # It currently uses lapply() rather than a simple loop because
+    # incrementally growing hash_list element by element
+    # makes pattern_produce_data_hash() extremely slow for patterns with
+    # 100000+ dynamic branches.
+    produce_hash_list = function(deps, pipeline) {
+      hash_list <- lapply(
+        deps,
+        function(name) .subset2(.subset2(lookup, name), "data")
+      )
+      names(hash_list) <- deps
+      hash_list
+    },
+    hash_hash_list = function(hash_list) {
+      hashes <- unlist(hash_list, use.names = TRUE)
       string <- paste(c(names(hashes), hashes), collapse = "")
       hash_object(string)
     },
@@ -181,7 +189,7 @@ meta_class <- R6::R6Class(
       data$format <- gsub("^aws_", "", data$format)
       data <- data[, self$database$header, drop = FALSE]
       self$database$overwrite_storage(data)
-      cli_mark_info(
+      cli::cli_alert_success(
         paste(
           "Migrated the metadata file to a new data format to include",
           "the new repository column. Up-to-date targets are still up to",

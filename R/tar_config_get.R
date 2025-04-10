@@ -91,13 +91,13 @@ tar_config_get_project <- function(name, yaml) {
     label = yaml$label %|||% character(0L),
     label_width = yaml$label_width %|||% 30L,
     level_separation = yaml$level_separation,
-    reporter_make = yaml$reporter_make %|||% "verbose",
-    reporter_outdated = yaml$reporter_outdated %|||% "forecast_interactive",
+    reporter_make = yaml$reporter_make %|||% reporter_default(),
+    reporter_outdated = yaml$reporter_outdated %|||% reporter_default(),
     script = yaml$script %|||% path_script_default(),
     seconds_meta_append = yaml$seconds_meta_append %|||% 0,
     seconds_meta_upload = yaml$seconds_meta_upload %|||% 15,
-    seconds_reporter = yaml$seconds_reporter %|||% 0,
-    seconds_reporter_outdated = yaml$seconds_reporter_outdated %|||% 1,
+    seconds_reporter = yaml$seconds_reporter %|||% NULL,
+    seconds_reporter_outdated = yaml$seconds_reporter_outdated %|||% NULL,
     seconds_interval = yaml$seconds_interval,
     shortcut = yaml$shortcut %|||% FALSE,
     store = yaml$store %|||% path_store_default(),
@@ -120,12 +120,24 @@ tar_config_get_convert <- function(name, value) {
     script = as.character(value),
     seconds_meta_append = as.numeric(value),
     seconds_meta_upload = as.numeric(value),
-    seconds_reporter = as.numeric(value),
-    seconds_reporter_outdated = as.numeric(value),
+    seconds_reporter = if_any(is.null(value), NULL, as.numeric(value)),
+    seconds_reporter_outdated = if_any(
+      is.null(value),
+      NULL,
+      as.numeric(value)
+    ),
     seconds_interval = if_any(is.null(value), NULL, as.numeric(value)),
     shortcut = as.logical(value),
     store = as.character(value),
     use_crew = as.logical(value),
     workers = as.integer(max(1L, as.integer(value)))
+  )
+}
+
+reporter_default <- function() {
+  if_any(
+    isTRUE(getOption("knitr.in.progress")),
+    "terse",
+    "balanced"
   )
 }

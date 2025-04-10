@@ -1,3 +1,55 @@
+# targets 1.11.1
+
+* Bugfix: `rstudio_available()` returns `FALSE` without error if `rstudioapi` is not installed.
+* Add a new `"terse"` reporter, which is the `"balanced"` reporter without the progress bar. Make `"terse"` the default reporter 
+
+# targets 1.11.0
+
+## Deprecated features
+
+* Deprecate the `priority` argument of `tar_target()`. Because of #1458, custom priorities no longer have an effect on execution order. However, up-to-date parallelized pipelines with 100000+ targets can now be checked around 10 times faster, so the tradeoff is worth it.
+
+## Changes to default behavior
+
+* Keep `format = "file"` files on disk even for non-local repositories (#1467).
+
+## Changes to default settings
+
+* In `tar_option_get()`, set `repository_meta` to `"local"` by default, regardless of `repository` (#1427).
+* In `tar_option_get()`, set `storage = "worker"`, `retrieval = "auto"`, and `memory = "auto"` by default (#1426). For `memory`, `"auto"` is now equivalent to `"transient"` most of the time, but it is equivalent to `"persistent"` for non-dynamic targets that other targets dynamically branch over. For `retrieval`, the `"auto"` setting is new. It is equivalent to `"worker"` for most cases, but it aligns with `"main"` for dynamic branches that branch over non-dynamic targets. All this is to avoid re-reading the upstream target from disk every time a branch needs to run.
+* Set the new "balanced" reporter to be the default reporter for `tar_make()` and `tar_outdated()`.
+* Set the default `garbage_collection` argument of `tar_option_get()` to 0 (#1464).
+
+## Efficiency improvements
+
+* Speed up checking up-to-date targets in large dynamic branching pipelines (#1458, #1460). The speedup is over 10-fold or more in some cases.
+* Maintain a persistent text connection when appending to a metadata text file (#1415).
+* Avoid superfluous garbage collection when `crew` controllers are saturated.
+* Set defaults for `storage`, `retrieval`, and `memory` that balance resource tradeoffs for the most common pipelines (#1426).
+* Garbage collection only runs in `targets:::target_run()` (#1464). There is no longer a separate `gc()` call on the main process.
+* Shave off overhead from `store_sync_file_meta()` in the general case.
+
+## Other changes
+
+* Upload workspaces to the cloud if `tar_option_get("repository_meta")` is `"aws"` or `"gcp"`. Download them with `tar_workspace_download()` and delete them with `tar_destroy(destroy = "all")` or `tar_destroy(destroy = "cloud")`.
+* Deep-copy settings when resolving `format = "auto"` (#1425, @paulseamer).
+* Add `store_read_path.tar_auto()` (#1429, @paulseamer).
+* Improve error message that explains `iteration = "group"` branching problems.
+* Allow more special characters in recorded warnings and error messages.
+* Call `cli::style_reset()` at the end of non-silent reporters (#1450, @r2evans).
+* Exclude lists of target definitions from the globals in the dependency graph (#1431).
+* Nomenclature change: drop the term "dynamic file" in favor of "file target".
+* Internally choose a default level separation in the `visNetwork` graph based on the number of hierarchical levels and the maximum number of vertices per level (#1432).
+* In `tar_visnetwork()`, choose the colors of the edges based on the origin vertices, not the destination vertices (#1433).
+* In the `"verbose"` and `"timestamp"` reporters, print "dispatched pattern" messages, and print the total computation and storage summed over all the branches.
+* Create a new `"balanced"` reporter with a `cli` progress bar (#1442).
+* Deprecate reporters `"forecast"`, `"forecast_interactive"`, `"verbose_positives"`, and `"timestamp_positives"` (#1442).
+* Ensure colors printed to the console are preserved when forwarded from the `callr` process (#1442).
+* Add `tar_option_with()` (https://github.com/ropensci/tarchetypes/issues/215, @noamross).
+* Use `prettyunits` to print elapsed times and file sizes.
+* Shorten and simplify the `tar_make()` error message.
+* Minor bugfix: add a new `on_worker` argument to `target_run()` and `builder_unload_value()` so the latter only removes the target value if the target was actually run on a worker.
+
 # targets 1.10.1
 
 * Restore explicit references to "self" in `R6` classes.

@@ -7,7 +7,6 @@ active_new <- function(
   reporter = NULL,
   seconds_meta_append = NULL,
   seconds_meta_upload = NULL,
-  seconds_reporter = NULL,
   envir = NULL
 ) {
   active_class$new(
@@ -19,7 +18,6 @@ active_new <- function(
     reporter = reporter,
     seconds_meta_append = seconds_meta_append,
     seconds_meta_upload = seconds_meta_upload,
-    seconds_reporter = seconds_reporter,
     envir = envir
   )
 }
@@ -47,7 +45,6 @@ active_class <- R6::R6Class(
       reporter = NULL,
       seconds_meta_append = NULL,
       seconds_meta_upload = NULL,
-      seconds_reporter = NULL,
       envir = NULL
     ) {
       super$initialize(
@@ -58,8 +55,7 @@ active_class <- R6::R6Class(
         queue = queue,
         reporter = reporter,
         seconds_meta_append = seconds_meta_append,
-        seconds_meta_upload = seconds_meta_upload,
-        seconds_reporter = seconds_reporter
+        seconds_meta_upload = seconds_meta_upload
       )
       self$envir <- envir
     },
@@ -188,7 +184,6 @@ active_class <- R6::R6Class(
         meta = .subset2(self, "meta"),
         active = TRUE
       )
-      target_sync_file_meta(target, .subset2(self, "meta"))
     },
     process_target = function(name) {
       scheduler <- .subset2(self, "scheduler")
@@ -205,8 +200,6 @@ active_class <- R6::R6Class(
       } else if (target_should_run(target, meta)) {
         self$skipping <- inherits(target, "tar_pattern")
         self$flush_upload_meta_file(target)
-        runtime_increment_targets_run(tar_runtime)
-        target_gc(target)
         .subset2(self, "run_target")(target)
       } else {
         .subset2(self, "skip_target")(target)
@@ -216,8 +209,10 @@ active_class <- R6::R6Class(
       self$scheduler$backoff$wait()
     },
     start = function() {
+      tar_runtime$active <- TRUE # Needs to be set here for tests.
       self$seconds_start <- time_seconds()
       pipeline_prune_names(self$pipeline, self$names)
+      pipeline_resolve_auto(self$pipeline)
       self$ensure_meta()
       self$update_scheduler()
       self$bootstrap_shortcut_deps()
@@ -226,9 +221,9 @@ active_class <- R6::R6Class(
       self$scheduler$reporter$report_start()
     },
     end = function() {
+      on.exit(self$meta$database$close())
+      on.exit(scheduler$progress$database$close(), add = TRUE)
       scheduler <- self$scheduler
-      scheduler$reporter$report_finalize(scheduler$progress)
-      pipeline_unload_loaded(self$pipeline)
       self$flush_meta()
       self$meta$database$deduplicate_storage()
       self$upload_meta()

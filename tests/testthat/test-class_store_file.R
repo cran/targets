@@ -1,4 +1,4 @@
-tar_test("dynamic files work", {
+tar_test("file targets work", {
   envir <- new.env(parent = environment())
   x <- target_init(
     name = "abc",
@@ -28,7 +28,7 @@ tar_test("dynamic files work", {
   expect_equal(out, exp)
 })
 
-tar_test("dynamic files must return characters", {
+tar_test("file targets must return characters", {
   x <- target_init(
     name = "abc",
     expr = quote(list(list("illegal"))),
@@ -39,7 +39,7 @@ tar_test("dynamic files must return characters", {
   expect_error(local$run(), class = "tar_condition_run")
 })
 
-tar_test("handle dynamic file errors properly", {
+tar_test("handle file target errors properly", {
   x <- target_init(
     name = "abc",
     expr = quote(stop("message123")),
@@ -48,7 +48,7 @@ tar_test("handle dynamic file errors properly", {
   pipeline <- pipeline_init(list(x))
   local <- local_init(pipeline = pipeline)
   expect_error(local$run(), class = "tar_condition_run")
-  expect_equal(tar_meta(abc, error)$error, "message123")
+  expect_true(grepl("message123$", tar_meta(abc, error)$error))
 })
 
 tar_test("inherits from tar_external", {

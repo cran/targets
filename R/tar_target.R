@@ -47,6 +47,11 @@
 #'     existing files (and/or directories), then the format becomes
 #'     `"file"` before [tar_make()] saves the target. Otherwise,
 #'     the format becomes `"qs"`.
+#'
+#'     NOTE: `format = "auto"` slows down pipelines with 10000+ targets
+#'     because it creates deep copies of 20000+ internal data objects.
+#'     Pipelines of this size should use a more explicit format instead of
+#'     `"auto"`.
 #'   * `"qs"`: Uses `qs2::qs_save()` and `qs2::qs_read()`. Should work for
 #'     most objects, much faster than `"rds"`. Optionally configure settings
 #'     through `tar_resources()` and `tar_resources_qs()`.
@@ -90,7 +95,7 @@
 #'     The value must be an object from the `torch` package
 #'     such as a tensor or neural network module.
 #'     Requires the `torch` package (not installed by default).
-#'   * `"file"`: A dynamic file. To use this format,
+#'   * `"file"`: A file target. To use this format,
 #'     the target needs to manually identify or save some data
 #'     and return a character vector of paths
 #'     to the data (must be a single file path if `repository`
@@ -110,11 +115,11 @@
 #'     If `repository` is not `"local"` and `format` is `"file"`,
 #'     then the character vector returned by the target must be of length 1
 #'     and point to a single file. (Directories and vectors of multiple
-#'     file paths are not supported for dynamic files on the cloud.)
+#'     file paths are not supported for file targets on the cloud.)
 #'     That output file is uploaded to the cloud and tracked for changes
 #'     where it exists in the cloud. The local file is deleted after
 #'     the target runs.
-#'   * `"url"`: A dynamic input URL. For this storage format,
+#'   * `"url"`: An input URL. For this storage format,
 #'     `repository` is implicitly `"local"`,
 #'     URL format is like `format = "file"`
 #'     except the return value of the target is a URL that already exists
@@ -272,21 +277,26 @@
 #'   to learn how to debug targets using saved workspaces.)
 #' @param memory Character of length 1, memory strategy. Possible values:
 #'
-#'   * `"auto"`: new in `targets` version 1.8.0.9011, `memory = "auto"`
-#'     is equivalent to `memory = "transient"` for dynamic branching
-#'     (a non-null `pattern` argument) and `memory = "persistent"`
-#'     for targets that do not use dynamic branching.
+#'   * `"auto"` (default): equivalent to `memory = "transient"` in almost
+#'     all cases. But to avoid superfluous reads from disk,
+#'     `memory = "auto"` is equivalent to `memory = "persistent"` for
+#'     for non-dynamically-branched targets that other targets
+#'     dynamically branch over. For example: if your pipeline has
+#'     `tar_target(name = y, command = x, pattern = map(x))`,
+#'     then `tar_target(name = x, command = f(), memory = "auto")`
+#'     will use persistent memory in order to avoid rereading all of `x`
+#'     for every branch of `y`.
+#'   * `"transient"`: the target gets unloaded
+#'     after every new target completes.
+#'     Either way, the target gets automatically loaded into memory
+#'     whenever another target needs the value.
 #'   * `"persistent"`: the target stays in memory
 #'     until the end of the pipeline (unless `storage` is `"worker"`,
 #'     in which case `targets` unloads the value from memory
 #'     right after storing it in order to avoid sending
 #'     copious data over a network).
-#'   * `"transient"`: the target gets unloaded
-#'     after every new target completes.
-#'     Either way, the target gets automatically loaded into memory
-#'     whenever another target needs the value.
 #'
-#'   For cloud-based dynamic files
+#'   For cloud-based file targets
 #'   (e.g. `format = "file"` with `repository = "aws"`),
 #'   the `memory` option applies to the
 #'   temporary local copy of the file:
@@ -296,16 +306,13 @@
 #'   The former conserves bandwidth,
 #'   and the latter conserves local storage.
 #' @param garbage_collection Logical: `TRUE` to run `base::gc()`
-#'   just before the target runs,
+#'   just before the target runs, in whatever R process it is about to run
+#'   (which could be a parallel worker).
 #'   `FALSE` to omit garbage collection.
-#'   In the case of high-performance computing,
-#'   `gc()` runs both locally and on the parallel worker.
-#'   All this garbage collection is skipped if the actual target
-#'   is skipped in the pipeline.
-#'   Non-logical values of `garbage_collection` are converted to `TRUE` or
-#'   `FALSE` using `isTRUE()`. In other words, non-logical values are
-#'   converted `FALSE`. For example, `garbage_collection = 2`
-#'   is equivalent to `garbage_collection = FALSE`.
+#'   Numeric values get converted to `FALSE`.
+#'   The `garbage_collection` option in [tar_option_set()]
+#'   is independent of the
+#'   argument of the same name in [tar_target()].
 #' @param deployment Character of length 1. If `deployment` is
 #'   `"main"`, then the target will run on the central controlling R process.
 #'   Otherwise, if `deployment` is `"worker"` and you set up the pipeline
@@ -313,10 +320,12 @@
 #'   the target runs on a parallel worker. For more on distributed/parallel
 #'   computing in `targets`, please visit
 #'   <https://books.ropensci.org/targets/crew.html>.
-#' @param priority Numeric of length 1 between 0 and 1. Controls which
-#'   targets get deployed first when multiple competing targets are ready
-#'   simultaneously. Targets with priorities closer to 1 get dispatched earlier
-#'   (and polled earlier in [tar_make_future()]).
+#' @param priority Deprecated on 2025-04-08 (`targets` version 1.10.1.9013).
+#'   `targets` has moved to a more efficient scheduling algorithm
+#'   (<https://github.com/ropensci/targets/issues/1458>)
+#'   which cannot support priorities.
+#'   The `priority` argument of [tar_target()] no longer has a reliable
+#'   effect on execution order.
 #' @param resources Object returned by `tar_resources()`
 #'   with optional settings for high-performance computing
 #'   functionality, alternative data storage formats,
@@ -326,9 +335,9 @@
 #'   is saved to storage. Only relevant when using `targets`
 #'   with parallel workers (<https://books.ropensci.org/targets/crew.html>).
 #'   Must be one of the following values:
+#'   * `"worker"` (default): the worker saves/uploads the value.
 #'   * `"main"`: the target's return value is sent back to the
 #'     host machine and saved/uploaded locally.
-#'   * `"worker"`: the worker saves/uploads the value.
 #'   * `"none"`: `targets` makes no attempt to save the result
 #'     of the target to storage in the location where `targets`
 #'     expects it to be. Saving to storage is the responsibility
@@ -339,9 +348,18 @@
 #'   depends on.) Only relevant when using `targets`
 #'   with parallel workers (<https://books.ropensci.org/targets/crew.html>).
 #'   Must be one of the following values:
+#'
+#'   * `"auto"` (default): equivalent to `retrieval = "worker"` in almost all
+#'     cases. But to avoid unnecessary reads from disk, `retrieval = "auto"`
+#'     is equivalent to `retrieval = "main"` for dynamic branches that
+#'     branch over non-dynamic targets. For example: if your pipeline has
+#'     `tar_target(x, command = f())`, then
+#'     `tar_target(y, command = x, pattern = map(x), retrieval = "auto")`
+#'     will use `"main"` retrieval in order to avoid rereading all of `x`
+#'     for every branch of `y`.
+#'   * `"worker"`: the worker loads the target's dependencies.
 #'   * `"main"`: the target's dependencies are loaded on the host machine
 #'     and sent to the worker before the target runs.
-#'   * `"worker"`: the worker loads the target's dependencies.
 #'   * `"none"`: `targets` makes no attempt to load its
 #'     dependencies. With `retrieval = "none"`, loading dependencies
 #'     is the responsibility of the user. Use with caution.

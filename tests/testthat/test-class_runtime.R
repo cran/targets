@@ -53,6 +53,14 @@ tar_test("fun", {
   expect_silent(runtime_validate(x))
 })
 
+tar_test("active", {
+  x <- runtime_new()
+  expect_null(x$active)
+  x$active <- TRUE
+  expect_true(x$active)
+  expect_silent(runtime_validate(x))
+})
+
 tar_test("gcp_auth", {
   x <- runtime_new()
   expect_null(x$gcp_auth)
@@ -239,6 +247,8 @@ tar_test("runtime_increment_targets_run()", {
 })
 
 tar_test("validate non-null metadata", {
-  x <- runtime_new(meta = meta_init())
+  meta <-  meta_init()
+  on.exit(meta$database$close())
+  x <- runtime_new(meta = meta)
   expect_silent(runtime_validate(x))
 })

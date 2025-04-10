@@ -79,10 +79,8 @@ build_traceback <- function(calls) {
 }
 
 build_message <- function(condition, prefix = character(0)) {
-  out <- build_message_text_substr(
-    message = conditionMessage(condition),
-    prefix = prefix
-  )
+  message <- conditionMessage(condition)
+  out <- build_message_text_substr(message = message, prefix = prefix)
   if_any(nzchar(out), out, ".")
 }
 

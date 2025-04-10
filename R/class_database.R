@@ -80,6 +80,7 @@ database_class <- R6::R6Class(
     buffer = NULL,
     buffer_length = NULL,
     staged = NULL,
+    connection = NULL,
     initialize = function(
       lookup = NULL,
       path = NULL,
@@ -102,8 +103,14 @@ database_class <- R6::R6Class(
       self$list_columns <- list_columns
       self$list_column_modes <- list_column_modes
       self$resources <- resources
-      self$buffer <- new.env(parent = emptyenv(), hash = FALSE)
+      self$buffer <- new.env(parent = emptyenv(), hash = TRUE)
       self$buffer_length <- 0L
+    },
+    close = function() {
+      if (!is.null(self$connection)) {
+        try(base::close(self$connection))
+        self$connection <- NULL
+      }
     },
     get_row = function(name) {
       lookup_get(lookup, name)
@@ -184,16 +191,16 @@ database_class <- R6::R6Class(
       as.list(data)[header]
     },
     buffer_row = function(row, fill_missing = TRUE) {
-      set_row(row)
+      .subset2(self, "set_row")(row)
       if (fill_missing) {
         row <- .subset2(self, "select_cols")(row)
       }
-      sublines <- .subset2(self, "produce_sublines")(row)
       new_length <- buffer_length + 1L
-      self$buffer[[as.character(new_length)]] <- sublines
+      self$buffer[[as.character(new_length)]] <- row
       self$buffer_length <- new_length
     },
     flush_rows = function() {
+      buffer_length <- .subset2(self, "buffer_length")
       if (buffer_length == 0L) {
         return()
       }
@@ -201,12 +208,13 @@ database_class <- R6::R6Class(
       index <- 1L
       buffer <- .subset2(self, "buffer")
       while (index <= buffer_length) {
-        line <- .subset2(buffer, as.character(index))
+        row <- .subset2(buffer, as.character(index))
+        line <- .subset2(self, "produce_sublines")(row)
         lines_list[[index]] <- paste(line, collapse = database_sep_outer)
         index <- index + 1L
       }
       lines <- as.character(lines_list)
-      append_lines(lines)
+      self$append_lines(lines)
       self$buffer <- new.env(parent = emptyenv(), hash = FALSE)
       self$buffer_length <- 0L
       self$staged <- TRUE
@@ -228,7 +236,7 @@ database_class <- R6::R6Class(
       while (!is.null(try(self$try_append_lines(lines), silent = in_test()))) {
         compare_working_directories()
         msg <- paste("Reattempting to append lines to", self$path)
-        cli_mark_info(msg)
+        cli::cli_alert(msg)
         Sys.sleep(stats::runif(1, 0.2, 0.25))
         attempt <- attempt + 1L
         if (attempt > max_attempts) {
@@ -243,7 +251,10 @@ database_class <- R6::R6Class(
       # nocov end
     },
     try_append_lines = function(lines) {
-      write(lines, self$path, ncolumns = 1L, append = TRUE, sep = "")
+      if (is.null(self$connection)) {
+        self$connection <- file(self$path, open = "a+")
+      }
+      cat(lines, file = self$connection, append = TRUE, sep = "\n")
       invisible()
     },
     append_storage = function(data) {
@@ -435,11 +446,17 @@ database_class <- R6::R6Class(
       }
       "upload"
     },
+    upload_workspace = function(target, meta, reporter) {
+      "upload_workspace"
+    },
     download = function(verbose = TRUE) {
       if (verbose) {
         tar_message_run("downloading")
       }
       "download"
+    },
+    download_workspace = function(name, store, verbose = TRUE) {
+      "download_workspace"
     },
     head = function() {
       file <- file_init(path = "path_cloud")

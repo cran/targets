@@ -17,6 +17,21 @@ tar_test("run timestamp reporter with a error and saved workspace", {
   expect_error(expect_message(local$run()), class = "tar_condition_run")
 })
 
+tar_test("run timestamp reporter workspace upload", {
+  skip_on_os("windows")
+  skip_on_ci()
+  pipeline <- pipeline_init(
+    list(
+      target_init("x", quote(123))
+    )
+  )
+  local <- local_init(pipeline, reporter = "timestamp")
+  local$run()
+  expect_message(
+    local$scheduler$reporter$report_workspace_upload(pipeline$targets$x)
+  )
+})
+
 tar_test("run timestamp reporter with a warning", {
   pipeline <- pipeline_init(list(target_init("x", quote(warning(123)))))
   local <- local_init(pipeline, reporter = "timestamp")
@@ -34,16 +49,13 @@ tar_test("run timestamp reporter with a cancellation", {
 })
 
 tar_test("timestamp reporter retry message", {
-  skip_on_os("windows")
-  pipeline <- pipeline_init(list(target_init("x", quote(TRUE))))
-  local <- local_init(pipeline, reporter = "timestamp")
-  local$run()
-  expect_message(
-    local$scheduler$reporter$report_retry(
-      target = local$pipeline$targets$x,
-      progress = local$scheduler$progress
-    )
-  )
+  x <- timestamp_new()
+  expect_message(x$report_retry(tar_target(x, TRUE)))
+})
+
+tar_test("report_pattern()", {
+  x <- timestamp_new()
+  expect_message(x$report_pattern(tar_target(x, TRUE, pattern = map(y))))
 })
 
 tar_test("validate timestamp reporter", {

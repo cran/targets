@@ -107,12 +107,12 @@ tar_test("repository_meta", {
 })
 
 tar_test("repository_meta", {
-  tar_option_set(repository = "gcp")
+  tar_option_set(repository_meta = "gcp")
   expect_equal(tar_option_get("repository_meta"), "gcp")
   tar_option_set(repository_meta = "aws")
   expect_equal(tar_option_get("repository_meta"), "aws")
   tar_option_reset()
-  tar_option_set(repository = "gcp")
+  tar_option_set(repository_meta = "gcp")
   expect_equal(tar_option_get("repository_meta"), "gcp")
   expect_error(
     tar_option_set(repository_meta = 123),
@@ -154,8 +154,8 @@ tar_test("deprecated error = \"workspace\"", {
 
 tar_test("memory", {
   expect_equal(tar_option_get("memory"), "auto")
-  tar_option_set(memory = "transient")
-  expect_equal(tar_option_get("memory"), "transient")
+  tar_option_set(memory = "persistent")
+  expect_equal(tar_option_get("memory"), "persistent")
   tar_option_reset()
   expect_equal(tar_option_get("memory"), "auto")
   expect_error(
@@ -165,11 +165,11 @@ tar_test("memory", {
 })
 
 tar_test("garbage_collection", {
-  expect_equal(tar_option_get("garbage_collection"), 1000L)
+  expect_equal(tar_option_get("garbage_collection"), 0L)
   tar_option_set(garbage_collection = 5L)
   expect_equal(tar_option_get("garbage_collection"), 5L)
   tar_option_reset()
-  expect_equal(tar_option_get("garbage_collection"), 1000L)
+  expect_equal(tar_option_get("garbage_collection"), 0L)
   expect_error(
     suppressWarnings(tar_option_set(garbage_collection = "abc")),
     class = "tar_condition_validate"
@@ -190,7 +190,10 @@ tar_test("deployment", {
 
 tar_test("priority", {
   expect_equal(tar_option_get("priority"), 0)
-  tar_option_set(priority = 1)
+  expect_warning(
+    tar_option_set(priority = 1),
+    class = "tar_condition_deprecate"
+  )
   expect_equal(tar_option_get("priority"), 1)
   tar_option_reset()
   expect_equal(tar_option_get("priority"), 0)
@@ -255,11 +258,11 @@ tar_test("resources", {
 })
 
 tar_test("storage", {
-  expect_equal(tar_option_get("storage"), "main")
-  tar_option_set(storage = "worker")
   expect_equal(tar_option_get("storage"), "worker")
-  tar_option_reset()
+  tar_option_set(storage = "main")
   expect_equal(tar_option_get("storage"), "main")
+  tar_option_reset()
+  expect_equal(tar_option_get("storage"), "worker")
   expect_error(
     tar_option_set(storage = "invalid"),
     class = "tar_condition_validate"
@@ -267,11 +270,11 @@ tar_test("storage", {
 })
 
 tar_test("retrieval", {
+  expect_equal(tar_option_get("retrieval"), "auto")
+  tar_option_set(retrieval = "main")
   expect_equal(tar_option_get("retrieval"), "main")
-  tar_option_set(retrieval = "worker")
-  expect_equal(tar_option_get("retrieval"), "worker")
   tar_option_reset()
-  expect_equal(tar_option_get("retrieval"), "main")
+  expect_equal(tar_option_get("retrieval"), "auto")
   expect_error(
     tar_option_set(retrieval = "invalid"),
     class = "tar_condition_validate"

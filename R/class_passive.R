@@ -6,8 +6,7 @@ passive_new <- function(
   queue = NULL,
   reporter = NULL,
   seconds_meta_append = NULL,
-  seconds_meta_upload = NULL,
-  seconds_reporter = NULL
+  seconds_meta_upload = NULL
 ) {
   passive_class$new(
     pipeline = pipeline,
@@ -17,8 +16,7 @@ passive_new <- function(
     queue = queue,
     reporter = reporter,
     seconds_meta_append = seconds_meta_append,
-    seconds_meta_upload = seconds_meta_upload,
-    seconds_reporter = seconds_reporter
+    seconds_meta_upload = seconds_meta_upload
   )
 }
 
@@ -37,7 +35,9 @@ passive_class <- R6::R6Class(
       self$meta$restrict_records(self$pipeline)
     },
     start = function() {
+      tar_runtime$active <- TRUE # Needs to be set here for tests.
       pipeline_prune_names(self$pipeline, self$names)
+      pipeline_resolve_auto(self$pipeline)
       self$ensure_meta()
       pipeline_reset_priorities(self$pipeline)
       self$update_scheduler()
@@ -45,6 +45,8 @@ passive_class <- R6::R6Class(
       self$scheduler$reporter$report_start()
     },
     end = function() {
+      self$meta$database$close()
+      self$scheduler$progress$database$close()
       self$scheduler$reporter$report_end()
     }
   )

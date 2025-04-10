@@ -21,11 +21,8 @@ target_init <- function(
   description = character(0L)
 ) {
   seed <- tar_seed_create(name)
-  deps <- deps <- deps %|||% deps_function(embody_expr(expr))
+  deps <- deps %|||% deps_function(embody_expr(expr))
   command <- command_init(expr, packages, library, string)
-  if (identical(memory, "auto")) {
-    memory <- if_any(is.null(pattern), "persistent", "transient")
-  }
   cue <- cue %|||% cue_init()
   if (any(grepl("^aws_", format))) {
     format <- gsub("^aws_", "", format)
@@ -318,12 +315,12 @@ target_needs_worker.default <- function(target) {
   FALSE
 }
 
-target_run <- function(target, envir, path_store) {
+target_run <- function(target, envir, path_store, on_worker = FALSE) {
   UseMethod("target_run")
 }
 
 #' @export
-target_run.default <- function(target, envir, path_store) {
+target_run.default <- function(target, envir, path_store, on_worker = FALSE) {
 }
 
 #' @title Internal function to run a target on a worker.
@@ -355,7 +352,7 @@ target_gc <- function(target) {
   } else {
     count <- .subset2(tar_runtime, "number_targets_run") %|||% 0L
     interval <- .subset2(tar_options, "get_garbage_collection")()
-    if (interval > 0L && (count %% interval) == 0L) {
+    if (interval > 0L && count > 0L && (count %% interval) == 0L) {
       gc()
     }
   }
@@ -431,6 +428,13 @@ target_workspace_copy <- function(target) {
   out
 }
 
+target_resolve_auto <- function(target, setting, value) {
+  settings <- .subset2(target, "settings")
+  if (.subset2(settings, setting) == "auto") {
+    settings[[setting]] <- value
+  }
+}
+
 target_patternview_meta <- function(target, pipeline, meta) {
   UseMethod("target_patternview_meta")
 }
@@ -475,14 +479,6 @@ target_debug <- function(target) {
 target_debug.default <- function(target) {
 }
 
-target_sync_file_meta <- function(target, meta) {
-  UseMethod("target_sync_file_meta")
-}
-
-#' @export
-target_sync_file_meta.default <- function(target, meta) {
-}
-
 target_marshal_value <- function(target) {
   UseMethod("target_marshal_value")
 }
@@ -525,17 +521,16 @@ target_allow_meta <- function(target) {
 }
 
 target_reformat <- function(target, format) {
-  file <- target$file
+  target$settings <- settings_clone(.subset2(target, "settings"))
   target$settings$format <- format
-  target$store <- settings_produce_store(target$settings)
-  target$file <- file
+  target$store <- settings_produce_store(.subset2(target, "settings"))
 }
 
 target_validate <- function(target) {
   UseMethod("target_validate")
 }
 
-target_produce_child <- function(target, name) {
+target_produce_child <- function(target, name, index) {
   UseMethod("target_produce_child")
 }
 

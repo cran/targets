@@ -135,30 +135,15 @@ tar_test("tar_make() handles callr errors", {
   )
 })
 
-tar_test("priorities apply to tar_make() (#437)", {
-  skip_cran()
-  tar_script(
-    list(
-      tar_target(x1, 1, priority = 0),
-      tar_target(y1, 1, priority = 0.5),
-      tar_target(z1, 1, priority = 1),
-      tar_target(x2, x1, priority = 0),
-      tar_target(y2, y1, priority = 0.5),
-      tar_target(z2, z1, priority = 1)
-    )
-  )
-  tar_make(callr_function = NULL)
-  out <- tar_progress()$name
-  exp <- c("z1", "z2", "y1", "y2", "x1", "x2")
-  expect_equal(out, exp)
-})
-
-tar_test("custom script and store args", {
+tar_test("custom script, store args, and garbage collection", {
   skip_cran()
   expect_equal(tar_config_get("script"), path_script_default())
   expect_equal(tar_config_get("store"), path_store_default())
   tar_script(
-    tar_target(x, TRUE),
+    {
+      tar_option_set(garbage_collection = 1L)
+      tar_target(x, TRUE)
+    },
     script = "example/script.R"
   )
   tar_make(
@@ -266,5 +251,12 @@ tar_test("working directory antipattern", {
   expect_error(
     suppressWarnings(tar_make(callr_function = NULL)),
     class = "tar_condition_run"
+  )
+})
+
+tar_test("tar_make_reporter()", {
+  expect_equal(
+    suppressWarnings(tar_make_reporter("summary")),
+    "balanced"
   )
 })

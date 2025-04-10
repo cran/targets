@@ -33,8 +33,9 @@
 #' @param destroy Character of length 1, what to destroy. Choices:
 #'   * `"all"`: entire data store (default: `_targets/`)
 #'     including cloud data, as well as download/upload scratch files.
-#'   * `"cloud"`: cloud data, including metadata as well as target object data
-#'     from targets with `tar_target(..., repository = "aws")`.
+#'   * `"cloud"`: cloud data, including metadata, target object data
+#'     from targets with `tar_target(..., repository = "aws")`,
+#'     and workspace files saved on the cloud.
 #'     Also deletes temporary staging files in
 #'     `file.path(tempdir(), "targets")`
 #'     that may have been accidentally left over from incomplete
@@ -55,8 +56,11 @@
 #'     Dynamic files are not deleted this way.
 #'   * `"scratch"`: temporary files in saved during [tar_make()] that should
 #'     automatically get deleted except if R crashed.
-#'   * `"workspaces"`: compressed lightweight files in `workspaces/`
+#'   * `"workspaces"`: compressed lightweight files locally saved
+#'     to the `workspaces/` folder
 #'     in the data store with the saved workspaces of targets.
+#'     Does not delete workspace files on the cloud. For that,
+#'     consider `destroy = "all"` or `destroy = "cloud"`.
 #'     See [tar_workspace()] for details.
 #'   * `"user"`: custom user-supplied files in the `user/` folder in the
 #'     data store.
@@ -135,7 +139,7 @@ tar_destroy <- function(
       batch_size = batch_size,
       verbose = verbose
     )
-    tar_delete_cloud_meta(script = script)
+    tar_delete_cloud_meta_and_workspaces(script = script)
     unlink(path_scratch_dir_network(), recursive = TRUE)
   }
   if (tar_should_delete(path = path, ask = ask)) {
@@ -146,7 +150,7 @@ tar_destroy <- function(
 
 # Covered in AWS and GCP tests.
 # nocov start
-tar_delete_cloud_meta <- function(script) {
+tar_delete_cloud_meta_and_workspaces <- function(script) {
   if (!file.exists(script)) {
     return()
   }
@@ -167,6 +171,7 @@ tar_delete_cloud_meta <- function(script) {
   progress$delete_cloud(verbose = FALSE)
   process$delete_cloud(verbose = FALSE)
   crew$delete_cloud(verbose = FALSE)
+  meta$delete_cloud_workspaces()
   invisible()
 }
 # nocov end

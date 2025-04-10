@@ -42,60 +42,16 @@ callr_outer <- function(
 }
 
 callr_error <- function(traced_condition, fun) {
-  general <- c(
-    utils::capture.output(
-      cli::cli_h1("Debugging"),
-      type = "message"
-    ),
-    paste(
-      "   ",
-      cli_blue_bullet(
-        c(
-          "tar_errored()",
-          "tar_meta(fields = any_of(\"error\"), complete_only = TRUE)",
-          "tar_workspace()",
-          "tar_workspaces()"
-        ),
-        print = FALSE
-      )
-    )
-  )
-  how_to <- c(
-    utils::capture.output(cli::cli_h1("How to"), type = "message"),
-    paste(
-      "   ",
-      cli_blue_bullet(
-        c(
-          paste(
-            "Debug:",
-            cli_url("https://books.ropensci.org/targets/debugging.html")
-          ),
-          paste(
-            "Help:",
-            cli_url("https://books.ropensci.org/targets/help.html")
-          )
-        ),
-        print = FALSE
-      )
-    )
-  )
-  data <- c(
-    utils::capture.output(
-      cli::cli_h1("Last error message"),
-      type = "message"
-    ),
-    paste0("    ", conditionMessage(traced_condition$condition)),
-    utils::capture.output(
-      cli::cli_h1("Last error traceback"),
-      type = "message"
-    ),
-    paste0("    ", traced_condition$trace)
-  )
   lines <- c(
-    sprintf("targets::%s() error", fun),
-    general,
-    how_to,
-    data
+    sprintf(
+      "Error in %s():\n  %s",
+      fun,
+      conditionMessage(traced_condition$condition)
+    ),
+    paste(
+      "  See",
+      cli_url("https://books.ropensci.org/targets/debugging.html")
+    )
   )
   message <- paste(lines, collapse = "\n")
   tar_throw_run(message, class = class(traced_condition$condition))
@@ -111,7 +67,13 @@ callr_dispatch <- function(
   store,
   fun
 ) {
-  options <- list()
+  in_rstudio_job <- rstudio_available(verbose = FALSE) &&
+    !is.null(getNamespace("rstudioapi")[["isBackgroundJob"]]) &&
+    rstudioapi::isBackgroundJob()
+  options <- list(
+    cli.dynamic = cli::is_dynamic_tty() || in_rstudio_job,
+    cli.num_colors = cli::num_ansi_colors()
+  )
   pid_parent <- as.integer(Sys.getpid())
   callr_arguments$func <- callr_inner
   callr_arguments$args <- list(
@@ -248,6 +210,12 @@ callr_set_runtime <- function(script, store, fun, pid_parent) {
   tar_runtime$store <- store
   tar_runtime$working_directory <- getwd()
   tar_runtime$fun <- fun
+  # Needs to be set here for user-side code in _targets.R outside the pipeline
+  tar_runtime$active <- fun %in% c(
+    "tar_make",
+    "tar_make_clustermq",
+    "tar_make_future"
+  )
   tar_runtime$pid_parent <- pid_parent
   tar_runtime$inventories <- list()
   runtime_set_file_info(tar_runtime, store)
@@ -285,7 +253,10 @@ tar_callr_args_default <- function(callr_function, reporter = NULL) {
   if (is.null(callr_function)) {
     return(list())
   }
-  out <- list(spinner = !identical(reporter, "summary"))
+  out <- list(spinner = FALSE, stderr = "2>&1")
+  if (cli::is_dynamic_tty()) {
+    out$env <- c(callr::rcmd_safe_env(), CLI_TICK_TIME = "1000") # nocov
+  }
   out[intersect(names(out), names(formals(callr_function)))]
 }
 
@@ -308,7 +279,7 @@ callr_args_default <- function(callr_function, reporter = NULL) {
     "callr_args_default() is deprecated in `targets`.",
     "please use tar_callr_args_default() instead"
   )
-  cli_red_x(msg)
+  cli::cli_alert_danger(msg)
   tar_callr_args_default(
     callr_function = callr_function,
     reporter = reporter

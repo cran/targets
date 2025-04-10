@@ -36,13 +36,32 @@
 #'   or to include functions and other global objects from the environment
 #'   created by running the target script file (default: `_targets.R`).
 #' @param reporter Character of length 1, name of the reporter to user.
-#'   Controls how messages are printed as targets are checked. Choices:
-#'     * `"forecast_interactive"` (default): use the forecast reporter if the
-#'       session is interactive (see [base::interactive()]),
-#'       otherwise use the silent reporter.
+#'   Controls how messages are printed as targets are checked.
+#'
+#'   The default of `tar_config_get("reporter_make")` is `"terse"`
+#'   if running inside a literate programming document
+#'   (i.e. the `knitr.in.progress` global option is `TRUE`).
+#'   Otherwise, the default is `"balanced"`. Choices:
+#'
+#'     * `"balanced"`: a reporter that balances efficiency
+#'       with informative detail.
+#'       Uses a `cli` progress bar instead of printing messages
+#'       for individual dynamic branches.
+#'       To the right of the progress bar is a text string like
+#'       "22.6s, 4510+, 124-" (22.6 seconds elapsed, 4510 targets
+#'       detected as outdated so far,
+#'       124 targets detected as up to date so far).
+#'
+#'       For best results with the balanced reporter, you may need to
+#'       adjust your `cli` settings. See global options `cli.num_colors`
+#'       and `cli.dynamic` at
+#'       <https://cli.r-lib.org/reference/cli-config.html>.
+#'       On that page is also the `CLI_TICK_TIME` environment variable
+#'       which controls the time delay between progress bar updates.
+#'       If the delay is too low, then overhead from printing to the console
+#'       may slow down the pipeline.
+#'     * `"terse"`: like `"balanced"`, except without a progress bar.
 #'     * `"silent"`: print nothing.
-#'     * `"forecast"`: print running totals of the checked and outdated
-#'       targets found so far.
 #' @inheritParams tar_validate
 #' @examples
 #' if (identical(Sys.getenv("TAR_EXAMPLES"), "true")) { # for CRAN
@@ -75,17 +94,20 @@ tar_outdated <- function(
   script = targets::tar_config_get("script"),
   store = targets::tar_config_get("store")
 ) {
+  if_any(
+    is.null(seconds_reporter),
+    NULL,
+    tar_warn_deprecate(
+      "The seconds_reporter argument of tar_outdated() etc. was deprecated ",
+      "in targets version 1.10.1.9010 (2025-03-31)."
+    )
+  )
   tar_assert_allow_meta("tar_outdated", store)
   force(envir)
   tar_assert_scalar(shortcut)
   tar_assert_lgl(shortcut)
   tar_assert_lgl(branches)
-  tar_assert_flag(reporter, tar_reporters_outdated())
   reporter <- tar_outdated_reporter(reporter)
-  tar_assert_dbl(seconds_reporter)
-  tar_assert_scalar(seconds_reporter)
-  tar_assert_none_na(seconds_reporter)
-  tar_assert_ge(seconds_reporter, 0)
   tar_deprecate_seconds_interval(seconds_interval)
   tar_assert_callr_function(callr_function)
   tar_assert_list(callr_arguments)
@@ -95,8 +117,7 @@ tar_outdated <- function(
     shortcut = shortcut,
     branches = branches,
     targets_only = targets_only,
-    reporter = reporter,
-    seconds_reporter = seconds_reporter
+    reporter = reporter
   )
   callr_outer(
     targets_function = tar_outdated_inner,
@@ -117,8 +138,7 @@ tar_outdated_inner <- function(
   shortcut,
   branches,
   targets_only,
-  reporter,
-  seconds_reporter
+  reporter
 ) {
   names_all <- pipeline_get_names(pipeline)
   names <- tar_tidyselect_eval(names_quosure, names_all)
@@ -134,8 +154,7 @@ tar_outdated_inner <- function(
     names = names,
     shortcut = shortcut,
     queue = "sequential",
-    reporter = reporter,
-    seconds_reporter = seconds_reporter
+    reporter = reporter
   )
   outdated$run()
   outdated_targets <- counter_get_names(outdated$outdated)
@@ -165,8 +184,10 @@ tar_outdated_globals <- function(pipeline, meta) {
 }
 
 tar_outdated_reporter <- function(reporter) {
-  if (identical(reporter, "forecast_interactive")) {
-    reporter <- if_any(interactive(), "forecast", "silent")
-  }
-  reporter
+  tar_config_assert_reporter_outdated(reporter)
+  if_any(
+    reporter %in% c("forecast", "forecast_interactive"),
+    "balanced",
+    reporter
+  )
 }

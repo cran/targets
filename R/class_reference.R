@@ -2,9 +2,10 @@ reference_new <- function(
   parent = NULL,
   path = NULL,
   stage = NULL,
-  hash = NULL
+  hash = NULL,
+  index = NULL
 ) {
-  list(parent, path, stage, hash)
+  list(parent, path, stage, hash, index)
 }
 
 reference_parent <- function(reference) {
@@ -23,9 +24,13 @@ reference_hash <- function(reference) {
   .subset2(reference, 4L)
 }
 
+reference_index <- function(reference) {
+  .subset2(reference, 5L)
+}
+
 reference_produce_target <- function(reference, pipeline, name) {
   parent <- pipeline_get_target(pipeline, reference_parent(reference))
-  child <- target_produce_child(parent, name)
+  child <- target_produce_child(parent, name, reference_index(reference))
   file <- .subset2(child, "file")
   if (!is.null(file)) {
     path <- reference_path(reference)

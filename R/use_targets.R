@@ -54,9 +54,9 @@ use_targets <- function(
   from <- system.file(from, package = "targets", mustWork = TRUE)
   if (overwrite || !file.exists(script)) {
     file.copy(from = from, to = script, overwrite = TRUE)
-    cli_blue_play(paste("Wrote", script))
+    cli::cli_alert_success(paste("Wrote", script))
   } else {
-    cli_red_x(paste("Did not overwrite", script))
+    cli::cli_alert_danger(paste("Did not overwrite", script))
   }
   # covered in tests/interactive/test-
   # nocov start

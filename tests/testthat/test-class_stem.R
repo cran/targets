@@ -35,7 +35,8 @@ tar_test("stem produce buds", {
   target_run(x, tar_option_get("envir"), path_store_default())
   pipeline <- pipeline_init(list(x))
   stem_update_junction(x, pipeline)
-  children <- map(target_get_children(x), ~stem_produce_bud(x, .x))
+  names <- target_get_children(x)
+  children <- map(seq_along(names), ~stem_produce_bud(x, names[.x], .x))
   expect_true(is.list(children))
   expect_length(children, length(letters))
   for (index in seq_along(letters)) {
@@ -47,6 +48,8 @@ tar_test("stem produce buds", {
 tar_test("stem$ensure_children()", {
   pipeline <- pipeline_map()
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   pipeline_prune_names(local$pipeline, local$names)
   local$update_scheduler()
   scheduler <- local$scheduler
@@ -61,22 +64,24 @@ tar_test("stem$ensure_children()", {
 
 tar_test("target_update_queue() updates queue correctly", {
   pipeline <- pipeline_order()
-  scheduler <- scheduler_init(pipeline, meta = meta_init())
+  meta <- meta_init()
+  on.exit(meta$database$close())
+  scheduler <- scheduler_init(pipeline, meta = meta)
   target <- pipeline_get_target(pipeline, "min2")
   target_update_queue(target, scheduler)
-  out <- scheduler$queue$data
-  exp <- c(
-    data1 = 0L,
-    data2 = 0L,
-    min1 = 1L,
-    min2 = 1L,
-    max1 = 1L,
-    max2 = 1L,
-    mins = 1L,
-    maxes = 2L,
-    all = 2L
+  expect_equal(sort(scheduler$queue$ready$data), sort(c("data1", "data2")))
+  out <- as.list(scheduler$queue$data)
+  exp <- list(
+    min1 = 1,
+    min2 = 1,
+    max1 = 1,
+    max2 = 1,
+    mins = 1,
+    maxes = 2,
+    all = 2
   )
-  expect_equal(out[sort(names(out))], exp[sort(names(exp))])
+  expect_equal(sort(names(out)), sort(names(exp)))
+  expect_equal(out[sort(names(out))], exp[sort(names(out))])
 })
 
 tar_test("target_deps_deep()", {
@@ -108,6 +113,8 @@ tar_test("target_deps_deep()", {
     )
   )
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   local$run()
   target <- pipeline_get_target(pipeline, "summary")
   out <- sort(target_deps_deep(target, pipeline))
@@ -147,6 +154,8 @@ tar_test("target_deps_deep() with retrieval 'main'", {
     )
   )
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   local$run()
   target <- pipeline_get_target(pipeline, "summary")
   out <- sort(target_deps_deep(target, pipeline))
@@ -163,8 +172,11 @@ tar_test("insert stem record of a successful internal stem", {
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
   local$run()
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   meta <- local$meta
   db <- meta$database
+  on.exit(db$close(), add = TRUE)
   db$ensure_storage()
   db$reset_storage()
   record <- target_produce_record(target, pipeline, meta)
@@ -193,9 +205,12 @@ tar_test("insert stem record of a external stem", {
   target <- target_init("x", quote("y"), format = "file")
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   local$run()
   meta <- local$meta
   db <- meta$database
+  on.exit(db$close(), add = TRUE)
   db$ensure_storage()
   db$reset_storage()
   record <- target_produce_record(target, pipeline, meta)
@@ -249,6 +264,8 @@ tar_test("stem$produce_record() of a errored stem", {
   target <- target_init("x", quote(stop(123)))
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   expect_error(local$run(), class = "tar_condition_run")
   meta <- local$meta
   record <- target_produce_record(target, pipeline, meta)
@@ -267,7 +284,7 @@ tar_test("stem$produce_record() of a errored stem", {
   expect_equal(record$children, NA_character_)
   expect_true(is.numeric(record$seconds))
   expect_equal(record$warnings, NA_character_)
-  expect_equal(record$error, "123")
+  expect_true(grepl("123$", record$error))
 })
 
 tar_test("stem$produce_record() with no error message", {
@@ -275,6 +292,8 @@ tar_test("stem$produce_record() with no error message", {
   target <- target_init("x", quote(stop()))
   pipeline <- pipeline_init(list(target), clone_targets = FALSE)
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   expect_error(local$run(), class = "tar_condition_run")
   meta <- local$meta
   record <- target_produce_record(target, pipeline, meta)

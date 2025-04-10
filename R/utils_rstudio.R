@@ -20,7 +20,7 @@ rstudio_symbol_at_cursor <- function(context) {
   )
   if_any(
     identical(length(match_index), 0L),
-    cli_red_x("Could not find object name at cursor position."),
+    cli::cli_alert_danger("Could not find object name at cursor position."),
     substr(
       context$contents[cursor_line],
       start = match_starts[match_index],
@@ -37,12 +37,10 @@ rstudio_available <- function(verbose = TRUE) {
   if (!package_installed("rstudioapi")) {
     available <- FALSE
     reason <- "package {rstudioapi} is not installed."
-  }
-  if (!rstudioapi::isAvailable()) {
+  } else if (!rstudioapi::isAvailable(child_ok = TRUE)) {
     available <- FALSE
     reason <- "RStudio API / Posit Workbench is not running."
-  }
-  if (!available && verbose) {
+  } else if (!available && verbose) {
     message <- paste(
       "as_job is TRUE in tar_make(), but",
       reason,

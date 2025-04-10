@@ -69,12 +69,12 @@ file_update_info <- function(file) {
 }
 
 file_update_hash <- function(file) {
-  files <- file_list_files(file$path)
+  files <- file_list_files(.subset2(file, "path"))
   info <- file_info(files)
   file$hash <- file_hash(files)
   file$time <- file_time(info)
   file$bytes <- file_bytes(info)
-  file$size <- file_size(file$bytes)
+  file$size <- file_size(.subset2(file, "bytes"))
   invisible()
 }
 
@@ -90,6 +90,9 @@ file_should_rehash <- function(file, time, size, trust_timestamps) {
       out <- TRUE
     } else {
       out <- (time != file_time) || (size != file_size)
+      if (out) {
+        file$needs_sync <- TRUE
+      }
     }
   } else {
     out <- TRUE
@@ -103,7 +106,7 @@ file_repopulate <- function(file, path, data) {
 }
 
 file_ensure_hash <- function(file) {
-  files <- file_list_files(file$path)
+  files <- file_list_files(.subset2(file, "path"))
   info <- file_info(files)
   time <- file_time(info)
   bytes <- file_bytes(info)
@@ -112,9 +115,9 @@ file_ensure_hash <- function(file) {
     file = file,
     time = time,
     size = size,
-    trust_timestamps = all(info$trust_timestamps)
+    trust_timestamps = all(.subset2(info, "trust_timestamps"))
   )
-  hash <- if_any(do, file_hash(files), file$hash)
+  hash <- if_any(do, file_hash(files), .subset2(file, "hash"))
   file$hash <- hash
   file$time <- time
   file$size <- size
@@ -155,7 +158,7 @@ file_validate_path <- function(path) {
 }
 
 file_validate <- function(file) {
-  tar_assert_correct_fields(file, file_new)
+  tar_assert_correct_fields(file, file_new, optional = "needs_sync")
   file_validate_path(file$path)
   tar_assert_chr(file$hash)
   tar_assert_chr(file$time)

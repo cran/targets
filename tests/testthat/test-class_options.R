@@ -3,7 +3,7 @@ tar_test("validate default options", {
   expect_silent(x$validate())
 })
 
-tar_test("validate non-default options", {
+tar_test("validate supported non-default options", {
   x <- options_init(
     tidy_eval = FALSE,
     packages = character(0),
@@ -18,7 +18,7 @@ tar_test("validate non-default options", {
     memory = "transient",
     garbage_collection = 3L,
     deployment = "main",
-    priority = 0.5,
+    priority = 0,
     backoff = backoff_init(),
     resources = tar_resources(qs = tar_resources_qs()),
     storage = "worker",
@@ -48,7 +48,7 @@ tar_test("export", {
     memory = "transient",
     garbage_collection = 3L,
     deployment = "main",
-    priority = 0.5,
+    priority = 0,
     resources = list(ncpu = 2),
     storage = "worker",
     retrieval = "worker",
@@ -74,7 +74,7 @@ tar_test("export", {
     memory = "transient",
     garbage_collection = 3L,
     deployment = "main",
-    priority = 0.5,
+    priority = 0,
     resources = list(ncpu = 2),
     storage = "worker",
     retrieval = "worker",
@@ -106,7 +106,7 @@ tar_test("import", {
     memory = "transient",
     garbage_collection = 4L,
     deployment = "main",
-    priority = 0.5,
+    priority = 0,
     resources = resources,
     storage = "worker",
     retrieval = "worker",
@@ -134,7 +134,7 @@ tar_test("import", {
   expect_equal(x$get_memory(), "transient")
   expect_equal(x$get_garbage_collection(), 4L)
   expect_equal(x$get_deployment(), "main")
-  expect_equal(x$get_priority(), 0.5)
+  expect_equal(x$get_priority(), 0)
   expect_equal(x$get_resources(), resources)
   expect_equal(x$get_storage(), "worker")
   expect_equal(x$get_retrieval(), "worker")
@@ -223,22 +223,10 @@ tar_test("repository", {
 tar_test("repository_meta", {
   x <- options_init()
   expect_equal(x$get_repository_meta(), "local")
-  x$set_repository("aws")
+  x$set_repository_meta("aws")
   expect_equal(x$get_repository_meta(), "aws")
   x$reset()
   expect_equal(x$get_repository_meta(), "local")
-  expect_error(x$set_repository_meta(123), class = "tar_condition_validate")
-})
-
-tar_test("repository_meta defaults to repository", {
-  x <- options_init()
-  x$set_repository("gcp")
-  expect_equal(x$get_repository_meta(), "gcp")
-  x$set_repository("aws")
-  expect_equal(x$get_repository_meta(), "aws")
-  x$reset()
-  x$set_repository("gcp")
-  expect_equal(x$get_repository_meta(), "gcp")
   expect_error(x$set_repository_meta(123), class = "tar_condition_validate")
 })
 
@@ -273,8 +261,8 @@ tar_test("deprecated error = \"workspace\"", {
 tar_test("memory", {
   x <- options_init()
   expect_equal(x$get_memory(), "auto")
-  x$set_memory("transient")
-  expect_equal(x$get_memory(), "transient")
+  x$set_memory("persistent")
+  expect_equal(x$get_memory(), "persistent")
   x$reset()
   expect_equal(x$get_memory(), "auto")
   expect_error(x$set_memory("invalid"), class = "tar_condition_validate")
@@ -282,11 +270,11 @@ tar_test("memory", {
 
 tar_test("garbage_collection", {
   x <- options_init()
-  expect_equal(x$get_garbage_collection(), 1000L)
+  expect_equal(x$get_garbage_collection(), 0L)
   x$set_garbage_collection(6L)
   expect_equal(x$get_garbage_collection(), 6L)
   x$reset()
-  expect_equal(x$get_garbage_collection(), 1000L)
+  expect_equal(x$get_garbage_collection(), 0L)
   expect_error(
     suppressWarnings(x$set_garbage_collection("a")),
     class = "tar_condition_validate"
@@ -306,7 +294,7 @@ tar_test("deployment", {
 tar_test("priority", {
   x <- options_init()
   expect_equal(x$get_priority(), 0)
-  x$set_priority(1)
+  expect_warning(x$set_priority(1), class = "tar_condition_deprecate")
   expect_equal(x$get_priority(), 1)
   x$reset()
   expect_equal(x$get_priority(), 0)
@@ -351,21 +339,21 @@ tar_test("resources", {
 
 tar_test("storage", {
   x <- options_init()
-  expect_equal(x$get_storage(), "main")
-  x$set_storage("worker")
   expect_equal(x$get_storage(), "worker")
-  x$reset()
+  x$set_storage("main")
   expect_equal(x$get_storage(), "main")
+  x$reset()
+  expect_equal(x$get_storage(), "worker")
   expect_error(x$set_storage("invalid"), class = "tar_condition_validate")
 })
 
 tar_test("retrieval", {
   x <- options_init()
+  expect_equal(x$get_retrieval(), "auto")
+  x$set_retrieval("main")
   expect_equal(x$get_retrieval(), "main")
-  x$set_retrieval("worker")
-  expect_equal(x$get_retrieval(), "worker")
   x$reset()
-  expect_equal(x$get_retrieval(), "main")
+  expect_equal(x$get_retrieval(), "auto")
   expect_error(x$set_retrieval("invalid"), class = "tar_condition_validate")
 })
 

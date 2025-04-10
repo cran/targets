@@ -87,6 +87,7 @@ tar_test("can load an entire map", {
   )
   local <- local_init(pipeline)
   local$run()
+  pipeline_unload_loaded(local$pipeline)
   expect_equal(counter_get_names(pipeline$loaded), character(0))
   target <- pipeline_get_target(pipeline, "map")
   target_load_value(target, pipeline)
@@ -201,6 +202,8 @@ tar_test("error relaying", {
 tar_test("maps produce correct junctions and bud niblings", {
   pipeline <- pipeline_map()
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   pipeline_prune_names(local$pipeline, local$names)
   local$update_scheduler()
   scheduler <- local$scheduler
@@ -231,6 +234,8 @@ tar_test("correct junction of a non-mapped stem", {
   local <- local_init(pipeline)
   pipeline_prune_names(local$pipeline, local$names)
   local$update_scheduler()
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   scheduler <- local$scheduler
   local$ensure_meta()
   local$process_target("data0")
@@ -497,30 +502,6 @@ tar_test("pattern dims are always deps when run", {
   expect_equiv(out, c("x", "x"))
 })
 
-tar_test("patterns and branches get correct ranks with priorities", {
-  pipeline <- pipeline_init(
-    list(
-      target_init("x", quote(seq_len(2)), priority = 0.1),
-      target_init("z", quote(stop(x)), pattern = quote(map(x)), priority = 0.3),
-      target_init("y", quote(stop(x)), pattern = quote(map(x)), priority = 0.2),
-      target_init("w", quote(c(y, z)), priority = 0.4)
-    )
-  )
-  algo <- local_init(pipeline, queue = "parallel")
-  expect_error(algo$run())
-  out <- algo$scheduler$queue$data
-  branch_names <- target_get_children(pipeline_get_target(pipeline, "z"))
-  branch_name <- intersect(branch_names, names(out))
-  exp <- c(
-    y = 0 - 0.2 / 2,
-    w = 2 - 0.4 / 2,
-    z = 1 - 1.1 / 2
-  )
-  exp[branch_name] <- 0 - 0.3 / 2
-  expect_equal(sort(names(out)), sort(names(exp)))
-  expect_equal(out[names(exp)], exp)
-})
-
 tar_test("prohibit branching over stem files", {
   file.create(c("a", "b"))
   pipeline <- pipeline_init(
@@ -551,6 +532,8 @@ tar_test("pattern$patternview with cross", {
 tar_test("cross produces correct junctions and bud niblings", {
   pipeline <- pipeline_cross()
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   pipeline_prune_names(local$pipeline, local$names)
   local$update_scheduler()
   scheduler <- local$scheduler
@@ -582,6 +565,8 @@ tar_test("cross produces correct junctions and bud niblings", {
 tar_test("correct junction of non-crossed stems", {
   pipeline <- pipeline_cross()
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   pipeline_prune_names(local$pipeline, local$names)
   local$update_scheduler()
   scheduler <- local$scheduler
@@ -603,6 +588,8 @@ tar_test("correct junction of non-crossed stems", {
 tar_test("cross pipeline gives correct values", {
   pipeline <- pipeline_cross()
   local <- local_init(pipeline)
+  on.exit(local$meta$database$close())
+  on.exit(local$scheduler$progress$database$close(), add = TRUE)
   scheduler <- local$scheduler
   local$run()
   value <- function(name) {

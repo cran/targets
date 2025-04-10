@@ -72,6 +72,26 @@ settings_new <- function(
   out
 }
 
+settings_clone <- function(settings) {
+  settings_new(
+    name = .subset2(settings, "name"),
+    description = .subset2(settings, "description"),
+    format = .subset2(settings, "format"),
+    repository = .subset2(settings, "repository"),
+    pattern = .subset2(settings, "pattern"),
+    dimensions = .subset2(settings, "dimensions"),
+    iteration = .subset2(settings, "iteration"),
+    error = .subset2(settings, "error"),
+    memory = .subset2(settings, "memory"),
+    garbage_collection = .subset2(settings, "garbage_collection"),
+    deployment = .subset2(settings, "deployment"),
+    priority = .subset2(settings, "priority"),
+    resources = .subset2(settings, "resources"),
+    storage = .subset2(settings, "storage"),
+    retrieval = .subset2(settings, "retrieval")
+  )
+}
+
 settings_produce_pattern <- function(pattern) {
   pattern <- as.expression(pattern)
   if_any(is.null(pattern[[1]]), NULL, pattern)
@@ -141,7 +161,7 @@ settings_validate <- function(settings) {
     settings$error,
     c("stop", "continue", "abridge", "workspace", "null")
   )
-  tar_assert_in(settings$memory, c("persistent", "transient"))
+  tar_assert_in(settings$memory, c("auto", "persistent", "transient"))
   tar_assert_lgl(settings$garbage_collection)
   tar_assert_scalar(settings$garbage_collection)
   tar_assert_in(settings$deployment, c("main", "worker"))
@@ -150,6 +170,6 @@ settings_validate <- function(settings) {
   tar_assert_le(settings$priority, 1)
   tar_assert_list(settings$resources)
   tar_assert_in(settings$storage, c("main", "worker"))
-  tar_assert_in(settings$retrieval, c("main", "worker"))
+  tar_assert_in(settings$retrieval, c("auto", "main", "worker"))
   invisible()
 }

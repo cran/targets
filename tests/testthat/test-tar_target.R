@@ -13,8 +13,8 @@ tar_test("tar_target() description", {
 })
 
 tar_test("tar_target() gets priorities", {
-  x <- tar_target(x, get_data(), priority = 0.5)
-  expect_equal(x$settings$priority, 0.5)
+  x <- tar_target(x, get_data(), priority = 0)
+  expect_equal(x$settings$priority, 0)
 })
 
 tar_test("tar_target() defines pattens correctly", {
@@ -74,23 +74,4 @@ tar_test("superseded ultra-custom formats and error null", {
 tar_test("url format has local repository", {
   target <- tar_target(x, 1, repository = "aws", format = "url")
   expect_equal(target$settings$repository,  "local")
-})
-
-tar_test("memory = 'auto' sets the correct setting", {
-  expect_equal(
-    tar_target(x, 1, memory = "auto")$settings$memory,
-    "persistent"
-  )
-  expect_equal(
-    tar_target(x, 1, pattern = map(y), memory = "auto")$settings$memory,
-    "transient"
-  )
-  expect_equal(
-    tar_target(x, 1, memory = "persistent")$settings$memory,
-    "persistent"
-  )
-  expect_equal(
-    tar_target(x, 1, pattern = map(y), memory = "transient")$settings$memory,
-    "transient"
-  )
 })

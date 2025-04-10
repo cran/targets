@@ -28,6 +28,7 @@ tar_test("target_run() on a errored builder", {
   x <- target_init(name = "abc", expr = quote(identity(identity(stop(123)))))
   target_run(x, tar_option_get("envir"), path_store_default())
   meta <- meta_init()
+  on.exit(meta$database$close())
   target_update_depend(x, pipeline_init(), meta)
   expect_error(
     target_conclude(x, pipeline_init(), scheduler_init(), meta),
@@ -166,11 +167,14 @@ tar_test("builder writing from main", {
   local_init(pipeline_init())$start()
   x <- target_init("abc", expr = quote(a), format = "rds", storage = "main")
   pipeline <- pipeline_init(list(x))
-  scheduler <- scheduler_init(pipeline, meta_init())
+  meta1 <- meta_init()
+  on.exit(meta1$database$close())
+  scheduler <- scheduler_init(pipeline, meta1)
   target_run(x, tar_option_get("envir"), path_store_default())
   expect_false(file.exists(x$file$path))
   expect_true(is.na(x$file$hash))
   meta <- meta_init()
+  on.exit(meta$database$close(), add = TRUE)
   lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
   expect_true(file.exists(x$file$path))
@@ -200,8 +204,11 @@ tar_test("builder writing from worker", {
   expect_equal(readRDS(path), "123")
   expect_equal(target_read_value(x)$object, "123")
   pipeline <- pipeline_init(list(x))
-  scheduler <- scheduler_init(pipeline, meta_init())
+  meta1 <- meta_init()
+  on.exit(meta1$database$close())
+  scheduler <- scheduler_init(pipeline, meta1)
   meta <- meta_init()
+  on.exit(meta$database$close(), add = TRUE)
   lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
 })
@@ -285,7 +292,7 @@ tar_test("storage = \"none\" ignores return value but tracks file", {
   expect_false(any(hash == tar_meta(x, data)$data))
 })
 
-tar_test("dynamic file writing from main", {
+tar_test("file target writing from main", {
   skip_cran()
   local_init(pipeline_init())$start()
   envir <- new.env(parent = environment())
@@ -305,13 +312,16 @@ tar_test("dynamic file writing from main", {
   expect_true(file.exists(x$file$path))
   expect_false(is.na(x$file$hash))
   pipeline <- pipeline_init(list(x))
-  scheduler <- scheduler_init(pipeline, meta_init())
+  meta1 <- meta_init()
+  on.exit(meta1$database$close())
+  scheduler <- scheduler_init(pipeline, meta1)
   meta <- meta_init()
+  on.exit(meta$database$close())
   lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
 })
 
-tar_test("dynamic file has illegal path", {
+tar_test("file target has illegal path", {
   skip_cran()
   x <- target_init(
     name = "abc",
@@ -322,7 +332,7 @@ tar_test("dynamic file has illegal path", {
   expect_error(local$run(), class = "tar_condition_run")
 })
 
-tar_test("dynamic file has missing path value", {
+tar_test("file target has missing path value", {
   skip_cran()
   x <- target_init(
     name = "abc",
@@ -333,7 +343,7 @@ tar_test("dynamic file has missing path value", {
   expect_error(local$run(), class = "tar_condition_run")
 })
 
-tar_test("dynamic file is missing at path", {
+tar_test("file target is missing at path", {
   skip_cran()
   x <- target_init(
     name = "abc",
@@ -345,7 +355,7 @@ tar_test("dynamic file is missing at path", {
   expect_error(local$run(), class = "tar_condition_run")
 })
 
-tar_test("dynamic file writing from worker", {
+tar_test("file target writing with worker deployment", {
   skip_cran()
   local_init(pipeline_init())$start()
   envir <- new.env(parent = environment())
@@ -363,11 +373,51 @@ tar_test("dynamic file writing from worker", {
     file
   }
   target_run(x, tar_option_get("envir"), path_store_default())
+  # Not actually on a worker, even though deployment is "worker"
+  # by default and storage is "worker".
+  expect_false(is.null(x$value))
+  expect_true(file.exists(x$file$path))
+  expect_false(is.na(x$file$hash))
+  pipeline <- pipeline_init(list(x))
+  meta <- meta_init()
+  on.exit(meta$database$close())
+  scheduler <- scheduler_init(pipeline, meta = meta)
+  lookup_set(meta$depends, "abc", NA_character_)
+  target_conclude(x, pipeline, scheduler, meta)
+})
+
+tar_test("file target writing when actually on worker", {
+  skip_cran()
+  local_init(pipeline_init())$start()
+  envir <- new.env(parent = environment())
+  tar_option_set(envir = envir)
+  x <- target_init(
+    name = "abc",
+    expr = quote(f()),
+    format = "file",
+    storage = "worker",
+    retrieval = "main"
+  )
+  envir$f <- function() {
+    file <- tempfile()
+    writeLines("lines", con = file)
+    file
+  }
+  target_run_worker(
+    x,
+    tar_option_get("envir"),
+    path_store_default(),
+    envvars = data.frame(),
+    options = tar_options$export(),
+    fun = "tar_make"
+  )
+  # On an actual worker, we assume the value was saved to storage.
   expect_null(x$value)
   expect_true(file.exists(x$file$path))
   expect_false(is.na(x$file$hash))
   pipeline <- pipeline_init(list(x))
   meta <- meta_init()
+  on.exit(meta$database$close())
   scheduler <- scheduler_init(pipeline, meta = meta)
   lookup_set(meta$depends, "abc", NA_character_)
   target_conclude(x, pipeline, scheduler, meta)
@@ -457,7 +507,8 @@ tar_test("relay errors as messages if error is continue", {
     )
   )
   meta <- tar_meta(names = c("data1", "data2"), fields = error)
-  expect_equal(sort(meta$error), sort(c("error_data1", "error_data2")))
+  expect_equal(grepl("error_data1", meta$error), meta$name == "data1")
+  expect_equal(grepl("error_data2", meta$error), meta$name == "data2")
 })
 
 tar_test("target_needs_worker(builder)", {

@@ -51,6 +51,7 @@ tar_target_raw <- function(
     c("stop", "continue", "null", "abridge", "trim", "workspace")
   )
   deprecate_error_workspace(error)
+  deprecate_priority(priority)
   tar_assert_flag(memory, c("auto", "persistent", "transient"))
   garbage_collection <- isTRUE(garbage_collection)
   tar_assert_lgl(garbage_collection)
@@ -62,7 +63,7 @@ tar_target_raw <- function(
   tar_assert_le(priority, 1)
   tar_assert_resources(resources)
   tar_assert_flag(storage, c("main", "worker", "none"))
-  tar_assert_flag(retrieval, c("main", "worker", "none"))
+  tar_assert_flag(retrieval, c("auto", "main", "worker", "none"))
   warn_error_format(error = error, format = format)
   if (!is.null(cue)) {
     cue_validate(cue)
