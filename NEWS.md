@@ -1,3 +1,27 @@
+# targets 1.11.3
+
+## Bug fixes
+
+* Use `qmethod = "escape"` to avoid https://github.com/Rdatatable/data.table/issues/3509 (#1480, @koefoeden).
+* Ensure `error = "trim"` does not hang when the errored target has a long chain of reverse dependencies (#1481, @koefoeden).
+* Manually remove class `"rlib_error_package_not_found"` from errors (#1484, @malcolmbarrett). This and #1354 are unfortunate consequences of #997.
+
+## Other changes
+
+* Call `suppressPackageStartupMessages()` once for the whole pipeline. Repeated target-specific calls may be slow, and the messages themselves are cumbersome. This is an appropriate tradeoff.
+* Ensure the progress bar from the balanced reporter does not chop up messages from `tar_debug_instructions()`.
+* Remove ANSI escape sequences from warnings and error messages.
+* Use `cli::cli_text()` instead of `cli::cli_progress_output()` (#1478, @dipterix).
+* Minor speedups in the beginning and end of `tar_make()` (#1482).
+* Cache `_targets/objects/` time stamps only for local builders mentioned in the metadata, as opposed to everything in that directory (#1482).
+* Instrument pre-processing overhead with progress bars (#1482).
+
+# targets 1.11.2
+
+* Documentation fix: if `format` is `"file"` and `repository` is not `"local"`, then the local file is no longer deleted after upload (#1467).
+* Improve legend labels in graphs.
+* Repair mermaid.js graphs with disconnected edges (#1472).
+
 # targets 1.11.1
 
 * Bugfix: `rstudio_available()` returns `FALSE` without error if `rstudioapi` is not installed.
@@ -7,7 +31,7 @@
 
 ## Deprecated features
 
-* Deprecate the `priority` argument of `tar_target()`. Because of #1458, custom priorities no longer have an effect on execution order. However, up-to-date parallelized pipelines with 100000+ targets can now be checked around 10 times faster, so the tradeoff is worth it.
+* Deprecate the `priority` argument of `tar_target()`. Because of #1458, custom priorities no longer have an effect on execution order. However, up-to-date parallelized pipelines with 100000+ targets can now be checked around 10 times faster, so the tradeoff is worth it. And as a workaround, you can send high-priority targets to one or more special `crew` controllers in a controller group (details: https://books.ropensci.org/targets/crew.html#heterogeneous-workers).
 
 ## Changes to default behavior
 

@@ -77,7 +77,13 @@ graph_class <- R6::R6Class(
 )
 
 adjacency_list <- function(from, to) {
-  tapply(X = from, INDEX = to, identity, simplify = FALSE)
+  # Faster than tapply(X = from, INDEX = to, identity, simplify = FALSE):
+  tapply(
+    X = from,
+    INDEX = factor(to, levels = unique.default(to)),
+    FUN = identity,
+    simplify = FALSE
+  )
 }
 
 join_edges <- function(lookup, from, to) {
@@ -85,6 +91,8 @@ join_edges <- function(lookup, from, to) {
   index <- 1L
   names <- names(new_edgelist)
   n <- length(names)
+  bar <- cli_local_progress_bar_init(label = "joining graph edges", total = n)
+  on.exit(cli_local_progress_bar_destroy(bar = bar))
   while (index <= n) {
     name <- .subset(names, index)
     new_from <- .subset2(new_edgelist, index)
@@ -94,6 +102,7 @@ join_edges <- function(lookup, from, to) {
       lookup[[name]] <- unique.default(c(new_from, .subset2(lookup, name)))
     }
     index <- index + 1L
+    cli_local_progress_bar_update(bar = bar, index = index)
   }
 }
 

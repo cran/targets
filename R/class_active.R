@@ -197,6 +197,7 @@ active_class <- R6::R6Class(
       if (counter_exists_name(.subset2(progress, "trimmed"), name)) {
         .subset2(scheduler, "trim")(target, pipeline)
         counter_del_name(.subset2(progress, "queued"), name)
+        target_update_queue(target, scheduler)
       } else if (target_should_run(target, meta)) {
         self$skipping <- inherits(target, "tar_pattern")
         self$flush_upload_meta_file(target)
@@ -214,6 +215,7 @@ active_class <- R6::R6Class(
       pipeline_prune_names(self$pipeline, self$names)
       pipeline_resolve_auto(self$pipeline)
       self$ensure_meta()
+      self$set_file_info()
       self$update_scheduler()
       self$bootstrap_shortcut_deps()
       self$ensure_process()
@@ -229,7 +231,6 @@ active_class <- R6::R6Class(
       self$upload_meta()
       path_scratch_del(path_store = self$meta$store)
       compare_working_directories()
-      tar_assert_objects_files(self$meta$store)
       seconds_elapsed <- time_seconds() - self$seconds_start
       scheduler$reporter$report_end(scheduler$progress, seconds_elapsed)
     },

@@ -29,7 +29,6 @@ tar_test("tar_mermaid() + legend + color", {
   expect_true(is.character(out))
   expect_true(any(grepl("subgraph Legend", out)))
   expect_true(any(grepl("classDef", out)))
-  expect_true(any(grepl("linkStyle", out)))
 })
 
 tar_test("tar_mermaid() + no legend + color", {
@@ -74,7 +73,6 @@ tar_test("tar_mermaid() + legend + no color", {
   )
   expect_true(is.character(out))
   expect_true(any(grepl("subgraph Legend", out)))
-  expect_true(any(grepl("linkStyle", out)))
   expect_false(any(grepl("classDef", out)))
 })
 
@@ -111,7 +109,8 @@ tar_test("custom script and store args", {
   out <- tar_mermaid(
     script = "example/script.R",
     store = "example/store",
-    callr_function = NULL
+    callr_function = NULL,
+    callr_arguments = list(show = FALSE)
   )
   expect_true(is.character(out))
   expect_false(file.exists("_targets.yaml"))
@@ -133,7 +132,8 @@ tar_test("custom script and store args with callr function", {
   tar_script(tar_target(x, "y"), script = "example/script.R")
   out <- tar_mermaid(
     script = "example/script.R",
-    store = "example/store"
+    store = "example/store",
+    callr_arguments = list(show = FALSE)
   )
   expect_true(is.character(out))
   expect_false(file.exists("_targets.yaml"))

@@ -134,3 +134,64 @@ cli_short <- function(x, max) {
   }
   x
 }
+
+cli_local_progress_bar_init <- function(label, total = NA_integer_) {
+  envir <- new.env(parent = globalenv())
+  if (cli_use_local_progress_bar()) {
+    id <- cli::cli_progress_bar(
+      format = trimws(
+        paste(
+          cli::symbol$arrow_right,
+          label,
+          if_any(
+            anyNA(total),
+            character(0L),
+            "{cli::pb_bar} {cli::pb_percent} | ETA: {cli::pb_eta}"
+          )
+        )
+      ),
+      # Prevents a mysterious cli progress error.
+      # Would have liked to set auto_terminate = FALSE instead.
+      total = if_any(anyNA(total), NA_integer_, total + 1L),
+      clear = TRUE,
+      .envir = envir
+    )
+    bar <- list(id = id, envir = envir, total = total)
+    if (anyNA(total)) {
+      cli_local_progress_bar_update(bar = bar, force = TRUE)
+    }
+    bar
+  }
+}
+
+# Using the progress bar ID can reduce overhead.
+cli_local_progress_bar_update <- function(bar, index = 1L, force = FALSE) {
+  envir <- parent.frame()
+  force(envir)
+  print_progress <- cli_use_local_progress_bar() && (
+    force ||
+      (index == 1L) ||
+      !(index %% max(1L, as.integer(.subset2(bar, "total") / 10)))
+  )
+  if (print_progress) {
+    cli::cli_progress_update(
+      set = index,
+      force = TRUE,
+      id = bar$id,
+      .envir = bar$envir
+    )
+  }
+}
+
+cli_local_progress_bar_destroy <- function(bar) {
+  envir <- parent.frame()
+  force(envir)
+  cli::cli_progress_done(id = bar$id, .envir = bar$envir)
+}
+
+cli_use_local_progress_bar <- function() {
+  progress_bar <- .subset2(tar_runtime, "progress_bar")
+  !is.null(progress_bar) && progress_bar
+}
+
+cli_many <- 1e4L

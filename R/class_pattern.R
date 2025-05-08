@@ -283,7 +283,8 @@ pattern_set_branches <- function(target, pipeline) {
   pipeline_initialize_references_children(
     pipeline = pipeline,
     name_parent = target_get_name(target),
-    names_children = junction_splits(target$junction)
+    names_children = junction_splits(target$junction),
+    type = "branch"
   )
 }
 
@@ -291,7 +292,14 @@ pattern_insert_branches <- function(target, pipeline, scheduler) {
   pattern_engraph_branches(target, pipeline, scheduler)
   pattern_prepend_branches(target, scheduler)
   pattern_set_branches(target, pipeline)
-  lapply(target_get_children(target), scheduler$progress$assign_queued)
+  bar <- cli_local_progress_bar_init(
+    label = paste("queueing", target_get_name(target), "branches")
+  )
+  on.exit(cli_local_progress_bar_destroy(bar = bar))
+  counter_set_new_names(
+    scheduler$progress$queued,
+    target_get_children(target)
+  )
   NULL
 }
 
@@ -427,7 +435,19 @@ pattern_combine_niblings_siblings <- function(niblings, siblings) {
 
 pattern_name_branches <- function(parent, niblings) {
   tuples <- do.call(paste, niblings)
-  suffixes <- map_chr(tuples, hash_object)
+  suffixes <- tuples
+  index <- 1L
+  n <- length(suffixes)
+  bar <- cli_local_progress_bar_init(
+    label = paste("creating", parent, "branch names"),
+    total = n
+  )
+  on.exit(cli_local_progress_bar_destroy(bar = bar))
+  while (index <= n) {
+    suffixes[index] <- hash_object(.subset(tuples, index))
+    index <- index + 1L
+    cli_local_progress_bar_update(bar = bar, index = index)
+  }
   paste0(parent, "_", suffixes)
 }
 

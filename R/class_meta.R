@@ -23,6 +23,8 @@ meta_class <- R6::R6Class(
     store = NULL,
     lookup = NULL,
     repository_cas_lookup_table = NULL,
+    local_builders = NULL,
+    branches = NULL,
     initialize = function(
       database = NULL,
       depends = NULL,
@@ -65,23 +67,14 @@ meta_class <- R6::R6Class(
       self$database$list_rows()
     },
     restrict_records = function(pipeline) {
+      bar <- cli_local_progress_bar_init(
+        label = "restricting metadata records"
+      )
+      on.exit(cli_local_progress_bar_destroy(bar = bar))
       names_envir <- names(pipeline$imports)
-      names_records <- self$list_records()
-      index <- 1L
-      n <- length(names_records)
-      get_row <- self$database$get_row
-      is_branch <- vector(mode = "logical", length = n)
-      while (index <= n) {
-        name <- .subset(names_records, index)
-        is_branch[index] <- .subset2(get_row(name), "type") == "branch"
-        index <- index + 1L
-      }
-      names_children <- names_records[is_branch]
-      names_targets <- pipeline_get_names(pipeline)
-      names_parents <- intersect(names_records, names_targets)
-      names_current <- c(names_envir, names_targets, names_children)
-      remove <- setdiff(names_records, names_current)
-      self$del_records(remove)
+      names_pipeline <- pipeline_get_names(pipeline)
+      names_current <- c(names_envir, names_pipeline, self$branches)
+      self$del_records(setdiff(self$list_records(), names_current))
     },
     hash_deps = function(deps, pipeline) {
       hash_list <- .subset2(self, "produce_hash_list")(deps, pipeline)
@@ -135,9 +128,22 @@ meta_class <- R6::R6Class(
       self$database$set_data(data)
     },
     preprocess = function(write = FALSE) {
-      data <- self$database$read_condensed_data()
+      if (write) {
+        self$database$deduplicate_storage()
+        data <- self$database$read_data()
+      } else {
+        data <- self$database$read_condensed_data()
+      }
       self$update_repository_cas_lookup_table(data)
-      self$database$preprocess(data = data, write = write)
+      self$database$set_data(data)
+      bar <- cli_local_progress_bar_init(
+        label = "noting builders and branches"
+      )
+      on.exit(cli_local_progress_bar_destroy(bar = bar))
+      is_local_builder <- data$type %in% c("stem", "branch") &
+        data$repository == "local"
+      self$local_builders <- data$name[is_local_builder]
+      self$branches <- data$name[data$type == "branch"]
       tar_runtime$meta <- self
     },
     ensure_preprocessed = function(write = FALSE) {

@@ -11,8 +11,9 @@ tar_counter <- function(names = NULL) {
 
 counter_init <- function(names = NULL) {
   count <- length(names)
-  envir <- new.env(hash = TRUE, parent = emptyenv())
-  map(names, assign, value = TRUE, envir = envir, inherits = FALSE)
+  list <- as.list(rep(TRUE, count))
+  names(list) <- names
+  envir <- list2env(x = list, hash = TRUE, parent = emptyenv())
   counter_new(count = count, envir = envir)
 }
 
@@ -78,6 +79,14 @@ counter_set_name <- function(counter, name) {
 
 counter_set_names <- function(counter, names) {
   lapply(names, counter_set_name, counter = counter)
+}
+
+counter_set_new_names <- function(counter, names) {
+  n <- length(names)
+  list <- as.list(rep(TRUE, n))
+  names(list) <- names
+  list2env(list, envir = .subset2(counter, "envir"))
+  counter$count <- .subset2(counter, "count") + n
 }
 
 counter_del_name <- function(counter, name) {

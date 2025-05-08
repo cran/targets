@@ -17,7 +17,8 @@ runtime_new <- function(
   trust_timestamps_store = NULL,
   number_targets_run = NULL,
   installed_packages = NULL,
-  meta = NULL
+  meta = NULL,
+  progress_bar = NULL
 ) {
   out <- new.env(parent = emptyenv(), hash = FALSE)
   out$target <- target
@@ -39,6 +40,7 @@ runtime_new <- function(
   out$number_targets_run <- number_targets_run
   out$installed_packages <- installed_packages
   out$meta <- meta
+  out$progress_bar <- progress_bar
   out
 }
 
@@ -125,19 +127,36 @@ runtime_validate_extras <- function(x) {
   if (!is.null(x$meta)) {
     tar_assert_envir(x$meta)
   }
+  if (!is.null(x$progress_bar)) {
+    tar_assert_lgl(x$progress_bar)
+    tar_assert_scalar(x$progress_bar)
+    tar_assert_none_na(x$progress_bar)
+  }
 }
 
-runtime_set_file_info <- function(runtime, store) {
-  runtime$trust_timestamps_store <- trust_timestamps(store)
-  objects <- list.files(
-    path = path_objects_dir(store),
-    all.files = TRUE,
-    full.names = TRUE,
-    no.. = TRUE
+runtime_set_file_info <- function(runtime, store, names) {
+  bar <- cli_local_progress_bar_init(
+    label = paste(
+      "querying",
+      length(names),
+      "local files in",
+      path_objects_dir(store)
+    )
   )
+  on.exit(cli_local_progress_bar_destroy(bar = bar))
+  runtime$trust_timestamps_store <- trust_timestamps(store)
   runtime$file_systems <- runtime_file_systems()
-  file_info <- as.list(file_info(objects, trust_timestamps = FALSE))
-  file_info <- file_info[c("path", "size", "mtime_numeric")]
+  info <- file_info(
+    file.path(path_objects_dir(store), names),
+    trust_timestamps = FALSE
+  )
+  info <- as.list(info)
+  keep <- !is.na(info$size)
+  info$path <- info$path[keep]
+  info$size <- info$size[keep]
+  info$mtime_numeric <- info$mtime_numeric[keep]
+  objects <- info$path
+  file_info <- info[c("path", "size", "mtime_numeric")]
   file_info$trust_timestamps <- rep(
     runtime$trust_timestamps_store,
     length(objects)

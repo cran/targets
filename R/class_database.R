@@ -129,7 +129,7 @@ database_class <- R6::R6Class(
       out <- map(
         rows,
         ~database_repair_list_columns(
-          get_row(.x),
+          as.list(get_row(.x)),
           list_columns,
           list_column_mode_list
         )
@@ -139,14 +139,17 @@ database_class <- R6::R6Class(
       out[, columns, drop = FALSE]
     },
     set_data = function(data) {
-      list <- lapply(data, as.list)
-      index <- 1L
-      n <- nrow(data)
-      names <- .subset2(data, "name")
-      while (index <= n) {
-        name <- .subset(names, index)
-        lookup[[name]] <- lapply(list, `[[`, i = index)
-        index <- index + 1L
+      bar <- cli_local_progress_bar_init(label = paste("parsing", self$path))
+      on.exit(cli_local_progress_bar_destroy(bar = bar))
+      if (nrow(data)) {
+        transposed <- data.table::transpose(data)
+        names <- names(data)
+        named <- lapply(
+          transposed,
+          function(x) as.list(stats::setNames(x, nm = names))
+        )
+        names(named) <- data$name
+        list2env(x = named, envir = self$lookup)
       }
     },
     exists_row = function(name) {
@@ -165,14 +168,6 @@ database_class <- R6::R6Class(
     },
     read_condensed_data = function() {
       self$condense_data(self$read_data())
-    },
-    preprocess = function(data = NULL, write = FALSE) {
-      data <- data %|||% self$read_condensed_data()
-      self$set_data(data)
-      if (write) {
-        self$ensure_storage()
-        self$overwrite_storage(data)
-      }
     },
     insert_row = function(row) {
       self$set_row(row)
@@ -338,6 +333,8 @@ database_class <- R6::R6Class(
       )
     },
     read_existing_data = function() {
+      bar <- cli_local_progress_bar_init(label = paste("reading", self$path))
+      on.exit(cli_local_progress_bar_destroy(bar = bar))
       # TODO: use sep2 once implemented:
       # https://github.com/Rdatatable/data.table/issues/1162
       encoding <- self$get_encoding()
@@ -386,9 +383,11 @@ database_class <- R6::R6Class(
       out
     },
     deduplicate_storage = function() {
-      if (!all(file.exists(self$path))) {
-        return()
-      }
+      bar <- cli_local_progress_bar_init(
+        label = paste("de-duplicating", self$path)
+      )
+      on.exit(cli_local_progress_bar_destroy(bar = bar))
+      self$ensure_storage()
       lines <- readLines(
         con = self$path,
         encoding = self$get_encoding(),
