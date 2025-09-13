@@ -200,8 +200,8 @@ future_class <- R6::R6Class(
       if (!length(names)) {
         return()
       }
-      targets <- map(names, ~pipeline_get_target(self$pipeline, .x))
-      priorities <- map_dbl(targets, ~.x$settings$priority)
+      targets <- map(names, ~ pipeline_get_target(self$pipeline, .x))
+      priorities <- map_dbl(targets, ~ .x$settings$priority)
       names(priorities) <- names
       names <- names(sort(priorities, decreasing = TRUE))
       lapply(names, self$process_worker)
@@ -245,5 +245,5 @@ future_value_target.tar_target <- function(value, name, pipeline) {
 #' @export
 future_value_target.condition <- function(value, name, pipeline) {
   target <- pipeline_get_target(pipeline, name)
-  builder_error_internal(target, value, "_future_")
+  builder_error_internal(target, value, "Error getting value from future:")
 }

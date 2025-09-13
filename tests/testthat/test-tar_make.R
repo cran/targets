@@ -196,11 +196,14 @@ tar_test("custom script and store args with callr function", {
 
 tar_test("runtime settings are forwarded, local process", {
   skip_cran()
-  tar_script({
-    writeLines(tar_path_store(), "store.txt")
-    writeLines(tar_path_script(), "script.txt")
-    tar_target(x, 1)
-  }, script = "custom_script")
+  tar_script(
+    {
+      writeLines(tar_path_store(), "store.txt")
+      writeLines(tar_path_script(), "script.txt")
+      tar_target(x, 1)
+    },
+    script = "custom_script"
+  )
   tar_make(
     callr_function = NULL,
     store = "custom_store",
@@ -212,11 +215,14 @@ tar_test("runtime settings are forwarded, local process", {
 
 tar_test("runtime settings are forwarded, extrernal process", {
   skip_cran()
-  tar_script({
-    writeLines(tar_path_store(), "store.txt")
-    writeLines(tar_path_script(), "script.txt")
-    tar_target(x, 1)
-  }, script = "custom_script")
+  tar_script(
+    {
+      writeLines(tar_path_store(), "store.txt")
+      writeLines(tar_path_script(), "script.txt")
+      tar_target(x, 1)
+    },
+    script = "custom_script"
+  )
   tar_make(
     callr_arguments = list(spinner = FALSE),
     reporter = "silent",
@@ -258,5 +264,13 @@ tar_test("tar_make_reporter()", {
   expect_equal(
     suppressWarnings(tar_make_reporter("summary")),
     "balanced"
+  )
+  expect_equal(
+    suppressWarnings(tar_make_reporter("timestamp_positives")),
+    "timestamp"
+  )
+  expect_equal(
+    suppressWarnings(tar_make_reporter("verbose_positives")),
+    "verbose"
   )
 })

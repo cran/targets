@@ -3,7 +3,10 @@
 tar_load_raw <- function(
   names,
   branches = NULL,
-  meta = tar_meta(store = store),
+  meta = targets::tar_meta(
+    store = store,
+    fields = -tidyselect::any_of("time")
+  ),
   strict = TRUE,
   silent = FALSE,
   envir = parent.frame(),
@@ -27,7 +30,7 @@ tar_load_raw <- function(
   tar_assert_envir(envir)
   map(
     names,
-    ~tar_load_target(
+    ~ tar_load_target(
       name = .x,
       branches = branches,
       meta = meta,

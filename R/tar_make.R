@@ -29,12 +29,19 @@
 #'   `shortcut = TRUE` only works if you set `names`.
 #' @param reporter Character of length 1, name of the reporter to user.
 #'   Controls how messages are printed as targets run in the pipeline.
-#'   Defaults to `tar_config_get("reporter_make")`.
 #'
+#'   The default value of `reporter` is the value
+#'   returned by `tar_config_get("reporter_make")`.
 #'   The default of `tar_config_get("reporter_make")` is `"terse"`
-#'   if running inside a literate programming document
-#'   (i.e. the `knitr.in.progress` global option is `TRUE`).
-#'   Otherwise, the default is `"balanced"`. Choices:
+#'   if the calling R session is either:
+#'
+#'       1. Non-interactive (`interactive()` returns `FALSE`), or
+#'       2. Inside a literate programming document
+#'         (the `knitr.in.progress` global option is `TRUE`).
+#'
+#'   Otherwise, the default is `"balanced"`.
+#'   You can always set the reporter manually.
+#'   Choices:
 #'
 #'   * `"balanced"`: a reporter that balances efficiency
 #'       with informative detail.
@@ -211,7 +218,7 @@ tar_make <- function(
   }
   if (as_job) {
     call <- match.call()
-    tar_make_as_job(call = call)
+    tar_make_as_job(call = call, reporter = reporter)
     return(invisible())
   }
   # nocov end
@@ -289,29 +296,41 @@ tar_make_inner <- function(
 }
 
 tar_make_reporter <- function(reporter) {
-  reporter <- if_any(
-    reporter %in% c("summary", "timestamp_positives", "verbose_positives"),
-    {
-      tar_warn_deprecate(
-        "The summary reporter in tar_make() etc. was deprecated ",
-        "in targets version 1.10.1.9010 (2025-03-31). ",
-        "Use the \"balanced\", \"verbose\", or \"timestamp\" ",
-        "reporter instead."
-      )
-      "balanced"
-    },
-    reporter
+  reporter <- as.character(reporter)
+  template <- paste0(
+    "The \"%s\" reporter ",
+    "in tar_make() etc. was deprecated ",
+    "in targets version 1.10.1.9010 (2025-03-31). ",
+    "Use the \"balanced\", \"verbose\", or \"timestamp\" ",
+    "reporter instead. Switching to \"%s\"."
   )
+  if (identical(reporter, "summary")) {
+    tar_warn_deprecate(sprintf(template, "summary", "balanced"))
+    reporter <- "balanced"
+  }
+  if (identical(reporter, "timestamp_positives")) {
+    tar_warn_deprecate(
+      sprintf(template, "timestamp_positives", "timestamp")
+    )
+    reporter <- "timestamp"
+  }
+  if (identical(reporter, "verbose_positives")) {
+    tar_warn_deprecate(
+      sprintf(template, "verbose_positives", "verbose")
+    )
+    reporter <- "verbose"
+  }
   tar_assert_flag(reporter, tar_reporters_make())
   reporter
 }
 
 # Tested in tests/interactive/test-job.R.
 # nocov start
-tar_make_as_job <- function(call) {
+tar_make_as_job <- function(call, reporter) {
   args <- as.list(call)[-1L]
   args$as_job <- FALSE
   args$callr_function <- NULL
+  args$reporter <- reporter
   args <- paste(names(args), "=", map_chr(args, tar_deparse_safe))
   args <- c(args, "callr_function = NULL")
   args <- paste0(args, collapse = ", ")

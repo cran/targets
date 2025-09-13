@@ -105,18 +105,40 @@ target_should_run.tar_builder <- function(target, meta) {
 # nolint start
 builder_should_run <- function(target, meta) {
   cue <- .subset2(target, "cue")
-  if (cue_meta_exists(cue, target, meta)) return(TRUE)
+  if (cue_meta_exists(cue, target, meta)) {
+    return(TRUE)
+  }
   row <- .subset2(meta, "get_row")(target_get_name(target))
-  if (cue_meta(cue, target, meta, row)) return(TRUE)
-  if (cue_always(cue, target, meta)) return(TRUE)
-  if (cue_never(cue, target, meta)) return(FALSE)
-  if (cue_command(cue, target, meta, row)) return(TRUE)
-  if (cue_depend(cue, target, meta, row)) return(TRUE)
-  if (cue_format(cue, target, meta, row)) return(TRUE)
-  if (cue_repository(cue, target, meta, row)) return(TRUE)
-  if (cue_iteration(cue, target, meta, row)) return(TRUE)
-  if (cue_seed(cue, target, meta, row)) return(TRUE)
-  if (cue_file(cue, target, meta, row)) return(TRUE)
+  if (cue_meta(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_always(cue, target, meta)) {
+    return(TRUE)
+  }
+  if (cue_never(cue, target, meta)) {
+    return(FALSE)
+  }
+  if (cue_command(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_depend(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_format(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_repository(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_iteration(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_seed(cue, target, meta, row)) {
+    return(TRUE)
+  }
+  if (cue_file(cue, target, meta, row)) {
+    return(TRUE)
+  }
   FALSE
 }
 # nolint end
@@ -349,11 +371,11 @@ builder_unmarshal_subpipeline <- function(target) {
   }
   patterns <- fltr(
     pipeline_get_names(subpipeline),
-    ~inherits(pipeline_get_target(subpipeline, .x), "tar_pattern")
+    ~ inherits(pipeline_get_target(subpipeline, .x), "tar_pattern")
   )
   map(
     setdiff(patterns, target$settings$dimensions),
-    ~target_ensure_value(pipeline_get_target(subpipeline, .x), subpipeline)
+    ~ target_ensure_value(pipeline_get_target(subpipeline, .x), subpipeline)
   )
 }
 
@@ -436,7 +458,13 @@ builder_update_build <- function(target, envir) {
   object <- build$object
   object <- tryCatch(
     builder_resolve_object(target, build),
-    error = function(error) builder_error_internal(target, error, "_build_")
+    error = function(error) {
+      builder_error_internal(
+        target,
+        error,
+        "Error resolving stored output:"
+      )
+    }
   )
   if (!identical(target$settings$storage, "none")) {
     target$value <- value_init(object, target$settings$iteration)
@@ -464,7 +492,13 @@ builder_ensure_paths <- function(target, path_store) {
   if (builder_expect_storage(target)) {
     tryCatch(
       builder_update_paths(target, path_store),
-      error = function(error) builder_error_internal(target, error, "_paths_")
+      error = function(error) {
+        builder_error_internal(
+          target,
+          error,
+          "Error resolving output location:"
+        )
+      }
     )
   }
 }
@@ -527,7 +561,13 @@ builder_ensure_object <- function(target, storage, on_worker) {
   if (context && builder_expect_storage(target)) {
     tryCatch(
       builder_update_object(target, on_worker),
-      error = function(error) builder_error_internal(target, error, "_store_")
+      error = function(error) {
+        builder_error_internal(
+          target,
+          error,
+          "Error storing output:"
+        )
+      }
     )
   }
 }
@@ -545,7 +585,13 @@ builder_ensure_correct_hash <- function(target) {
   if (!metrics_terminated_early(target$metrics)) {
     tryCatch(
       builder_wait_correct_hash(target),
-      error = function(error) builder_error_internal(target, error, "_hash_")
+      error = function(error) {
+        builder_error_internal(
+          target,
+          error,
+          "Error hashing output:"
+        )
+      }
     )
   }
 }
